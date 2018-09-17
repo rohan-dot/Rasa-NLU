@@ -1,0 +1,28 @@
+{
+  "states": [
+    "intent_greet",
+    "intent_goodbye",
+    "intent_LanID",
+    "intent_otp",
+    "intent_ResetPassword",
+    "intent_Complete",
+    "intent_Verification",
+    "intent_neg_otp",
+    "entity_LAN",
+    "entity_OTP",
+    "entity_NEG",
+    "slot_LAN_0",
+    "slot_OTP_0",
+    "prev_action_listen",
+    "prev_action_restart",
+    "prev_action_default_fallback",
+    "prev_utter_greet",
+    "prev_utter_goodbye",
+    "prev_utter_ask_LanID",
+    "prev_utter_ask_OTP",
+    "prev_utter_ResetPassword",
+    "prev_utter_Verification",
+    "prev_utter_Complete",
+    "prev_utter_neg_otp"
+  ]
+}

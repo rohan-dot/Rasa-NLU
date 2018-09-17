@@ -1,0 +1,74 @@
+slots:
+  
+    
+ 
+  LAN:
+    type: text
+  OTP:
+    type: float
+
+  
+
+
+intents:
+ - greet
+ - goodbye
+ - LanID
+ - otp
+ - ResetPassword
+ - Complete
+ - Verification
+ - neg_otp
+
+entities:
+ - LAN
+ - OTP
+ - NEG
+templates:
+  utter_greet:
+    - 'Hello! How can I help?'
+    - 'Hello! Fellow employee how can I Locksmith be of your service'
+    - 'Hey! I am Locksmith the best AI bot to help you with your password related issues'
+    - 'Hiya! How can I be of service today'
+    - 'Hey wasupp employee'
+  utter_goodbye:
+    - 'Talk to you later.'
+    - 'Bye bye :('
+    - 'Goodbye! , Work Hard!'
+    - 'talk to you later'
+    - 'Goobye someone else requires my services now'
+  
+  utter_ask_LanID:
+    - 'What is your LAN ID?'
+    - 'Tell me the lan id which needs its password to be reset'
+    - 'Could you please tell me your LANID so I could further assist you in resetting yout password'
+  utter_ask_OTP:
+    - 'What is the otp you just recieved?'
+    - 'what was the otp you just got'
+    - 'Could you please tell me your OTP so I could further assist you in resetting yout password' 
+  utter_ResetPassword:
+    - 'Enter your Lan id to further continuing the process of resetting your password?'
+    - 'Then let us reset your password employee for that please tell me your lan id so we could move further with this process'
+    - 'Looks like someone forgot their password enter your Lan id so we can together reset your password'
+  utter_Verification:
+    - 'Are you sure you want to reset your password'
+    - 'Last chance to go back are you sure you want to reset your password'
+  utter_Complete:
+    - 'Your password has been reset Goodbye employee'
+    - 'My AI has managed to reset your password fare thee well! '
+    - 'It has been done, My work here is over! :)'
+  utter_neg_otp:
+    - 'what! you havent recieved your otp let me send it again!'
+    - 'I will send you the otp again '
+    - 'Wait for just a few more seconds I will send you the otp again'
+actions:
+ - utter_greet
+ - utter_goodbye
+ - utter_ask_LanID
+ - utter_ask_OTP
+ - utter_ResetPassword
+ - utter_Verification
+ - utter_Complete
+ - utter_neg_otp
+ 
+

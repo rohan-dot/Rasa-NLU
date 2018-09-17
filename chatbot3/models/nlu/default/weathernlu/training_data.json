@@ -1,0 +1,530 @@
+{
+  "rasa_nlu_data": {
+    "common_examples": [
+      {
+        "intent": "greet",
+        "text": "Hello"
+      },
+      {
+        "intent": "goodbye",
+        "text": "goodbye"
+      },
+      {
+        "intent": "greet",
+        "text": "hey"
+      },
+      {
+        "intent": "greet",
+        "text": "hello"
+      },
+      {
+        "intent": "greet",
+        "text": "hi"
+      },
+      {
+        "intent": "greet",
+        "text": "heya"
+      },
+      {
+        "intent": "greet",
+        "text": "howdy"
+      },
+      {
+        "intent": "greet",
+        "text": "hey there"
+      },
+      {
+        "intent": "goodbye",
+        "text": "bye"
+      },
+      {
+        "intent": "goodbye",
+        "text": "goodbye"
+      },
+      {
+        "intent": "goodbye",
+        "text": "bye bye"
+      },
+      {
+        "intent": "goodbye",
+        "text": "see ya"
+      },
+      {
+        "intent": "goodbye",
+        "text": "see you later"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 12,
+            "end": 40,
+            "value": "rlee3104@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "My LanID is rlee3104@india.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 12,
+            "end": 40,
+            "value": "ukam3304@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "My login is ukam3304@india.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 13,
+            "end": 45,
+            "value": "neena.leekha@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "Lan id is -: neena.leekha@india.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 17,
+            "end": 42,
+            "value": "rlee2134@na.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "hiya my login is rlee2134@na.convergys.com"
+      },
+      {
+        "intent": "otp",
+        "entities": [
+          {
+            "start": 3,
+            "end": 6,
+            "value": "otp",
+            "entity": "OTP"
+          }
+        ],
+        "text": "My otp is 657890"
+      },
+      {
+        "intent": "otp",
+        "entities": [
+          {
+            "start": 0,
+            "end": 6,
+            "value": "345216",
+            "entity": "OTP"
+          }
+        ],
+        "text": "345216"
+      },
+      {
+        "intent": "otp",
+        "entities": [
+          {
+            "start": 0,
+            "end": 6,
+            "value": "345217",
+            "entity": "OTP"
+          }
+        ],
+        "text": "345217"
+      },
+      {
+        "intent": "otp",
+        "entities": [
+          {
+            "start": 0,
+            "end": 6,
+            "value": "696996",
+            "entity": "OTP"
+          }
+        ],
+        "text": "696996"
+      },
+      {
+        "intent": "otp",
+        "entities": [
+          {
+            "start": 0,
+            "end": 6,
+            "value": "123456",
+            "entity": "OTP"
+          }
+        ],
+        "text": "123456"
+      },
+      {
+        "intent": "otp",
+        "entities": [
+          {
+            "start": 0,
+            "end": 6,
+            "value": "123476",
+            "entity": "OTP"
+          }
+        ],
+        "text": "123476"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "Hi could you help me reset my password"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "hi I'm doing great could you help me reset my password my lan id is ufic@india.convergys.com"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "hi im good could you help me reset my password ive forgotten it"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "i need your help in changing my password"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "I need your help in resetting my password"
+      },
+      {
+        "intent": "Verification",
+        "text": "Yes"
+      },
+      {
+        "intent": "Verification",
+        "text": "yeah sure"
+      },
+      {
+        "intent": "Verification",
+        "text": "yup I'm sure"
+      },
+      {
+        "intent": "Verification",
+        "text": "Yup"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 40,
+            "end": 66,
+            "value": " uqwe1111@na.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "i want to reset my password my lan id is uqwe1111@na.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 39,
+            "end": 67,
+            "value": "rlee3422@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "i wannnaaa reset my password my lan is rlee3422@india.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 41,
+            "end": 69,
+            "value": "abcd7781@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "could you reset my password my lan id is abcd7781@india.convergys.com"
+      },
+      {
+        "intent": "neg_otp",
+        "entities": [
+          {
+            "start": 5,
+            "end": 11,
+            "value": "havent",
+            "entity": "NEG"
+          }
+        ],
+        "text": "no i havent recieved my otp"
+      },
+      {
+        "intent": "neg_otp",
+        "entities": [
+          {
+            "start": 2,
+            "end": 7,
+            "value": "didnt",
+            "entity": "NEG"
+          }
+        ],
+        "text": "i didnt get the otp"
+      },
+      {
+        "intent": "neg_otp",
+        "entities": [
+          {
+            "start": 0,
+            "end": 4,
+            "value": "nah ",
+            "entity": "NEG"
+          }
+        ],
+        "text": "nah "
+      },
+      {
+        "intent": "neg_otp",
+        "entities": [
+          {
+            "start": 0,
+            "end": 4,
+            "value": "nope",
+            "entity": "NEG"
+          },
+          {
+            "start": 4,
+            "end": 12,
+            "value": " havent ",
+            "entity": "NEG"
+          }
+        ],
+        "text": "nope havent recieved my otp"
+      },
+      {
+        "intent": "goodbye",
+        "text": "thank you"
+      },
+      {
+        "intent": "goodbye",
+        "text": "thanks"
+      },
+      {
+        "intent": "goodbye",
+        "text": "alright thanks locksmity"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 19,
+            "end": 47,
+            "value": "rlee3104@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "reset password for rlee3104@india.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 26,
+            "end": 51,
+            "value": "ukam3123@na.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "reset password for the id ukam3123@na.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 14,
+            "end": 35,
+            "value": "xeee@na.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "reset pwd for xeee@na.convergys.com"
+      },
+      {
+        "intent": "greet",
+        "text": "heyyy"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "I wanna reset my password"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 32,
+            "end": 60,
+            "value": "rlee3106@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "I want to reset my password for rlee3106@india.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 38,
+            "end": 64,
+            "value": "rewq@3133@na.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "could u reset my password for lanid-: rewq@3133@na.convergys.com"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "reset my password please"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "plz reset my pwd"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "could u reset my password"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "i forgot my password"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 14,
+            "end": 42,
+            "value": "qwer2222@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "reset pwd for qwer2222@india.convergys.com"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "I want to reset my password"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 48,
+            "end": 72,
+            "value": "qwer@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "could you please reset my password my lan id is qwer@india.convergys.com"
+      },
+      {
+        "intent": "ResetPassword",
+        "text": "reset my password"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 0,
+            "end": 21,
+            "value": "rewq@sa.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "rewq@sa.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 0,
+            "end": 21,
+            "value": "avbc@sa.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "avbc@sa.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 12,
+            "end": 33,
+            "value": "wera@sa.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "reset pwd 4 wera@sa.convergys.com"
+      },
+      {
+        "intent": "otp",
+        "entities": [
+          {
+            "start": 7,
+            "end": 13,
+            "value": "555577",
+            "entity": "OTP"
+          }
+        ],
+        "text": "otp iz 555577"
+      },
+      {
+        "intent": "otp",
+        "entities": [
+          {
+            "start": 0,
+            "end": 6,
+            "value": "775543",
+            "entity": "OTP"
+          }
+        ],
+        "text": "775543"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 50,
+            "end": 74,
+            "value": "resw@india.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "I want to reset password for employee with lan id resw@india.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 23,
+            "end": 44,
+            "value": "reas@na.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "reset pwd for employee reas@na.convergys.com"
+      },
+      {
+        "intent": "LanID",
+        "entities": [
+          {
+            "start": 20,
+            "end": 41,
+            "value": "ghjk@sa.convergys.com",
+            "entity": "LAN"
+          }
+        ],
+        "text": "change password for ghjk@sa.convergys.com"
+      }
+    ],
+    "regex_features": [],
+    "entity_synonyms": []
+  }
+}

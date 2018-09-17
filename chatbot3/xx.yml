@@ -1,0 +1,44 @@
+slots:
+  location:
+    type: text
+  Reset_Password:
+    type: text
+
+intents:
+ - greet
+ - goodbye
+ - inform
+ - LANID
+ - otp
+ - ResetPassword 
+
+entities:
+ - location
+ - LAN
+ - OTP
+ - Reset_Password
+ 
+templates:
+    utter_greet:
+    - 'Hello I'm LockSmith! How may I help?'
+    utter_goodbye:
+    - 'Talk to you later.'
+    - 'Bye bye :('
+    - 'Happy to help you friend'
+    utter_ask_location:
+    - 'In what location?'
+    utter_ask_LANID:
+    - 'What is your LAN ID?'
+    - 'Could you please tell me your LANID so I could further assist you in resetting yout password'
+    utter_ask_OTP:
+    - 'What is the otp you just recieved?'
+    - 'Could you please tell me your OTP so I could further assist you in resetting yout password'
+    utter_Reset_Password:
+    - 'Enter your Lan id to further continuing the process of resetting your password?'
+actions:
+ - utter_greet
+ - utter_goodbye
+ - utter_ask_LANID
+ - utter_ask_location
+ - utter_ask_OTP
+ - actions.ActionWeather

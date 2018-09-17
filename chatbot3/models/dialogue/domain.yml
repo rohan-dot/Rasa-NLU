@@ -1,0 +1,84 @@
+action_factory: null
+action_names:
+- utter_greet
+- utter_goodbye
+- utter_ask_LanID
+- utter_ask_OTP
+- utter_ResetPassword
+- utter_Verification
+- utter_Complete
+- utter_neg_otp
+actions:
+- utter_greet
+- utter_goodbye
+- utter_ask_LanID
+- utter_ask_OTP
+- utter_ResetPassword
+- utter_Verification
+- utter_Complete
+- utter_neg_otp
+config:
+  store_entities_as_slots: true
+entities:
+- LAN
+- OTP
+- NEG
+intents:
+- greet
+- goodbye
+- LanID
+- otp
+- ResetPassword
+- Complete
+- Verification
+- neg_otp
+slots:
+  LAN:
+    initial_value: null
+    type: rasa_core.slots.TextSlot
+  OTP:
+    initial_value: null
+    max_value: 1.0
+    min_value: 0.0
+    type: rasa_core.slots.FloatSlot
+templates:
+  utter_Complete:
+  - text: Your password has been reset Goodbye employee
+  - text: 'My AI has managed to reset your password fare thee well! '
+  - text: It has been done, My work here is over! :)
+  utter_ResetPassword:
+  - text: Enter your Lan id to further continuing the process of resetting your password?
+  - text: Then let us reset your password employee for that please tell me your lan
+      id so we could move further with this process
+  - text: Looks like someone forgot their password enter your Lan id so we can together
+      reset your password
+  utter_Verification:
+  - text: Are you sure you want to reset your password
+  - text: Last chance to go back are you sure you want to reset your password
+  utter_ask_LanID:
+  - text: What is your LAN ID?
+  - text: Tell me the lan id which needs its password to be reset
+  - text: Could you please tell me your LANID so I could further assist you in resetting
+      yout password
+  utter_ask_OTP:
+  - text: What is the otp you just recieved?
+  - text: what was the otp you just got
+  - text: Could you please tell me your OTP so I could further assist you in resetting
+      yout password
+  utter_goodbye:
+  - text: Talk to you later.
+  - text: Bye bye :(
+  - text: Goodbye! , Work Hard!
+  - text: talk to you later
+  - text: Goobye someone else requires my services now
+  utter_greet:
+  - text: Hello! How can I help?
+  - text: Hello! Fellow employee how can I Locksmith be of your service
+  - text: Hey! I am Locksmith the best AI bot to help you with your password related
+      issues
+  - text: Hiya! How can I be of service today
+  - text: Hey wasupp employee
+  utter_neg_otp:
+  - text: what! you havent recieved your otp let me send it again!
+  - text: 'I will send you the otp again '
+  - text: Wait for just a few more seconds I will send you the otp again
