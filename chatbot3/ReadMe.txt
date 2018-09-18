@@ -14,5 +14,6 @@ to make changes/ see the training data go to data folder using cd data
 and type rasa-nlu-trainer here you can see all the intents and entities
 to train model run train_init.py from cmd
 and to have test conversations run train_online.py from cmd
+to have a conversation without training the bot simultaneously run dialogue_management_model.py in cmd
 
 after you have had a conversation save it as  stories.md and replace the folder in data called stories.md by this new stories.md
