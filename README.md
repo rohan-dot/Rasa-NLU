@@ -3,7 +3,39 @@ Interning for convergys I made a chatbot for password reset using rasa-nlu.
 I trained the bot for password reset functionalities adding the T-opt service and Lanid of the employee and trained it via own examples to make it's answer seem more human like rather than robotic
 
 
-In the evolving landscape of the Russian-Ukraine conflict, Twitter has notably become a crucial battleground for narrative control, with counter speech standing out as a formidable strategy against misinformation. This approach, increasingly recognized in both academic and wider public discussions (Vyas et al., 2023), serves as a direct countermeasure to the rampant spread of false narratives and propaganda, a common feature of the digital age's conflicts (Bjola and Pamment, 2018). Scholars from diverse fields, especially Media Studies and Political Science, underline counter speech's vital role in undermining and correcting misinformation. For instance, research led by Harsin (2018) and supported by findings from Lewandowsky et al. (2012), has demonstrated how counter speech not only debunks false claims but also significantly contributes to the cultivation of an informed public discourse, a crucial element in maintaining democratic processes. These studies show that through strategic use of counter narratives, individuals and groups on Twitter can effectively mitigate the influence of misinformation, promoting a culture of critical engagement and fact-checking among users. Moreover, empirical analyses, such as those conducted by Garland et al. (2020) and Mathew et al. (2018, 2020), have documented the mechanisms through which counter speech mobilizes support for truth, engaging a broader audience in the examination and rebuttal of misleading content. This body of work illustrates counter speech's dual function: as a mechanism for information accuracy and as a democratic tool that empowers users to partake actively in the discursive battles shaping public perception and opinion in times of conflict.
+from sklearn.metrics import f1_score
+import numpy as np
+
+# Original columns
+C1 = ['t1056', 't1256']
+C2 = ['t1006', 't1256']
+
+# Combine the values to find unique labels
+all_labels = set(C1 + C2)
+
+# Create a mapping from label to integer
+label_to_int = {label: i for i, label in enumerate(all_labels)}
+
+# Encode the original labels using the mapping
+C1_encoded = [label_to_int[label] for label in C1]
+C2_encoded = [label_to_int[label] for label in C2]
+
+# Calculate F1 score
+# Since F1 score is typically calculated for binary classification, we need to ensure it's applicable here.
+# If there are more than 2 classes, we may need to calculate F1 score in a different manner (e.g., micro, macro)
+
+# Verify if binary or multiclass
+is_binary = len(all_labels) <= 2
+
+if is_binary:
+    # For binary classification, we directly calculate F1 score
+    f1 = f1_score(C1_encoded, C2_encoded)
+else:
+    # For multiclass, calculate F1 score with 'micro' to aggregate the contributions of all classes
+    f1 = f1_score(C1_encoded, C2_encoded, average='micro')
+
+f1, label_to_int
+
 
 
 
