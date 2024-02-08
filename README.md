@@ -3,35 +3,34 @@ Interning for convergys I made a chatbot for password reset using rasa-nlu.
 I trained the bot for password reset functionalities adding the T-opt service and Lanid of the employee and trained it via own examples to make it's answer seem more human like rather than robotic
 
 
- import pandas as pd
+ To utilize Mistral or a similar language model for sentence obfuscation, ensuring the methodology is clear, structured, and ready for implementation, present the task as follows:
 
-# Assuming C1 and C2 are pandas Series objects
-C1_series = pd.Series(C1)
-C2_series = pd.Series(C2)
+---
 
-# Combine the series to ensure consistent encoding
-combined_series = pd.concat([C1_series, C2_series], ignore_index=True)
+**Obfuscation Task for Mistral:**
 
-# Factorize the combined series to get unique codes for each label
-_, unique_codes = pd.factorize(combined_series)
+"Your task is to obfuscate the stylistic signature of any given sentence while preserving its original meaning, leveraging your in-depth understanding of language, writing styles, and stylistic nuances. Execute the following steps:
 
-# Encode the original series using the factorized values
-C1_encoded_series = pd.factorize(C1_series)[0]
-C2_encoded_series = pd.factorize(C2_series)[0]
+1. **Sentence Analysis:**
+   - Identify and describe key stylistic features within the sentence that might reveal the author's identity or unique style. This includes particular word choices, sentence structures, and use of grammatical elements.
 
-# Calculate F1 score (using 'micro' if necessary)
-# We check again for binary or multiclass
-is_binary = len(np.unique(unique_codes)) <= 2
+2. **Feature Evaluation and Ranking:**
+   - Evaluate each identified feature based on its uniqueness to the author's style and its frequency in general writing. Rank these features by their potential to identify the author.
 
-if is_binary:
-    f1_pandas = f1_score(C1_encoded_series, C2_encoded_series)
-else:
-    f1_pandas = f1_score(C1_encoded_series, C2_encoded_series, average='micro')
+3. **Alternative Suggestion:**
+   - For each highly ranked, distinctive feature, suggest alternative expressions or structures that maintain the original sentence's intent but alter the stylistic markers. Ensure these alternatives are stylistically neutral or common across various writing styles.
 
-f1_pandas
+4. **Contextual Adjustment:**
+   - Consider the overall context and meaning of the sentence to ensure that the suggested alternatives fit naturally and do not distort the original message.
 
+5. **Sentence Obfuscation:**
+   - Implement the suggested changes to produce an obfuscated version of the sentence. This revised sentence should be less identifiable in terms of the original author's unique style.
 
+6. **Coherence and Meaning Check:**
+   - Review the obfuscated sentence for coherence, clarity, and fidelity to the original meaning. Adjust as necessary to improve fluency and ensure the intent remains unchanged.
 
+Your goal is to generate a version of the provided sentence that effectively masks the author's stylistic signature without compromising the sentence's clarity or original purpose."
 
+---
 
-
+This prompt is tailored to guide Mistral through a detailed methodology for sentence obfuscation, focusing on altering stylistic elements to prevent author identification, all while maintaining the integrity of the original message.
