@@ -4,4 +4,4 @@ I trained the bot for password reset functionalities adding the T-opt service an
 
 
 
- In this paper, we introduce a comprehensive pipeline to address social media hate speech, leveraging Large Language Models (LLMs) for summarizing topics, detecting hate speech, and generating counter-narratives. Our approach involves manually annotating tweets to assess a zero-shot LLM's accuracy, followed by using a combination of Retrieval-Augmented Generation (RAG) and Mistral models for creating context-specific counterspeech. We further evaluate the effectiveness of our generated counterspeech on criteria such as factuality, relevance, grammaticality, and diversity. This concise overview outlines our methodological framework and key contributions.
+ Zero-shot classification refers to the capability of the Mistral model to accurately categorize text as hate speech or non-hate speech without the need for any user-provided examples of either category. This approach aims to minimize classification bias by relying on the model's pre-existing knowledge and understanding, rather than on a potentially biased or limited set of training data.
