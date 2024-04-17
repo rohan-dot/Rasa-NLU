@@ -4,4 +4,31 @@ I trained the bot for password reset functionalities adding the T-opt service an
 
 
 
- The challenge of ensuring factual correctness in large language models (LLMs) using Retrieval-Augmented Generation (RAG) architectures is significantly compounded by difficulties in verifying the factual accuracy of their training datasets. Given the vast and heterogeneous nature of these datasets, it becomes nearly impossible to systematically evaluate and ensure the truthfulness of the information fed into the models during their training phase. This issue is not as prevalent in more traditional models where the scope and source of training data are more controlled and thus, more easily vetted for accuracy. This fundamental limitation underscores an urgent need for innovative approaches to scrutinize and enhance the reliability of training data, thereby improving the factual correctness of outputs from LLMs, especially in critical applications where factual integrity is paramount.
+ from PIL import Image
+
+# Function to overlay two images
+def overlay_images(background_path, overlay_path, output_path, position=(0, 0)):
+    # Open the background and overlay images
+    background = Image.open(background_path).convert("RGBA")
+    overlay = Image.open(overlay_path).convert("RGBA")
+
+    # Create a new image with the same size as the background, transparent initially
+    composite = Image.new("RGBA", background.size)
+
+    # Paste the background image to the composite image
+    composite.paste(background, (0, 0))
+
+    # Paste the overlay image on top of the background image at the given position
+    composite.paste(overlay, position, overlay)  # overlay used as a mask for itself
+
+    # Save the final image
+    final_image = composite.convert("RGBA")  # Ensure the final image is in RGBA mode
+    final_image.save(output_path)
+
+# Paths to your images
+background_image_path = 'path_to_background_image.png'
+overlay_image_path = 'path_to_overlay_image.png'
+output_image_path = 'path_to_output_image.png'
+
+# Call the function with the path to your images and the desired position
+overlay_images(background_image_path, overlay_image_path, output_image_path, position=(50, 50))
