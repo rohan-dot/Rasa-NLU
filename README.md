@@ -4,31 +4,24 @@ I trained the bot for password reset functionalities adding the T-opt service an
 
 
 
- from PIL import Image
+ 
+import json
 
-# Function to overlay two images
-def overlay_images(background_path, overlay_path, output_path, position=(0, 0)):
-    # Open the background and overlay images
-    background = Image.open(background_path).convert("RGBA")
-    overlay = Image.open(overlay_path).convert("RGBA")
+# Load the JSON files
+with open('file1.json', 'r') as file:
+    data1 = json.load(file)
 
-    # Create a new image with the same size as the background, transparent initially
-    composite = Image.new("RGBA", background.size)
+with open('file2.json', 'r') as file:
+    data2 = json.load(file)
 
-    # Paste the background image to the composite image
-    composite.paste(background, (0, 0))
+# Assuming data1 and data2 are lists of dictionaries
+story_pairs_in_data2 = {item['story_pair'] for item in data2}  # Collect all story_pairs from data2
 
-    # Paste the overlay image on top of the background image at the given position
-    composite.paste(overlay, position, overlay)  # overlay used as a mask for itself
+# Filter to keep items in data1 that have a story_pair that appears in data2
+filtered_data1 = [item for item in data1 if item['story_pair'] in story_pairs_in_data2]
 
-    # Save the final image
-    final_image = composite.convert("RGBA")  # Ensure the final image is in RGBA mode
-    final_image.save(output_path)
+# Save the filtered data back to a new JSON file
+with open('filtered_file1.json', 'w') as file:
+    json.dump(filtered_data1, file, indent=4)
 
-# Paths to your images
-background_image_path = 'path_to_background_image.png'
-overlay_image_path = 'path_to_overlay_image.png'
-output_image_path = 'path_to_output_image.png'
-
-# Call the function with the path to your images and the desired position
-overlay_images(background_image_path, overlay_image_path, output_image_path, position=(50, 50))
+print(f"Kept {len(filtered
