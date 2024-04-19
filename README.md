@@ -5,23 +5,21 @@ I trained the bot for password reset functionalities adding the T-opt service an
 
 
  
-import json
+import pandas as pd
 
-# Load the JSON files
-with open('file1.json', 'r') as file:
-    data1 = json.load(file)
+# Assuming df1 and df2 are already loaded and have the 'story_pair' column
 
-with open('file2.json', 'r') as file:
-    data2 = json.load(file)
+# Get the unique 'story_pair' values from df1
+unique_pairs_df1 = df1['story_pair'].unique()
 
-# Assuming data1 and data2 are lists of dictionaries
-story_pairs_in_data2 = {item['story_pair'] for item in data2}  # Collect all story_pairs from data2
+# Filter df2 to only include rows where 'story_pair' values are in df1
+filtered_df2 = df2[df2['story_pair'].isin(unique_pairs_df1)]
 
-# Filter to keep items in data1 that have a story_pair that appears in data2
-filtered_data1 = [item for item in data1 if item['story_pair'] in story_pairs_in_data2]
+# Optionally, you can drop extra rows if both dataframes should be of equal length and completely matched
+# This will remove the extra unmatched rows from df2 to make the lengths identical
+if len(filtered_df2) > len(df1):
+    filtered_df2 = filtered_df2.iloc[:len(df1)]
 
-# Save the filtered data back to a new JSON file
-with open('filtered_file1.json', 'w') as file:
-    json.dump(filtered_data1, file, indent=4)
-
-print(f"Kept {len(filtered
+# Now you can check the result
+print(f"Length of df1: {len(df1)}")
+print(f"Filtered length of df2: {len(filtered_df2)}")
