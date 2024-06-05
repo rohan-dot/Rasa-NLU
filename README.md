@@ -2,17 +2,22 @@
 Interning for convergys I made a chatbot for password reset using rasa-nlu.
 I trained the bot for password reset functionalities adding the T-opt service and Lanid of the employee and trained it via own examples to make it's answer seem more human like rather than robotic
 
-I understand, let me explain the correct mapping.
+### Methodology
 
-**Reflected cross-site scripting (XSS)** is indeed closely related to the initial stages of an attack, often involving social engineering tactics to get the victim to click on a malicious link or visit a compromised page.
+We employed the Mistral model with a Retrieval-Augmented Generation (RAG) framework for authorship impersonation. Our approach involved capturing and replicating the target author's writing style using prompt engineering techniques.
 
-**Tactic: Initial Access**
-- Techniques in this tactic focus on how the adversary gains initial access to the target network or system.
+**1. Style Extraction:**  
+We queried the model using prompts to extract the target author's writing style based on specific criteria: voice, tone, diction, sentence structure, imagery, metaphor, dialogue, and emotional expression. The extracted styles were encoded into embeddings and stored in a vector database.
 
-**Relevant Technique:**
-- **T1566: Phishing**: This technique covers a broad range of methods where adversaries trick victims into providing information or performing actions (e.g., clicking on a malicious link) that allow the adversary to gain access.
+**2. RAG Pipeline Setup:**  
+The RAG pipeline was configured to query the vector database for the target author's stylistic elements. This setup allowed efficient retrieval and integration of these elements into the generation process.
 
-### Explanation:
-- **T1566**: This technique encompasses different phishing methods, including those that might involve reflected XSS. In reflected XSS attacks, an attacker often tricks a user into clicking a malicious link, which then executes a script in the user's browser, leading to potential credential theft or session hijacking. This aligns with the description of a phishing attempt using reflected XSS.
+**3. Style Application:**  
+Another Mistral model instance was used to incorporate the retrieved stylistic elements into the source documents, effectively transforming them to mimic the target author's style.
 
-Given this context, **T1566** is indeed an appropriate ATT&CK ID for mapping reflected XSS vulnerabilities used in phishing attacks.
+**Framework Components:**
+- **Original Input (OI):** Original sample text and metadata.
+- **Style Criteria (SC):** Specific stylistic elements to extract and replicate.
+- **Style Guidance (SG):** Instructions for perturbing the original text to align with the target author's style.
+
+An example of OI, SC, and SG is provided in the appendix. This concise framework enabled effective and accurate authorship impersonation.
