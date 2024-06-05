@@ -8,17 +8,9 @@ Certainly! Here’s an equation using the framework components Original Input (O
 S' = \text{ApplyStyle}(M, \text{OI}, \text{RetrieveStyle}(V, \text{SC}, \text{SG}))
 \]
 
-Where:
-- \( S' \) is the impersonated text.
-- \( \text{ApplyStyle} \) is the function that applies the retrieved style to the original input.
-- \( M \) is the pre-trained Mistral model.
-- \( \text{OI} \) is the original input text.
-- \( \text{RetrieveStyle} \) is the function that queries the vector database to retrieve the style.
-- \( V \) is the vector database storing the styles.
-- \( \text{SC} \) is the style criteria.
-- \( \text{SG} \) is the style guidance.
 
-In LaTeX, the equation can be written as follows:
+
+Certainly! Here’s the complete LaTeX code with the equation and the explanation of each component:
 
 ```latex
 \documentclass{article}
@@ -30,7 +22,19 @@ In LaTeX, the equation can be written as follows:
 S' = \text{ApplyStyle}(M, \text{OI}, \text{RetrieveStyle}(V, \text{SC}, \text{SG}))
 \]
 
+Where:
+\begin{align*}
+S' & : \text{Impersonated text} \\
+\text{ApplyStyle} & : \text{Function that applies the retrieved style to the original input} \\
+M & : \text{Pre-trained Mistral model} \\
+\text{OI} & : \text{Original input text} \\
+\text{RetrieveStyle} & : \text{Function that queries the vector database to retrieve the style} \\
+V & : \text{Vector database storing the styles} \\
+\text{SC} & : \text{Style criteria} \\
+\text{SG} & : \text{Style guidance}
+\end{align*}
+
 \end{document}
 ```
 
-This equation captures the essence of the framework, illustrating how the original input is transformed into the impersonated text using the specified style criteria and guidance.
+This LaTeX code includes the equation along with the explanations for each component, formatted properly for a document.
