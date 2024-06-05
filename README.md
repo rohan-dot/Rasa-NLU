@@ -21,3 +21,16 @@ Another Mistral model instance was used to incorporate the retrieved stylistic e
 - **Style Guidance (SG):** Instructions for perturbing the original text to align with the target author's style.
 
 An example of OI, SC, and SG is provided in the appendix. This concise framework enabled effective and accurate authorship impersonation.
+
+\documentclass{article}
+\usepackage{amsmath}
+
+\begin{document}
+
+\[
+S' = \text{ApplyStyle}(M, \text{OI}, \text{RetrieveStyle}(V, \text{SC}, \text{SG}))
+\]
+
+\end{document}
+
+
