@@ -1,46 +1,5 @@
-I'm# Rasa-NLU
+# Rasa-NLU
 Interning for convergys I made a chatbot for password reset using rasa-nlu.
 I trained the bot for password reset functionalities adding the T-opt service and Lanid of the employee and trained it via own examples to make it's answer seem more human like rather than robotic
 
-To calculate the weighted F1 score, we need to take into account the F1 scores of each class and their respective supports. The formula for the weighted F1 score is:
-
-\[ \text{Weighted F1 Score} = \frac{\sum (\text{support}_i \times \text{F1 score}_i)}{\sum \text{support}_i} \]
-
-From the images, the F1 scores and supports are as follows:
-
-- T1006: F1 score = 0.8739495798319329, support = 64
-- T1040: F1 score = 0.0, support = 6
-- T1055: F1 score = 0.1111111111111111, support = 17
-- T1059: F1 score = 0.8127659574468086, support = 197
-- T1068: F1 score = 0.5586592178770949, support = 68
-- T1078: F1 score = 0.0, support = 3
-- T1083: F1 score = 0.0, support = 2
-- T1110: F1 score = 0.15384615384615385, support = 11
-- T1202: F1 score = 0.7500000000000001, support = 33
-- T1204: F1 score = 0.9090909090909091, support = 6
-- T1222: F1 score = 0.5185185185185185, support = 20
-- T1499: F1 score = 0.7529411764705882, support = 44
-- T1552: F1 score = 0.16666666666666669, support = 11
-- T1588: F1 score = 0.0, support = 1
-- T1592: F1 score = 0.464, support = 58
-- T1600: F1 score = 0.0, support = 8
-- T1608: F1 score = 0.7599999999999999, support = 29
-- T1611: F1 score = 0.0, support = 3
-
-Let's compute the weighted F1 score using the provided data.
-
-First, let's sum the product of the F1 score and support for each class:
-
-\[ \sum (\text{support}_i \times \text{F1 score}_i) \]
-
-Then, sum all the supports:
-
-\[ \sum \text{support}_i \]
-
-Finally, compute the weighted F1 score:
-
-\[ \text{Weighted F1 Score} = \frac{\sum (\text{support}_i \times \text{F1 score}_i)}{\sum \text{support}_i} \]
-
-Let's perform these calculations.
-
-The weighted F1 score is approximately **0.6690**.
+The rapid advancements in Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) techniques have introduced significant challenges in information security, particularly authorship impersonation. This threat involves malicious actors mimicking the writing style of legitimate authors to disseminate false information, conduct influence operations, or compromise sensitive communications. For government entities, the integrity of communications is paramount, making it crucial to develop robust verification systems to protect against such threats. In our research, we perform authorship impersonation using LLMs and RAG techniques to highlight vulnerabilities in current communication systems. We simulate scenarios where adversaries use these technologies to replicate authoritative voices and infiltrate official communications. Our approach includes developing and testing advanced models to accurately distinguish between legitimate and impersonated texts, using performance and linguistic metrics to assess the effectiveness of our models against sophisticated impersonation attempts, and analyzing real-world applications and potential impacts of authorship impersonation on government operations. Our findings reveal significant weaknesses in current authorship verification systems when faced with advanced impersonation techniques using LLMs and RAG. Key results include the failure of existing models to detect subtle stylistic differences introduced by sophisticated impersonation techniques, the necessity for more advanced and adaptive verification models, and the potential for widespread misinformation and disruption of command and control (C2) systems if these vulnerabilities are not addressed. Governments must develop and implement sophisticated authorship verification models to accurately verify communications and prevent impersonation. Military C2 systems need robust authorship verification tools to maintain operational security and effectiveness during crises and conflicts. Protecting the integrity of public communications is essential to prevent misinformation and maintain public confidence in government operations. Sharing knowledge and techniques for authorship verification with allied nations is crucial for creating a unified front against these threats. By focusing on this issue at the 2024 INFOPAC Symposium, we can advance our understanding of the threat landscape, develop more effective verification systems, and ensure the security of government communications. This abstract provides a comprehensive framework for discussing the critical aspects of authorship impersonation, addressing government needs, and fostering collaboration among key stakeholders. All research and discussions will adhere to ethical guidelines, ensuring the responsible development and deployment of authorship verification technologies. This proposal draws on insights from leading researchers and practitioners in the field of authorship verification and information security. We extend our gratitude to all contributors and stakeholders committed to safeguarding the integrity of government communications. This abstract emphasizes the importance of addressing authorship impersonation within the context of information warfare, highlighting a pressing security concern, and contributing to the overall theme of ensuring information advantage at the 2024 INFOPAC Symposium.
