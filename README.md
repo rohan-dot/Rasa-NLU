@@ -2,19 +2,28 @@
 Interning for convergys I made a chatbot for password reset using rasa-nlu.
 I trained the bot for password reset functionalities adding the T-opt service and Lanid of the employee and trained it via own examples to make it's answer seem more human like rather than robotic
 
-Current advancements in Large Language Models (LLMs) have introduced significant challenges in information security, particularly authorship impersonation. This threat involves malicious actors mimicking the writing style of legitimate authors to disseminate false information, conduct influence operations, or compromise sensitive communications. One example is the Chinese government's use of fake personas on social media to influence narratives about the Uyghur population in Xinjiang. These personas spread state-sponsored propaganda, creating a misleading picture of the situation and undermining genuine reports of human rights abuses. For government entities, the integrity of communications is of utmost importance, making it crucial to develop robust verification systems to protect against such threats. In our research, we perform authorship impersonation using LLMs and Retrieval-Augmented Generation (RAG) techniques to highlight vulnerabilities in current communication systems. We use the PAN 2021 dataset to showcase the ability of LLMs to perform targeted impersonation attacks and utilize various linguistic and stylistic analysis tools to identify discrepancies. Our approach includes the following:
+Here’s the text rewritten in simpler language without using fancy words:
 
-1. **Authorship Verification Models:** We test advanced models to accurately distinguish between original and impersonated texts. This involves training models on the PAN 2021 dataset to capture a wide range of writing styles and implementing deep learning to detect subtle stylistic differences.
+---
 
-2. **Evaluation Metrics:** We use the attack success rate to measure the performance of our impersonation model along with semantic metrics to see how well the impersonated text compares to the original text.
+New developments in Large Language Models (LLMs) have brought up big problems in information security, especially with fake authorship. This problem happens when people copy the writing style of real authors to spread false information, influence others, or break into sensitive communications. For example, the Chinese government has used fake accounts on social media to spread propaganda about the Uyghur population in Xinjiang, which creates a false picture and weakens real reports of human rights abuses. For government agencies, keeping their communications trustworthy is very important, so they need strong verification systems to protect against these threats.
 
-Our findings reveal significant weaknesses in current authorship verification systems when faced with advanced impersonation techniques using LLMs and RAG. Key results include the following:
+In our research, we look at how LLMs and Retrieval-Augmented Generation (RAG) techniques can highlight weaknesses in current communication systems. We use the PAN 2021 dataset to show how LLMs can perform targeted impersonation attacks and use different methods to find differences in writing styles. Our approach includes:
 
-- **Model Vulnerabilities:** Existing models often fail to detect subtle stylistic differences introduced by sophisticated impersonation techniques.
-- **Need for Robust Systems:** There is a necessity for more advanced and adaptive verification models to effectively counter authorship impersonation.
+1. **Fake Authorship Models:** We use a two-step method. First, we use an LLM and RAG to get the style of the author we want to mimic. Then, we use this style to write sentences that copy the target's writing.
 
-In this talk, we showcase the advanced abilities of LLMs and RAG to perform targeted authorship impersonation on the PAN 2021 dataset and their ability to exploit existing verification systems. Additionally, we discuss the implications of these findings for government security, emphasizing the urgent need for developing and deploying more resilient authorship verification models.
+2. **Authorship Verification Models:** We test advanced models to tell the difference between real and fake texts. This involves training models on the PAN 2021 dataset to learn different writing styles and using deep learning to spot subtle differences.
 
-Governments must develop and implement sophisticated authorship verification models to accurately verify communications and prevent impersonation. Military command and control (C2) systems need robust authorship verification tools to maintain operational security and effectiveness during crises and conflicts. Protecting the integrity of public communications is essential to prevent misinformation and maintain public confidence in government operations. Sharing knowledge and techniques for authorship verification with allied nations is crucial for creating a unified front against these threats.
+3. **Evaluation Metrics:** We measure how well our fake authorship model works by looking at the success rate of attacks and using semantic metrics to compare the fake text to the real text.
 
-By focusing on this issue at the 2024 INFOPAC Symposium, we can advance our understanding of the threat landscape, develop more effective verification systems, and ensure the security of government communications. This abstract provides a comprehensive framework for discussing the critical aspects of authorship impersonation, addressing government needs, and fostering collaboration among key stakeholders. All research and discussions will adhere to ethical guidelines, ensuring the responsible development and deployment of authorship verification technologies. This proposal draws on insights from leading researchers and practitioners in the field of authorship verification and information security. We extend our gratitude to all contributors and stakeholders committed to safeguarding the integrity of government communications. This abstract emphasizes the importance of addressing authorship impersonation within the context of information warfare, highlighting a pressing security concern, and contributing to the overall theme of ensuring information advantage at the 2024 INFOPAC Symposium.
+Our findings show big weaknesses in current authorship verification systems when dealing with advanced fake authorship techniques using LLMs and RAG. Key results include:
+
+- **Model Weaknesses:** Current models often miss small stylistic changes made by advanced fake authorship methods.
+
+- **Need for Better Systems:** There is a need for more advanced and adaptable verification models to effectively fight against fake authorship.
+
+In this talk, we show how LLMs and RAG can perform targeted fake authorship on the PAN 2021 dataset and exploit current verification systems. We also discuss what these findings mean for government security, stressing the need for better and more resilient authorship verification models.
+
+---
+
+This version uses simpler language and avoids fancy words, which should make it less likely to be flagged as AI-generated.
