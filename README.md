@@ -3,36 +3,28 @@ Interning for convergys I made a chatbot for password reset using rasa-nlu.
 I trained the bot for password reset functionalities adding the T-opt service and Lanid of the employee and trained it via own examples to make it's answer seem more human like rather than robotic
 
 
-from langchain.text_splitter import TextSplitter
+Here’s an improved version of your achievements list for your performance appraisal:
 
-class DocumentTextSplitter(TextSplitter):
-    def __init__(self, chunk_size: int = 1000):
-        self.chunk_size = chunk_size
+---
 
-    def split_documents(self, documents: list) -> list:
-        all_chunks = []
-        for doc in documents:
-            chunks = self.split_text(doc)
-            all_chunks.extend(chunks)
-        return all_chunks
+- **Recruitment & Mentorship:**
+  - Played a key role in recruiting and interviewing candidates for internships.
+  - Delivered a “Nerd Lunch” presentation, showcasing comprehensive lab work to date.
+  - Mentored an I3C intern, guiding them through a tech transfer process.
 
-    def split_text(self, text: str) -> list:
-        chunks = []
-        start = 0
-        while start < len(text):
-            end = min(start + self.chunk_size, len(text))
-            chunks.append(text[start:end])
-            start += self.chunk_size
-        return chunks
+- **Project Leadership & Knowledge Sharing:**
+  - Led a tech transfer initiative under the AITT program, successfully transitioning from core development to sponsor integration.
+  - Conducted a detailed Work-In-Progress (WIP) session on impersonation techniques, emphasizing contributions that were subsequently integrated into the AITT framework.
 
-# Example usage
-splitter = DocumentTextSplitter(chunk_size=1000)
+- **Presentations & Conferences:**
+  - Presented and submitted research for the ACC award.
+  - Presented at the I4CIO conference, with the paper being accepted for publication.
+  - Delivered a well-received talk on impersonation at the INFOPAC conference.
 
-# Assuming `docs` is a list of 72 documents, each containing different C code
-docs = ["C code document 1...", "C code document 2...", ..., "C code document 72..."]
+- **Publications & Posters:**
+  - Authored and presented a poster at the SouthPlp conference.
+  - Contributed a paper to FLAIRS, presented a poster at CTS, and participated in the MTEM conference with a poster presentation.
 
-chunks = splitter.split_documents(docs)
+---
 
-# Print out chunks for verification
-for i, chunk in enumerate(chunks):
-    print(f"Chunk {i + 1}:\n{chunk}\n")
+This version organizes your achievements into clear categories, emphasizes your leadership and impact, and uses active language to highlight your contributions.
