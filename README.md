@@ -3,6 +3,150 @@ Interning for convergys I made a chatbot for password reset using rasa-nlu.
 I trained the bot for password reset functionalities adding the T-opt service and Lanid of the employee and trained it via own examples to make it's answer seem more human like rather than robotic
 
 
+import os
+import git
+import glob
+import faiss
+import torch
+from tqdm import tqdm
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from sentence_transformers import SentenceTransformer
+
+# Configuration
+GITHUB_REPO_URL = 'https://github.com/your-username/your-c-repo.git'
+LOCAL_REPO_PATH = './c_repo'
+CHUNK_SIZE = 512  # Number of characters per chunk
+EMBEDDING_DIM = 768  # Depends on the embedding model used
+EMBEDDING_MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
+LLM_MODEL_NAME = 'mistralai/Mistral-7B-Instruct-v0.1'
+
+def clone_repo(repo_url, repo_path):
+    if not os.path.exists(repo_path):
+        print(f'Cloning repository from {repo_url}...')
+        git.Repo.clone_from(repo_url, repo_path)
+    else:
+        print('Repository already cloned.')
+
+def read_c_files(repo_path):
+    print('Reading C files...')
+    c_files = glob.glob(os.path.join(repo_path, '**/*.c'), recursive=True)
+    file_contents = {}
+    for file in c_files:
+        with open(file, 'r', encoding='utf-8') as f:
+            file_contents[file] = f.read()
+    return file_contents
+
+def chunk_code(file_contents):
+    print('Chunking code...')
+    chunks = []
+    metadata = []
+    for file_path, content in file_contents.items():
+        for i in range(0, len(content), CHUNK_SIZE):
+            chunk = content[i:i+CHUNK_SIZE]
+            chunks.append(chunk)
+            metadata.append({
+                'file_path': file_path,
+                'chunk_index': i // CHUNK_SIZE
+            })
+    return chunks, metadata
+
+def embed_chunks(chunks, model_name):
+    print('Embedding chunks...')
+    model = SentenceTransformer(model_name)
+    embeddings = model.encode(chunks, show_progress_bar=True)
+    return embeddings
+
+def build_faiss_index(embeddings, embedding_dim):
+    print('Building FAISS index...')
+    index = faiss.IndexFlatL2(embedding_dim)
+    index.add(embeddings)
+    return index
+
+def retrieve_relevant_chunks(query, index, embeddings, chunks, metadata, model_name, top_k=5):
+    print('Embedding query...')
+    model = SentenceTransformer(model_name)
+    query_embedding = model.encode([query])
+    distances, indices = index.search(query_embedding, top_k)
+    retrieved_chunks = []
+    for idx in indices[0]:
+        retrieved_chunks.append({
+            'chunk': chunks[idx],
+            'metadata': metadata[idx]
+        })
+    return retrieved_chunks
+
+def load_llm(model_name):
+    print('Loading LLM...')
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto')
+    return tokenizer, model
+
+def generate_answer(question, context, tokenizer, model):
+    prompt = f"Answer the following question based on the provided context:\n\nContext:\n{context}\n\nQuestion: {question}\n\nAnswer:"
+    inputs = tokenizer.encode(prompt, return_tensors='pt').to(model.device)
+    outputs = model.generate(inputs, max_length=512)
+    answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return answer
+
+def main():
+    # Step 1: Clone the GitHub repository
+    clone_repo(GITHUB_REPO_URL, LOCAL_REPO_PATH)
+
+    # Step 2: Read C files from the repository
+    file_contents = read_c_files(LOCAL_REPO_PATH)
+
+    # Step 3: Chunk the code
+    chunks, metadata = chunk_code(file_contents)
+
+    # Step 4: Embed the chunks
+    embeddings = embed_chunks(chunks, EMBEDDING_MODEL_NAME)
+
+    # Step 5: Build the FAISS index
+    index = build_faiss_index(embeddings, EMBEDDING_DIM)
+
+    # Step 6: Load the LLM
+    tokenizer, model = load_llm(LLM_MODEL_NAME)
+
+    # User interaction loop
+    while True:
+        question = input('\nEnter your question (or type "exit" to quit): ')
+        if question.lower() == 'exit':
+            break
+
+        # Optional: Specify a file to look at
+        file_filter = input('Specify a file to look at (press Enter to skip): ')
+        if file_filter:
+            filtered_indices = [i for i, meta in enumerate(metadata) if file_filter in meta['file_path']]
+            if not filtered_indices:
+                print('No matching files found. Proceeding without file filter.')
+        else:
+            filtered_indices = None
+
+        # Step 7: Retrieve relevant chunks
+        retrieved_chunks = retrieve_relevant_chunks(
+            question,
+            index if not filtered_indices else faiss.IndexProxy([index.reconstruct(i) for i in filtered_indices]),
+            embeddings if not filtered_indices else embeddings[filtered_indices],
+            chunks if not filtered_indices else [chunks[i] for i in filtered_indices],
+            metadata if not filtered_indices else [metadata[i] for i in filtered_indices],
+            EMBEDDING_MODEL_NAME
+        )
+
+        # Combine retrieved chunks as context
+        context = '\n'.join([chunk['chunk'] for chunk in retrieved_chunks])
+
+        # Step 8: Generate the answer using LLM
+        answer = generate_answer(question, context, tokenizer, model)
+        print(f'\nAnswer:\n{answer}')
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
 To create a chunker for a Retrieval-Augmented Generation (RAG) approach that allows you to access and edit an entire codebase using a Large Language Model (LLM), you'll need to follow a systematic process. This involves breaking down your codebase into manageable chunks, indexing them for efficient retrieval, and setting up a pipeline where the LLM can reason about the code and suggest or implement changes. Below is a step-by-step guide to help you achieve this.
 
 ---
