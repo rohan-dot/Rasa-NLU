@@ -28,3 +28,33 @@ for filename in os.listdir(directory):
 
 # Print the list of file contents
 print(file_contents)
+
+
+
+
+
+
+
+
+
+import os
+
+# Specify the directory you want to work with
+directory = 'A'  # Replace 'A' with your actual directory path if needed
+
+# Iterate over all files in the directory
+for filename in os.listdir(directory):
+    # Construct full file path
+    filepath = os.path.join(directory, filename)
+    
+    # Check if it's a file (and not a directory)
+    if os.path.isfile(filepath):
+        # Skip files that already end with '.txt'
+        if not filename.endswith('.txt'):
+            # Create new file name by adding '.txt'
+            new_filename = filename + '.txt'
+            new_filepath = os.path.join(directory, new_filename)
+            
+            # Rename the file
+            os.rename(filepath, new_filepath)
+            print(f'Renamed "{filename}" to "{new_filename}"')
