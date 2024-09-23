@@ -270,3 +270,236 @@ conversational_qa = ConversationalRetrievalChain.from_llm(
     memory=memory,
     combine_docs_chain_kwargs={'prompt': prompt}
 )
+
+
+
+
+xxxxx
+
+
+
+
+Certainly! I'll incorporate the custom prompt template into the original code to enhance your RAG application with a personalized conversational experience. This will allow you to customize how the assistant interacts with users, potentially improving the quality and relevance of the answers.
+
+Below is the updated script with the custom prompt template integrated into the conversational retrieval chain.
+
+---
+
+### **Updated Script with Custom Prompt Template**
+
+```python
+from langchain.text_splitter import TextSplitter
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.document_loaders import TextLoader
+from langchain.llms import OpenAI
+from langchain.docstore.document import Document
+from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
+from langchain.prompts import PromptTemplate
+import re
+
+# Custom code function splitter
+class CodeFunctionSplitter(TextSplitter):
+    def split_text(self, text):
+        pattern = r'^\w[\w\s\*]*\s+\**\s*\w+\s*\([^\)]*\)\s*\{'
+        matches = list(re.finditer(pattern, text, re.MULTILINE))
+        splits = []
+        for i, match in enumerate(matches):
+            start = match.start()
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+            function_code = text[start:end].strip()
+            splits.append(function_code)
+        return splits
+
+# Load the code file
+loader = TextLoader('delete.c', encoding='utf-8')
+code_data = loader.load()[0].page_content
+
+# Initialize the custom splitter
+splitter = CodeFunctionSplitter()
+code_chunks = splitter.split_text(code_data)
+
+# Create documents
+documents = [Document(page_content=chunk) for chunk in code_chunks]
+
+# Generate embeddings and build the vector store
+embeddings = OpenAIEmbeddings(openai_api_key='YOUR_OPENAI_API_KEY')
+vector_store = FAISS.from_documents(documents, embeddings)
+
+# Initialize the language model
+llm = OpenAI(temperature=0, openai_api_key='YOUR_OPENAI_API_KEY')
+
+# Initialize conversational memory
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
+# Define a custom prompt template
+prompt_template = """You are an expert assistant helping with questions about C code, specifically the SQLite 'delete.c' source file. Use the provided code snippets to answer the user's questions.
+
+{chat_history}
+User: {question}
+Assistant:"""
+
+prompt = PromptTemplate(
+    template=prompt_template,
+    input_variables=["chat_history", "question"]
+)
+
+# Create the conversational retrieval QA chain with the custom prompt
+conversational_qa = ConversationalRetrievalChain.from_llm(
+    llm=llm,
+    retriever=vector_store.as_retriever(),
+    memory=memory,
+    combine_docs_chain_kwargs={'prompt': prompt}
+)
+
+# Start a conversation
+print("Welcome to the Code QA Assistant. Ask me anything about the 'delete.c' code.")
+print("Type 'exit' or 'quit' to end the conversation.")
+
+while True:
+    question = input("You: ")
+    if question.lower() in ["exit", "quit"]:
+        print("Assistant: Goodbye!")
+        break
+    result = conversational_qa({"question": question})
+    answer = result["answer"]
+    print(f"Assistant: {answer}")
+```
+
+**Please replace `'YOUR_OPENAI_API_KEY'` with your actual OpenAI API key.**
+
+---
+
+### **Explanation of Changes**
+
+#### **1. Imported `PromptTemplate`**
+
+```python
+from langchain.prompts import PromptTemplate
+```
+
+We import `PromptTemplate` from `langchain.prompts` to create a custom prompt.
+
+#### **2. Defined the Custom Prompt Template**
+
+```python
+prompt_template = """You are an expert assistant helping with questions about C code, specifically the SQLite 'delete.c' source file. Use the provided code snippets to answer the user's questions.
+
+{chat_history}
+User: {question}
+Assistant:"""
+```
+
+- **Purpose:** To guide the language model to behave as an expert assistant knowledgeable about the `delete.c` code.
+- **Components:**
+  - **Instruction:** Sets the context that the assistant is an expert on the `delete.c` source file.
+  - **{chat_history}:** Includes the conversation history for context.
+  - **{question}:** The user's current question.
+  - **Assistant:** Signals where the assistant's response should begin.
+
+#### **3. Created the `PromptTemplate` Instance**
+
+```python
+prompt = PromptTemplate(
+    template=prompt_template,
+    input_variables=["chat_history", "question"]
+)
+```
+
+- **template:** The custom prompt string we defined.
+- **input_variables:** Specifies which variables will be filled in the template.
+
+#### **4. Updated the Conversational Retrieval QA Chain**
+
+```python
+conversational_qa = ConversationalRetrievalChain.from_llm(
+    llm=llm,
+    retriever=vector_store.as_retriever(),
+    memory=memory,
+    combine_docs_chain_kwargs={'prompt': prompt}
+)
+```
+
+- **combine_docs_chain_kwargs:** A dictionary of keyword arguments passed to the document combination chain.
+- **'prompt': prompt:** Passes the custom prompt to the chain.
+
+#### **5. Improved User Interaction Messages**
+
+Added messages to guide the user:
+
+```python
+print("Welcome to the Code QA Assistant. Ask me anything about the 'delete.c' code.")
+print("Type 'exit' or 'quit' to end the conversation.")
+```
+
+This clarifies that the assistant specializes in the `delete.c` code and provides instructions for ending the session.
+
+---
+
+### **Testing the Updated Application**
+
+You can now run the script and interact with the assistant using your custom prompt. Here's an example interaction:
+
+**Example Conversation:**
+
+```
+Welcome to the Code QA Assistant. Ask me anything about the 'delete.c' code.
+Type 'exit' or 'quit' to end the conversation.
+You: What is the purpose of the sqlite3DeleteFrom function?
+Assistant: The `sqlite3DeleteFrom` function generates code to implement the DELETE FROM statement in SQLite. It handles the deletion of records from a specified table based on an optional WHERE clause, ORDER BY clause, and LIMIT clause. It also manages triggers, foreign keys, and views associated with the table.
+You: How does it handle views?
+Assistant: If the table to be deleted from is a view, `sqlite3DeleteFrom` realizes the view into an ephemeral table. This means it materializes the view's result set into a temporary table before performing the deletion. It also checks if the view has been properly initialized and handles any triggers associated with it.
+You: Does it check for foreign key constraints?
+Assistant: Yes, `sqlite3DeleteFrom` considers foreign key constraints. It uses functions like `sqlite3FkRequired` to determine if foreign key actions are needed and generates the appropriate code to enforce these constraints during the deletion process.
+You: quit
+Assistant: Goodbye!
+```
+
+### **Benefits of the Custom Prompt Template**
+
+- **Tailored Responses:** The assistant is instructed to focus on the `delete.c` code, providing more precise and relevant answers.
+- **Consistent Tone and Style:** By defining the assistant as an "expert assistant," the language model adopts a professional and knowledgeable tone.
+- **Enhanced Contextual Awareness:** The prompt includes `{chat_history}`, ensuring that the assistant considers the entire conversation when generating responses.
+
+### **Additional Tips**
+
+- **Modify the Prompt as Needed:** Feel free to adjust the prompt template to better suit your needs or to experiment with different instructions.
+- **Return Source Documents:** If you want the assistant to reference specific code snippets in its answers, set `return_source_documents=True` and adjust the prompt to include them.
+
+```python
+conversational_qa = ConversationalRetrievalChain.from_llm(
+    llm=llm,
+    retriever=vector_store.as_retriever(),
+    memory=memory,
+    return_source_documents=True,
+    combine_docs_chain_kwargs={'prompt': prompt}
+)
+```
+
+- **Adjusting the Prompt for Source Documents:**
+
+```python
+prompt_template = """You are an expert assistant helping with questions about C code, specifically the SQLite 'delete.c' source file. Use the provided code snippets to answer the user's questions.
+
+{context}
+
+{chat_history}
+User: {question}
+Assistant:"""
+
+prompt = PromptTemplate(
+    template=prompt_template,
+    input_variables=["context", "chat_history", "question"]
+)
+```
+
+In this case, `{context}` will include the retrieved code snippets, which the assistant can reference when answering.
+
+---
+
+### **Conclusion**
+
+By adding a custom prompt template to your RAG application, you can significantly improve the assistant's ability to provide accurate and context-aware answers. The prompt guides the language model's behavior, ensuring that it remains focused on the `delete.c` code and adheres to the desired tone and style.
+
+Feel free to further customize the prompt or any other aspect of the application to better suit your needs. If you have any more questions or need assistance with additional modifications, don't hesitate to ask!
