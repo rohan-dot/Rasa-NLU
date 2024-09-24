@@ -502,4 +502,200 @@ In this case, `{context}` will include the retrieved code snippets, which the as
 
 By adding a custom prompt template to your RAG application, you can significantly improve the assistant's ability to provide accurate and context-aware answers. The prompt guides the language model's behavior, ensuring that it remains focused on the `delete.c` code and adheres to the desired tone and style.
 
-Feel free to further customize the prompt or any other aspect of the application to better suit your needs. If you have any more questions or need assistance with additional modifications, don't hesitate to ask!
+Feel free to further customize the prompt or any other aspect of the application to better suit your needs. If you have any more questions or need assistance with additional modifications, don't hesitate to asxxxxx
+
+
+
+
+
+xxxxxxxxx
+
+
+
+
+import os
+import numpy as np
+import faiss
+import networkx as nx
+import openai
+from pycparser import c_ast, parse_file
+
+# Set your OpenAI API key
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
+class FunctionCallVisitor(c_ast.NodeVisitor):
+    def __init__(self, filename):
+        self.function_data = {}
+        self.current_function = None
+        self.filename = filename
+
+    def visit_FuncDef(self, node):
+        self.current_function = node.decl.name
+        # Extract function code
+        self.function_data[self.current_function] = {
+            'calls': [],
+            'code': self.get_code(node)
+        }
+        # Visit the body of the function to find function calls
+        self.visit(node.body)
+
+    def visit_FuncCall(self, node):
+        if self.current_function:
+            if isinstance(node.name, c_ast.ID):
+                called_function = node.name.name
+                self.function_data[self.current_function]['calls'].append(called_function)
+        self.generic_visit(node)
+
+    def get_code(self, node):
+        # Read the code directly from the file using node.coord
+        if node.coord and node.coord.file:
+            with open(self.filename, 'r') as f:
+                lines = f.readlines()
+            start_line = node.coord.line - 1
+            func_code = []
+            brace_count = 0
+            for line in lines[start_line:]:
+                func_code.append(line)
+                brace_count += line.count('{') - line.count('}')
+                if brace_count == 0:
+                    break
+            return ''.join(func_code)
+        else:
+            return ''
+
+def build_call_graph(function_data):
+    G = nx.DiGraph()
+    for function, data in function_data.items():
+        G.add_node(function, code=data['code'])
+        for called_function in data['calls']:
+            G.add_edge(function, called_function)
+    return G
+
+def generate_embeddings(function_data):
+    embeddings = {}
+    for function, data in function_data.items():
+        input_text = data['code']
+        if not input_text.strip():
+            continue  # Skip empty code blocks
+        response = openai.Embedding.create(
+            input=input_text,
+            engine='text-embedding-ada-002'
+        )
+        embeddings[function] = np.array(response['data'][0]['embedding'])
+    return embeddings
+
+def create_faiss_index(embeddings):
+    if not embeddings:
+        raise ValueError("No embeddings to index.")
+    dimension = len(next(iter(embeddings.values())))
+    index = faiss.IndexFlatL2(dimension)
+    function_list = list(embeddings.keys())
+    embedding_matrix = np.vstack([embeddings[func] for func in function_list]).astype('float32')
+    index.add(embedding_matrix)
+    return index, function_list
+
+def query_functions(query, index, function_list):
+    response = openai.Embedding.create(
+        input=query,
+        engine='text-embedding-ada-002'
+    )
+    query_embedding = np.array(response['data'][0]['embedding']).astype('float32')
+    k = 5  # Number of nearest neighbors
+    distances, indices = index.search(np.array([query_embedding]), k)
+    results = [function_list[idx] for idx in indices[0]]
+    return results
+
+class ConversationMemory:
+    def __init__(self):
+        self.history = []
+
+    def add_interaction(self, user_input, assistant_response):
+        self.history.append({'user': user_input, 'assistant': assistant_response})
+
+    def get_recent_history(self, n=3):
+        # Get the last n interactions
+        return self.history[-n:]
+
+def answer_question(query, index, function_list, function_data, graph, memory):
+    # Retrieve relevant functions
+    relevant_functions = query_functions(query, index, function_list)
+
+    # Expand the context using the function call graph
+    expanded_functions = set(relevant_functions)
+    for func in relevant_functions:
+        # Include functions called by and calling the relevant functions
+        expanded_functions.update(graph.successors(func))
+        expanded_functions.update(graph.predecessors(func))
+
+    # Build the context with code snippets
+    context = "\n\n".join([function_data[func]['code'] for func in expanded_functions])
+
+    # Retrieve recent conversation history
+    recent_history = memory.get_recent_history()
+    history_text = ""
+    for turn in recent_history:
+        history_text += f"User: {turn['user']}\nAssistant: {turn['assistant']}\n\n"
+
+    # Custom prompt
+    prompt = f"""
+You are an expert C code assistant.
+
+Conversation history:
+{history_text}
+
+Based on the following code snippets:
+
+{context}
+
+Answer the following question:
+
+{query}
+"""
+
+    response = openai.Completion.create(
+        engine='text-davinci-003',
+        prompt=prompt,
+        max_tokens=500,
+        temperature=0.2,
+        stop=["User:", "Assistant:"]
+    )
+    answer = response['choices'][0]['text'].strip()
+
+    # Add the interaction to memory
+    memory.add_interaction(query, answer)
+
+    return answer
+
+def main():
+    # Path to your C code file
+    code_file = 'delete.c'  # Replace with the path to your delete.c file
+
+    # Parse the C file
+    ast = parse_file(code_file, use_cpp=True)
+    call_visitor = FunctionCallVisitor(code_file)
+    call_visitor.visit(ast)
+    function_data = call_visitor.function_data
+
+    # Build the function call graph
+    G = build_call_graph(function_data)
+
+    # Generate embeddings for each function
+    embeddings = generate_embeddings(function_data)
+
+    # Create FAISS index
+    faiss_index, function_list = create_faiss_index(embeddings)
+
+    # Initialize conversation memory
+    memory = ConversationMemory()
+
+    # Interaction loop
+    print("Type 'exit' or 'quit' to end the session.")
+    while True:
+        query = input("User: ")
+        if query.lower() in ['exit', 'quit']:
+            break
+        answer = answer_question(query, faiss_index, function_list, function_data, G, memory)
+        print("Assistant:", answer)
+
+if __name__ == '__main__':
+    main()
