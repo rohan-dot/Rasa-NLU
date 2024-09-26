@@ -719,3 +719,19 @@ shortest_text = df.loc[df['text_length'].idxmin()]['text']
 
 print("Longest text:", longest_text)
 print("Shortest text:", shortest_text)
+
+
+
+import pandas as pd
+
+# Example DataFrame
+data = {'text': ['short text', 'medium length text', 'a much longer piece of text', 'tiny sentence']}
+df = pd.DataFrame(data)
+
+# Function to count words in a text
+df['word_count'] = df['text'].apply(lambda x: len(x.split()))
+
+# Calculate the average number of words
+average_word_count = df['word_count'].mean()
+
+print("Average number of words:", average_word_count)
