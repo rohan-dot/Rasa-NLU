@@ -699,3 +699,23 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+
+
+import pandas as pd
+
+# Example DataFrame
+data = {'text': ['short', 'medium length text', 'a much longer piece of text', 'tiny']}
+df = pd.DataFrame(data)
+
+# Calculate lengths of each text entry
+df['text_length'] = df['text'].apply(len)
+
+# Find the longest and shortest text
+longest_text = df.loc[df['text_length'].idxmax()]['text']
+shortest_text = df.loc[df['text_length'].idxmin()]['text']
+
+print("Longest text:", longest_text)
+print("Shortest text:", shortest_text)
