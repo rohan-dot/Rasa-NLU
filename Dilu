@@ -734,4 +734,116 @@ df['word_count'] = df['text'].apply(lambda x: len(x.split()))
 # Calculate the average number of words
 average_word_count = df['word_count'].mean()
 
+
+
+
+import os
+import re
+import nltk
+import spacy
+import PyPDF2
+from typing import List
+
+# Download required NLTK data
+nltk.download('punkt')
+
+# Load SpaCy model for semantic processing
+nlp = spacy.load('en_core_web_sm')
+
+def extract_text_from_pdf(pdf_path: str) -> str:
+    """
+    Extracts text from a PDF file.
+    """
+    text = ""
+    with open(pdf_path, 'rb') as file:
+        reader = PyPDF2.PdfReader(file)
+        for page_num in range(len(reader.pages)):
+            page = reader.pages[page_num]
+            text += page.extract_text()
+    return text
+
+def clean_text(text: str) -> str:
+    """
+    Cleans extracted text by removing unwanted characters and multiple spaces.
+    """
+    # Remove non-printable characters
+    text = ''.join(filter(lambda x: x.isprintable(), text))
+    # Replace multiple spaces/newlines with a single space
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+def split_into_sentences(text: str) -> List[str]:
+    """
+    Splits text into sentences using NLTK's sentence tokenizer.
+    """
+    sentences = nltk.tokenize.sent_tokenize(text)
+    return sentences
+
+def semantic_chunking(sentences: List[str], max_tokens: int = 500) -> List[str]:
+    """
+    Chunks sentences into semantically coherent chunks based on max token length.
+    """
+    chunks = []
+    current_chunk = ''
+    current_length = 0
+
+    for sentence in sentences:
+        doc = nlp(sentence)
+        sentence_length = len(doc)
+        if current_length + sentence_length <= max_tokens:
+            current_chunk += ' ' + sentence
+            current_length += sentence_length
+        else:
+            chunks.append(current_chunk.strip())
+            current_chunk = sentence
+            current_length = sentence_length
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
+    return chunks
+
+def apply_sliding_window(chunks: List[str], overlap: int = 50) -> List[str]:
+    """
+    Applies a sliding window to the chunks to maintain context between them.
+    """
+    windowed_chunks = []
+    for i in range(len(chunks)):
+        start = max(0, i - 1)
+        combined_chunk = ' '.join(chunks[start:i+1])
+        windowed_chunks.append(combined_chunk)
+    return windowed_chunks
+
+def process_pdf(pdf_path: str, max_tokens: int = 500, overlap: int = 50) -> List[str]:
+    """
+    Full processing pipeline for a single PDF.
+    """
+    raw_text = extract_text_from_pdf(pdf_path)
+    cleaned_text = clean_text(raw_text)
+    sentences = split_into_sentences(cleaned_text)
+    chunks = semantic_chunking(sentences, max_tokens=max_tokens)
+    windowed_chunks = apply_sliding_window(chunks, overlap=overlap)
+    return windowed_chunks
+
+def process_all_pdfs(directory_path: str, max_tokens: int = 500, overlap: int = 50) -> List[str]:
+    """
+    Processes all PDFs in a directory.
+    """
+    all_chunks = []
+    for filename in os.listdir(directory_path):
+        if filename.lower().endswith('.pdf'):
+            pdf_path = os.path.join(directory_path, filename)
+            print(f"Processing {pdf_path}...")
+            chunks = process_pdf(pdf_path, max_tokens=max_tokens, overlap=overlap)
+            all_chunks.extend(chunks)
+    return all_chunks
+
+# Example usage
+if __name__ == "__main__":
+    pdf_directory = 'path_to_your_pdf_folder'
+    chunks = process_all_pdfs(pdf_directory)
+    # Now you can proceed to generate embeddings or use the chunks in your RAG pipeline
+    print(f"Total chunks created: {len(chunks)}")
+
+
 print("Average number of words:", average_word_count)
