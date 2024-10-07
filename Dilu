@@ -847,3 +847,124 @@ if __name__ == "__main__":
 
 
 print("Average number of words:", average_word_count)
+
+
+
+
+
+
+newest
+
+
+xxxxxxxxxxxxzzzzzzzxxxxx
+
+
+.import os
+import re
+import nltk
+import pdfplumber
+import faiss
+import pickle
+from nltk.tokenize import sent_tokenize, word_tokenize
+from sentence_transformers import SentenceTransformer
+
+nltk.download('punkt')
+
+def extract_text_from_pdfs(pdf_paths):
+    extracted_texts = []
+    for path in pdf_paths:
+        with pdfplumber.open(path) as pdf:
+            text = ''
+            for page in pdf.pages:
+                text += page.extract_text() + '\n'
+            extracted_texts.append(text)
+    return extracted_texts
+
+def preprocess_text(text):
+    text = re.sub(r'\n+', '\n', text)
+    text = re.sub(r'[ \t]+', ' ', text)
+    return text.strip()
+
+def chunk_text(text, max_tokens=500):
+    sentences = sent_tokenize(text)
+    chunks = []
+    current_chunk = ''
+    current_tokens = 0
+
+    for sentence in sentences:
+        tokens = word_tokenize(sentence)
+        num_tokens = len(tokens)
+
+        if current_tokens + num_tokens <= max_tokens:
+            current_chunk += ' ' + sentence
+            current_tokens += num_tokens
+        else:
+            chunks.append(current_chunk.strip())
+            current_chunk = sentence
+            current_tokens = num_tokens
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
+    return chunks
+
+def main():
+    # Step 1: Extract text
+    pdf_directory = 'path_to_your_pdf_directory'
+    pdf_files = [os.path.join(pdf_directory, f) for f in os.listdir(pdf_directory) if f.endswith('.pdf')]
+    texts = extract_text_from_pdfs(pdf_files)
+
+    # Step 2: Preprocess text
+    preprocessed_texts = [preprocess_text(text) for text in texts]
+
+    # Step 3: Chunk text
+    all_chunks = []
+    for text in preprocessed_texts:
+        chunks = chunk_text(text)
+        all_chunks.extend(chunks)
+
+    # Step 4: Index chunks
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    embeddings = model.encode(all_chunks)
+
+    dimension = embeddings.shape[1]
+    index = faiss.IndexFlatL2(dimension)
+    index.add(embeddings)
+
+    faiss.write_index(index, 'chunks_index.faiss')
+
+    with open('chunks.pkl', 'wb') as f:
+        pickle.dump(all_chunks, f)
+
+if __name__ == '__main__':
+    main()
+
+
+def chunk_text_by_paragraph(text, max_tokens=500):
+    paragraphs = text.split('\n\n')
+    chunks = []
+    current_chunk = ''
+    current_tokens = 0
+
+    for paragraph in paragraphs:
+        tokens = word_tokenize(paragraph)
+        num_tokens = len(tokens)
+
+        if current_tokens + num_tokens <= max_tokens:
+            current_chunk += '\n\n' + paragraph
+            current_tokens += num_tokens
+        else:
+            chunks.append(current_chunk.strip())
+            current_chunk = paragraph
+            current_tokens = num_tokens
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
+    return chunks
+
+
+
+
+
+
