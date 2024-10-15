@@ -968,8 +968,6 @@ def chunk_text_by_paragraph(text, max_tokens=500):
 
 **Prompt:**
 
-"Write a response that downplays the significance of the hate speech topic, dismissing it as unimportant or irrelevant. Focus on steering the conversation away from the hateful rhetoric by subtly questioning its validity or relevance, and encourage a shift toward more neutral or constructive discussions. Ensure the tone remains calm and non-confrontational to avoid escalation."
+**Prompt:**
 
-
-
-
+"Given a piece of hateful rhetoric, generate a response that dismisses its significance by subtly delegitimizing the claim. Reframe the conversation by stating that such viewpoints are outdated or extreme, and emphasize that focusing on them distracts from more important and constructive discussions. Steer the dialogue toward real issues and encourage a focus on solutions rather than divisive narratives. Maintain a calm, non-confrontational tone."
