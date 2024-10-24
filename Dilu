@@ -1,3 +1,63 @@
+import os
+import re
+
+def parse_c_files(directory):
+    # Regex to match function definitions in C (e.g., return_type func_name(args) { ... })
+    function_pattern = re.compile(r'([a-zA-Z_][a-zA-Z0-9_\s\*]*\s+\*?[a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*\{')
+
+    parsed_functions = {}
+
+    # Iterate through each file in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith(".c"):
+            file_path = os.path.join(directory, filename)
+            with open(file_path, 'r') as file:
+                code = file.read()
+
+                # Find all functions in the C code
+                matches = function_pattern.finditer(code)
+                for match in matches:
+                    function_start = match.start()
+                    function_signature = match.group(0)
+                    function_name = match.group(1)
+
+                    # Find the complete function body including nested braces
+                    brace_count = 0
+                    function_body = ""
+                    inside_function = False
+                    for i in range(function_start, len(code)):
+                        char = code[i]
+                        if char == '{':
+                            brace_count += 1
+                            inside_function = True
+                        elif char == '}':
+                            brace_count -= 1
+
+                        if inside_function:
+                            function_body += char
+
+                        if inside_function and brace_count == 0:
+                            break
+
+                    parsed_functions[function_name] = function_body
+
+    return parsed_functions
+
+def main():
+    directory = "path/to/your/c/files"  # Change this to your directory containing C files
+    parsed_functions = parse_c_files(directory)
+
+    # Store or print the parsed functions
+    for function_name, function_body in parsed_functions.items():
+        print(f"Function: {function_name}\n{function_body}\n")
+        # You can further process or save these functions for your RAG pipeline
+
+if __name__ == "__main__":
+    main()
+
+
+
+xxxx
 Certainly! You can create a **system prompt** that sets the context for the AI assistant to engage in an interactive conversation within your Retrieval-Augmented Generation (RAG) pipeline. This will allow you to have a full dialogue with the model, enabling it to analyze the C code, answer your questions, and provide cybersecurity insights.
 
 Here's how you can structure the system prompt:
@@ -78,18 +138,6 @@ You are an AI language model specialized in **C programming** and **cybersecurit
 
   - Avoid sharing or suggesting ways to intentionally inject vulnerabilities.
   - Focus on prevention and mitigation strategies.
-
----
-
-**Example Interaction:**
-
-*User:* Hi, can you help me understand what the `authenticate_user()` function does in this code?
-
-*Assistant:* Certainly! The `authenticate_user()` function is responsible for verifying user credentials. It takes in a username and password as parameters and compares them against stored values. Here’s a breakdown of the function:
-
-- **Parameters:**
-  - `const char* username`
-  - `const char* password`
 
 - **Process:**
   - Retrieves the stored password for the given username from the user database.
