@@ -1252,3 +1252,53 @@ This exercise is intended solely for educational purposes to demonstrate how inf
 **Conclusion**
 
 By using this prompt, users can explore how messages can be manipulated and understand the importance of critical thinking and media literacy in evaluating information encountered online.
+
+
+
+
+aix
+
+
+
+import os
+import pycparser
+
+def parse_c_file(file_path):
+    with open(file_path, 'r') as file:
+        code = file.read()
+    parser = pycparser.CParser()
+    ast = parser.parse(code)
+    return ast
+
+def extract_functions(ast):
+    functions = []
+
+    class FunctionVisitor(pycparser.c_ast.NodeVisitor):
+        def visit_FuncDef(self, node):
+            functions.append(node)
+    
+    visitor = FunctionVisitor()
+    visitor.visit(ast)
+    return functions
+
+def chunk_code(code, functions, chunk_size=1000):
+    chunks = []
+    for func in functions:
+        func_code = code[func.coord.offset:func.coord.offset + func.coord.length]
+        if len(func_code) > chunk_size:
+            chunks.extend([func_code[i:i+chunk_size] for i in range(0, len(func_code), chunk_size)])
+        else:
+            chunks.append(func_code)
+    return chunks
+
+# Apply to all C files
+c_files = [f for f in os.listdir('.') if f.endswith('.c')]
+all_chunks = []
+
+for c_file in c_files:
+    ast = parse_c_file(c_file)
+    functions = extract_functions(ast)
+    with open(c_file, 'r') as file:
+        code = file.read()
+    chunks = chunk_code(code, functions)
+    all_chunks.extend(chunks)
