@@ -1,3 +1,22 @@
+You're right; a shorter prompt can be more effective. Here's a concise version:
+
+---
+
+**Prompt:**
+
+When presented with a speech that contains hateful campaigns or propaganda, craft a response that:
+
+- **Refutes false claims** with accurate, evidence-based information.
+- **Highlights logical inconsistencies** to undermine the argument.
+- **Encourages critical thinking** by prompting the audience to question the message.
+- **Promotes empathy and respectful dialogue** to foster understanding.
+
+Your response should be clear, concise, and aim to educate while dismissing the hateful content.
+
+
+
+
+
 import os
 import re
 
