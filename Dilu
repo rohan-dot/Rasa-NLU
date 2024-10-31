@@ -1,4 +1,74 @@
+import os
+import numpy as np
+import faiss
+from sentence_transformers import SentenceTransformer
+import pickle
 
+# Load documents (your existing list of dictionaries)
+documents = [...]  # Your list of documents
+
+# Load the embedding model
+model_name = 'mixbread-model-name'
+embedding_model = SentenceTransformer(model_name)
+
+# Generate embeddings and collect metadata
+embeddings = []
+metadata = []
+
+for doc in documents:
+    content = doc['content']
+    filename = doc['filename']
+    
+    embedding = embedding_model.encode(content)
+    
+    embeddings.append(embedding)
+    metadata.append({'filename': filename})
+
+# Convert embeddings to numpy array
+embedding_matrix = np.vstack(embeddings).astype('float32')
+
+# Create FAISS index
+embedding_dim = embedding_matrix.shape[1]
+index = faiss.IndexFlatL2(embedding_dim)
+index.add(embedding_matrix)
+
+# Save the index and metadata
+faiss.write_index(index, 'faiss_index.index')
+
+with open('metadata.pkl', 'wb') as f:
+    pickle.dump(metadata, f)
+
+# Function to search the FAISS index
+def search_faiss(query_text, index, embedding_model, metadata, documents, top_k=5):
+    query_embedding = embedding_model.encode(query_text).astype('float32')
+    distances, indices = index.search(np.array([query_embedding]), top_k)
+    
+    results = []
+    for i in range(len(indices[0])):
+        idx = indices[0][i]
+        result = {
+            'filename': metadata[idx]['filename'],
+            'content': documents[idx]['content'],
+            'distance': distances[0][i]
+        }
+        results.append(result)
+    return results
+
+# Example query
+query = "How does SQLite handle transactions?"
+results = search_faiss(query, index, embedding_model, metadata, documents)
+
+for res in results:
+    print(f"Filename: {res['filename']}, Distance: {res['distance']}")
+    print(f"Content snippet: {res['content'][:200]}")
+    print('-' * 80)
+
+
+
+
+
+
+xxxxx
 def chunk_c_files(directory_path, chunk_size=1024):
     documents = []
 
