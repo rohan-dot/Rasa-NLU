@@ -4,6 +4,258 @@ import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
 import pickle
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+# Part 1: Chunking .c files and Removing Comments
+
+def chunk_c_files(directory_path, chunk_size=None):
+    documents = []
+
+    # Regex pattern to remove comments, including multi-line comments with leading asterisks
+    pattern = re.compile(
+        r"""
+        # Match strings and characters to ignore them
+        (?P<string>"(?:\\.|[^"\\])*")|
+        (?P<char>'(?:\\.|[^'\\])*')|
+        # Match single-line comments
+        (?P<single_comment>//.*?$)|
+        # Match multi-line comments with optional leading whitespace and asterisks
+        (?P<multi_comment)/\*(?:\s*\*?.*?\n)*?\s*\*/\s*
+        """,
+        re.VERBOSE | re.MULTILINE
+    )
+
+    def remove_comments(code):
+        def replacer(match):
+            if match.group('string') or match.group('char'):
+                return match.group(0)
+            elif match.group('single_comment') or match.group('multi_comment'):
+                return ''
+            else:
+                return match.group(0)
+        return pattern.sub(replacer, code)
+
+    # Traverse the directory and its subdirectories
+    for root, dirs, files in os.walk(directory_path):
+        for filename in files:
+            if filename.endswith('.c'):
+                file_path = os.path.join(root, filename)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as file:
+                        content = file.read()
+                        # Remove comments from the code
+                        code_without_comments = remove_comments(content)
+
+                        if chunk_size:
+                            # Split content into chunks
+                            for i in range(0, len(code_without_comments), chunk_size):
+                                chunk = code_without_comments[i:i+chunk_size]
+                                document = {
+                                    'filename': filename,
+                                    'content': chunk
+                                }
+                                documents.append(document)
+                        else:
+                            document = {
+                                'filename': filename,
+                                'content': code_without_comments
+                            }
+                            documents.append(document)
+                except Exception as e:
+                    print(f"Error reading {file_path}: {e}")
+    return documents
+
+# Usage
+src_directory = '/path/to/sqlite/src'  # Replace with your actual path
+documents = chunk_c_files(src_directory)
+
+# Save the documents for later use
+with open('documents.pkl', 'wb') as f:
+    pickle.dump(documents, f)
+
+# Part 2: Generating Embeddings and Building FAISS Index
+
+# Load the embedding model
+model_name = 'mixbread-model-name'  # Replace with your embedding model's name
+embedding_model = SentenceTransformer(model_name)
+
+embeddings = []
+metadata = []
+
+for doc in documents:
+    content = doc['content']
+    filename = doc['filename']
+
+    # Generate embedding
+    embedding = embedding_model.encode(content)
+
+    embeddings.append(embedding)
+    metadata.append({'filename': filename})
+
+# Convert embeddings to numpy array
+embedding_matrix = np.vstack(embeddings).astype('float32')
+
+# Create FAISS index
+embedding_dim = embedding_matrix.shape[1]
+index = faiss.IndexFlatL2(embedding_dim)
+index.add(embedding_matrix)
+
+# Save the index and metadata
+faiss.write_index(index, 'faiss_index.index')
+
+with open('metadata.pkl', 'wb') as f:
+    pickle.dump(metadata, f)
+
+# Part 3: RAG Pipeline with Chat History using Mistral Model
+
+# Load the FAISS index and metadata
+index = faiss.read_index('faiss_index.index')
+
+with open('metadata.pkl', 'rb') as f:
+    metadata = pickle.load(f)
+
+with open('documents.pkl', 'rb') as f:
+    documents = pickle.load(f)
+
+# Load the Mistral model and tokenizer
+mistral_model_name = 'mistralai/Mistral-7B-v0.1'  # Replace with the correct model name if different
+tokenizer = AutoTokenizer.from_pretrained(mistral_model_name)
+model = AutoModelForCausalLM.from_pretrained(
+    mistral_model_name,
+    torch_dtype=torch.float16,  # Use float16 for efficiency, requires appropriate hardware
+    device_map='auto'  # Automatically assigns layers to devices (GPU/CPU)
+)
+
+# Ensure the model is in evaluation mode
+model.eval()
+
+# Function to combine query and history
+def combine_query_and_history(query, chat_history, history_length=3):
+    # Take the last 'history_length' exchanges
+    relevant_history = chat_history[-history_length:]
+    # Combine them into a single string
+    history_text = ""
+    for turn in relevant_history:
+        history_text += f"User: {turn['user']}\nAssistant: {turn['assistant']}\n"
+    # Append the current query
+    combined_text = history_text + f"User: {query}"
+    return combined_text
+
+# Function to construct the prompt
+def construct_prompt(query, chat_history, retrieved_docs):
+    # Build the conversation history
+    conversation = ""
+    for turn in chat_history:
+        conversation += f"User: {turn['user']}\nAssistant: {turn['assistant']}\n"
+    conversation += f"User: {query}\nAssistant:"
+
+    # Include retrieved code snippets
+    context = ""
+    for doc in retrieved_docs:
+        context += f"Filename: {doc['filename']}\nCode:\n{doc['content']}\n\n"
+
+    # Final prompt
+    prompt = f"""
+You are an AI assistant knowledgeable about the SQLite C codebase.
+
+Relevant code snippets:
+{context}
+
+Conversation history:
+{conversation}
+Provide a detailed answer to the user's latest question using the code snippets above and the conversation history.
+"""
+    return prompt.strip()
+
+# Function to retrieve documents
+def retrieve_documents(query, index, embedding_model, metadata, documents, chat_history, top_k=5):
+    # Combine query with chat history
+    combined_text = combine_query_and_history(query, chat_history)
+    # Encode the combined text
+    query_embedding = embedding_model.encode(combined_text).astype('float32')
+    # Perform the search
+    distances, indices = index.search(np.array([query_embedding]), top_k)
+    # Retrieve the corresponding documents
+    retrieved_docs = []
+    for i in range(len(indices[0])):
+        idx = indices[0][i]
+        doc = {
+            'filename': metadata[idx]['filename'],
+            'content': documents[idx]['content'],
+            'distance': distances[0][i]
+        }
+        retrieved_docs.append(doc)
+    return retrieved_docs
+
+# Function to generate response using Mistral
+def generate_response(prompt, max_new_tokens=500):
+    inputs = tokenizer(prompt, return_tensors='pt').to(model.device)
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            temperature=0.7,
+            do_sample=True,
+            top_p=0.95,
+            num_return_sequences=1
+        )
+    generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    # Extract the assistant's response from the generated text
+    # Assumes the assistant's response follows after the last 'Assistant:' in the prompt
+    response = generated_text.split('Assistant:')[-1].strip()
+    return response
+
+# Main RAG pipeline with chat history
+def rag_pipeline_with_history(query, chat_history, index, embedding_model, metadata, documents, top_k=5):
+    # Step 1: Retrieve relevant documents
+    retrieved_docs = retrieve_documents(query, index, embedding_model, metadata, documents, chat_history, top_k)
+
+    # Step 2: Construct prompt with history and retrieved documents
+    prompt = construct_prompt(query, chat_history, retrieved_docs)
+
+    # Step 3: Generate response using the Mistral model
+    response = generate_response(prompt)
+
+    # Step 4: Update chat history
+    chat_history.append({'user': query, 'assistant': response})
+
+    return response
+
+# Usage Example
+
+# Initialize chat history
+chat_history = []
+
+# User's first query
+query1 = "How does SQLite handle database transactions?"
+response1 = rag_pipeline_with_history(query1, chat_history, index, embedding_model, metadata, documents)
+print("Assistant:", response1)
+
+# User's follow-up query
+query2 = "Can you provide an example of starting a transaction?"
+response2 = rag_pipeline_with_history(query2, chat_history, index, embedding_model, metadata, documents)
+print("Assistant:", response2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+xxxyxzyxyxyxxuxuxy
+import os
+import re
+import numpy as np
+import faiss
+from sentence_transformers import SentenceTransformer
+import pickle
 import openai  # Make sure to install openai package: pip install openai
 
 # Set your OpenAI API key
