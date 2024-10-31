@@ -1,4 +1,76 @@
 import os
+import re
+
+def chunk_c_files(directory_path, chunk_size=None):
+    documents = []
+    
+    # Regex patterns
+    pattern = re.compile(
+        r"""
+        # Match strings and characters to ignore them
+        (?P<string>"(?:\\.|[^"\\])*")|
+        (?P<char>'(?:\\.|[^'\\])*')|
+        # Match single-line comments
+        (?P<single_comment>//.*?$)|
+        # Match multi-line comments
+        (?P<multi_comment>/\*.*?\*/s)
+        """,
+        re.VERBOSE | re.DOTALL | re.MULTILINE
+    )
+    
+    def remove_comments(code):
+        def replacer(match):
+            if match.group('string') or match.group('char'):
+                # Return the string or char as it is
+                return match.group(0)
+            elif match.group('single_comment') or match.group('multi_comment'):
+                # Replace comments with an empty string
+                return ''
+            else:
+                return match.group(0)
+        return pattern.sub(replacer, code)
+    
+    # Traverse the directory and its subdirectories
+    for root, dirs, files in os.walk(directory_path):
+        for filename in files:
+            if filename.endswith('.c'):
+                file_path = os.path.join(root, filename)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as file:
+                        content = file.read()
+                        # Remove comments from the code
+                        code_without_comments = remove_comments(content)
+                        
+                        if chunk_size:
+                            # Split content into chunks
+                            for i in range(0, len(code_without_comments), chunk_size):
+                                chunk = code_without_comments[i:i+chunk_size]
+                                document = {
+                                    'filename': filename,
+                                    'content': chunk
+                                }
+                                documents.append(document)
+                        else:
+                            document = {
+                                'filename': filename,
+                                'content': code_without_comments
+                            }
+                            documents.append(document)
+                except Exception as e:
+                    print(f"Error reading {file_path}: {e}")
+    return documents
+
+# Usage
+src_directory = '/path/to/sqlite/src'  # Replace with your actual path
+documents = chunk_c_files(src_directory)
+
+
+
+
+
+
+xxxxxx
+import os
 import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
