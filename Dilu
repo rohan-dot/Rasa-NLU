@@ -1,3 +1,68 @@
+
+import os
+
+def parse_c_files(directory):
+    parsed_functions = {}
+
+    # Iterate through each file in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith(".c"):
+            file_path = os.path.join(directory, filename)
+            with open(file_path, 'r') as file:
+                code = file.readlines()
+
+                inside_function = False
+                brace_count = 0
+                function_name = ""
+                function_body = ""
+
+                for line in code:
+                    line = line.strip()
+
+                    # Detect function start (naive approach)
+                    if not inside_function and "(" in line and ")" in line and ";" not in line and "#" not in line:
+                        if "{" in line:
+                            brace_count += 1
+                            inside_function = True
+                            function_name = line.split('(')[0].split()[-1]
+                            function_body = line + "\n"
+                        else:
+                            inside_function = True
+                            function_name = line.split('(')[0].split()[-1]
+                            function_body = line + "\n"
+                    elif inside_function:
+                        if "{" in line:
+                            brace_count += line.count("{")
+                        if "}" in line:
+                            brace_count -= line.count("}")
+
+                        function_body += line + "\n"
+
+                        if brace_count == 0:
+                            inside_function = False
+                            parsed_functions[function_name] = function_body
+                            function_body = ""
+
+    return parsed_functions
+
+def main():
+    directory = "path/to/your/c/files"  # Change this to your directory containing C files
+    parsed_functions = parse_c_files(directory)
+
+    # Store or print the parsed functions
+    for function_name, function_body in parsed_functions.items():
+        print(f"Function: {function_name}\n{function_body}\n")
+        # You can further process or save these functions for your RAG pipeline
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+xxxx
+
+
 You're right; a shorter prompt can be more effective. Here's a concise version:
 
 ---
