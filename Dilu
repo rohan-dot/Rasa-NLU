@@ -1,35 +1,35 @@
 import os
 
-def count_words_in_txt_files(base_folder):
-    total_word_count = 0
+# Initialize total word count
+total_words = 0
 
-    # Traverse through each numbered folder in the base directory
-    for folder in os.listdir(base_folder):
-        # Check if the folder name is a number
-        if folder.isdigit():
-            folder_path = os.path.join(base_folder, folder)
-            if os.path.isdir(folder_path):
-                # Construct path to the specific subfolder
-                subfolder_path = os.path.join(folder_path, f"original_300_nontarget_stories_for_{folder}")
-                if os.path.exists(subfolder_path) and os.path.isdir(subfolder_path):
-                    # Recursively go through all subfolders and count words in .txt files
-                    for root, _, files in os.walk(subfolder_path):
-                        for file_name in files:
-                            if file_name.endswith('.txt'):
-                                file_path = os.path.join(root, file_name)
-                                with open(file_path, 'r', encoding='utf-8') as file:
-                                    content = file.read()
-                                    # Count words in the file and add to the total count
-                                    total_word_count += len(content.split())
+# Set the base directory
+base_dir = 'larger_set'
 
-    return total_word_count
+# Traverse through the 25 numbered folders in 'larger_set'
+for folder_name in os.listdir(base_dir):
+    folder_path = os.path.join(base_dir, folder_name)
+    if os.path.isdir(folder_path) and folder_name.isdigit():
+        # Construct the subfolder name
+        subfolder_name = f'original_stories_nontargrt_{folder_name}'
+        subfolder_path = os.path.join(folder_path, subfolder_name)
+        if os.path.isdir(subfolder_path):
+            # Traverse through the numbered subfolders
+            for sub_sub_folder_name in os.listdir(subfolder_path):
+                sub_sub_folder_path = os.path.join(subfolder_path, sub_sub_folder_name)
+                if os.path.isdir(sub_sub_folder_path):
+                    # Iterate over text files in the sub-sub-folder
+                    for file_name in os.listdir(sub_sub_folder_path):
+                        file_path = os.path.join(sub_sub_folder_path, file_name)
+                        if os.path.isfile(file_path) and file_name.endswith('.txt'):
+                            # Read the text file and count words
+                            with open(file_path, 'r', encoding='utf-8') as file:
+                                text = file.read()
+                                words = text.split()
+                                total_words += len(words)
 
-# Set the base folder path to `larger_set`
-base_folder = './larger_set'
-
-# Count words and print the result
-total_words = count_words_in_txt_files(base_folder)
-print(f"Total number of words in all text files: {total_words}")
+# Print the total word count
+print(f'Total words: {total_words}')
 
 
 xxxx
