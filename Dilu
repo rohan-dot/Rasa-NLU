@@ -1,27 +1,18 @@
-Here's a refined version of the abstract with a stronger motivation, clearer integration of the BEND maneuvers within the RAG and prompt engineering pipelines, and detailed use of Judge LLM and the DeepEval library for evaluation:
+**Abstract**
 
----
+Misinformation and hate speech online amplify polarized narratives, disrupt social cohesion, and pose serious national security threats. The Russia-Ukraine conflict illustrates how rapidly misinformation can fuel divisions, emphasizing the urgent need for robust, adaptive countermeasures. We introduce the Influence Operation Counter Narrative Evaluation and Creation (ICONEC) framework, leveraging advanced AI to design and assess effective counter-narratives.
 
-The rise of disinformation and hate speech online has amplified polarization, disrupting social cohesion and threatening national security. Events like the Russia-Ukraine conflict demonstrate how rapidly misinformation can fuel divisions, emphasizing the urgent need for robust, adaptive countermeasures. In this research, we introduce the Influence Operation Counter Narrative Evaluation and Creation (ICONEC) framework, which leverages advanced AI to design and assess counter-narratives effectively.
+Our approach utilizes the BEND framework, categorizing influence operations via four primary tactics: distract, distort, engage, and enhance. By integrating these maneuvers within a Retrieval Augmented Generation (RAG) and prompt engineering pipeline, we generate counter-narratives that strategically address adversarial messaging. These counter-narratives align with the psychological and technological strategies of malign actors, targeting both content and community dynamics facilitating harmful information spread.
 
-Our approach is rooted in the BEND framework, which categorizes influence operations through maneuvers characterized by four primary tactics: distract, distort, dismay, and disrupt. By embedding these maneuvers within our Retrieval Augmented Generation (RAG) and prompt engineering pipelines, we craft counter-narratives that strategically respond to adversarial messaging. These counter-narratives are designed to align with the psychological and technological strategies used by malign actors, thereby targeting not just the content but the community dynamics that facilitate the spread of harmful information.
+We evaluate our approach on a corpus of 500,000 tweets related to the Ukraine bio-lab narrative. Our pipeline employs the Mistral-7B-Instruct-v0.2 model, Retrieval Augmented Generation (RAG), and LangChain to generate effective counter-narratives. Data from various online news sources is segmented, embedded using a sentence transformer, and stored in a FAISS vector store for efficient retrieval. Relevant information is retrieved via LangChain using these embeddings.
 
-The integration of BEND maneuvers into our RAG pipeline ensures that responses are contextually tailored to counteract specific disinformation tactics effectively. Our prompt engineering process further refines these responses, allowing the generation of varied narrative structures that resonate with different audience segments and neutralize the manipulative effects of influence operations. This approach supports real-time adaptation to evolving disinformation threats, making the counter-narratives timely and impactful.
+To assess the quality and effectiveness of the generated counter-narratives, we employ a dual-assessment methodology using the DeepEval library and Judge LLM. DeepEval quantitatively measures persuasiveness, coherence, and potential influence, ensuring narratives maintain factual accuracy while engaging the target audience. Judge LLM provides an additional analysis by assessing narrative effectiveness and alignment with counter-messaging objectives.
 
-To evaluate the quality and effectiveness of the generated counter-narratives, we deploy a dual-assessment methodology using the DeepEval library and Judge LLM. DeepEval quantitatively measures the persuasiveness, coherence, and potential influence of each response, ensuring that the narratives maintain factual accuracy while engaging the target audience. Judge LLM provides an additional layer of analysis by assessing the relative persuasiveness and strategic impact of the counter-narratives, enabling continuous refinement and optimization of our approach.
+Our integration of BEND maneuvers into the RAG pipeline ensures responses are contextually tailored to counteract specific disinformation tactics. Prompt engineering further refines these responses, generating varied narrative structures that resonate with different audience segments and neutralize manipulative influence operations. This approach enables real-time adaptation to evolving disinformation threats, making counter-narratives timely and impactful.
 
-Our findings underscore the significance of incorporating comprehensive frameworks like BEND into AI-driven solutions for counter-narratives. By simulating how adversaries use disinformation strategies and incorporating these tactics into our response generation, we effectively disrupt adversarial objectives and reinforce audience resilience. Preliminary results highlight a notable enhancement in countering harmful content and fostering a more informed, resilient public discourse.
+Our findings highlight the importance of incorporating frameworks like BEND into AI-driven counter-narrative solutions. By simulating adversarial disinformation strategies within our response generation, we effectively disrupt adversarial objectives and reinforce audience resilience. Preliminary results indicate significant enhancement in countering harmful content and promoting informed public discourse.
 
-This research provides actionable insights for practitioners and policymakers in the information environment, demonstrating how current AI capabilities can be innovatively deployed to combat disinformation. Transitioning from strategy to action, our work contributes to a scalable, adaptive model that strengthens defenses against influence operations and supports societal cohesion.
-
----
-
-Feel free to suggest further tweaks or specific details you'd like to include!
-
-
-
-
-
+This research offers actionable insights for practitioners and policymakers, demonstrating innovative deployment of AI capabilities to combat disinformation. Our work contributes a scalable, adaptive model that strengthens defenses against influence operations and supports societal cohesion.
 
 xxxx
 
