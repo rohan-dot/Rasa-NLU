@@ -1,19 +1,22 @@
-**Abstract**
+ Here's a prompt you can use to guide the LLM in following a chain of thought reasoning process to retrieve context and answer questions specifically related to a file name or a file name and function:
 
-Misinformation and hate speech online amplify polarized narratives, disrupt social cohesion, and pose serious national security threats. The Russia-Ukraine conflict illustrates how rapidly misinformation can fuel divisions, emphasizing the urgent need for robust, adaptive countermeasures. We introduce the Influence Operation Counter Narrative Evaluation and Creation (ICONEC) framework, leveraging advanced AI to design and assess effective counter-narratives.
+---
 
-Our approach utilizes the BEND framework, categorizing influence operations via four primary tactics: distract, distort, engage, and enhance. By integrating these maneuvers within a Retrieval Augmented Generation (RAG) and prompt engineering pipeline, we generate counter-narratives that strategically address adversarial messaging. These counter-narratives align with the psychological and technological strategies of malign actors, targeting both content and community dynamics facilitating harmful information spread.
+**Prompt:**
 
-We evaluate our approach on a corpus of 500,000 tweets related to the Ukraine bio-lab narrative. Our pipeline employs the Mistral-7B-Instruct-v0.2 model, Retrieval Augmented Generation (RAG), and LangChain to generate effective counter-narratives. Data from various online news sources is segmented, embedded using a sentence transformer, and stored in a FAISS vector store for efficient retrieval. Relevant information is retrieved via LangChain using these embeddings.
+"You are an expert assistant with access to a large codebase. I will provide you with either a file name, or a file name along with a function name. For each command, I want you to retrieve only the relevant context from the codebase, focus solely on the file name and/or function provided, and respond with answers strictly related to the specified file or function. Use chain-of-thought reasoning to ensure each step is directly connected to the file or function I mention, avoiding unrelated information.
 
-To assess the quality and effectiveness of the generated counter-narratives, we employ a dual-assessment methodology using the DeepEval library and Judge LLM. DeepEval quantitatively measures persuasiveness, coherence, and potential influence, ensuring narratives maintain factual accuracy while engaging the target audience. Judge LLM provides an additional analysis by assessing narrative effectiveness and alignment with counter-messaging objectives.
+When I provide:
 
-Our integration of BEND maneuvers into the RAG pipeline ensures responses are contextually tailored to counteract specific disinformation tactics. Prompt engineering further refines these responses, generating varied narrative structures that resonate with different audience segments and neutralize manipulative influence operations. This approach enables real-time adaptation to evolving disinformation threats, making counter-narratives timely and impactful.
+1. **File Name Only**: Retrieve an overview of the file, including its purpose, key functions, and any dependencies it has.
+   
+2. **File Name and Function**: Retrieve specific details about that function within the file, including its parameters, purpose, implementation details, and any internal or external dependencies.
 
-Our findings highlight the importance of incorporating frameworks like BEND into AI-driven counter-narrative solutions. By simulating adversarial disinformation strategies within our response generation, we effectively disrupt adversarial objectives and reinforce audience resilience. Preliminary results indicate significant enhancement in countering harmful content and promoting informed public discourse.
+Use a structured, step-by-step reasoning approach to ensure accuracy and relevance to my commands. Do not infer beyond the specific context of the file or function provided."
 
-This research offers actionable insights for practitioners and policymakers, demonstrating innovative deployment of AI capabilities to combat disinformation. Our work contributes a scalable, adaptive model that strengthens defenses against influence operations and supports societal cohesion.
+---
 
+This prompt ensures the LLM is directed to focus narrowly on the information requested and to use a logical, step-by-step reasoning approach to retrieve context accurately.
 xxxx
 
 ### **System Prompt for Interactive Code Analysis and Cybersecurity Consultation**
