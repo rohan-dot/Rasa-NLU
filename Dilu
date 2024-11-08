@@ -1,3 +1,8 @@
+In this work, we leverage advanced prompt engineering techniques—such as chain-of-thought reasoning—alongside Retrieval Augmented Generation to effectively summarize and query large codebases. This language-agnostic approach empowers developers to efficiently explore and understand specific functionalities within the code, enhancing both productivity and comprehension.
+
+
+
+
 Here’s a step-by-step prompt to guide an LLM through the process of identifying vulnerabilities in C code or specific functions within the code:
 
 ---
