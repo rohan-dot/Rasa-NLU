@@ -1,3 +1,36 @@
+**Title: Counteracting Disinformation with Advanced AI: The ICONEC Framework for Effective Counter-Narratives**
+
+Misinformation and hate speech online amplify polarized narratives, disrupt social cohesion, and pose serious national security threats. For example, the Russia-Ukraine conflict illustrates how rapidly misinformation can fuel divisions, emphasizing the urgent need for robust, adaptive countermeasures. Additionally, in May, OpenAI disrupted five covert influence operations that used open models to generate content for narrative shaping. With the increasing use of Large Language Models (LLMs) in such operations, it is crucial to assess the effectiveness and risks associated with LLM-generated content at scale to ensure responsible use.
+
+In our research, we introduce the Influence Operation Counter Narrative Evaluation and Creation (ICONEC) framework, leveraging advanced AI to design and assess effective counter-narratives. We utilize the BEND framework, categorizing influence operations via tactics such as distraction, distortion, engagement, and enhancement. Our approach integrates these maneuvers within a Retrieval-Augmented Generation (RAG) and prompt-engineering pipeline to generate narratives and counter-narratives that strategically address adversarial messaging. These responses counter the psychological and technological information spread strategies targeting content and community dynamics used by malign actors.
+
+Our approach includes:
+
+1. **Data Collection and Embedding**: We gather data from various government documents sourced from national archives and think tanks. This information is embedded using a sentence transformer and stored in a FAISS vector store for efficient retrieval.
+
+2. **Narrative Generation Pipeline**: We employ the Mistral-7B-Instruct-v0.2 model alongside RAG and advanced prompt engineering to generate effective messaging. Relevant information is retrieved via LangChain using the embeddings, allowing for contextually tailored responses.
+
+3. **Integration of BEND Maneuvers**: By incorporating BEND tactics into our RAG pipeline, we ensure that the generated counter-narratives strategically address specific disinformation techniques used by adversaries.
+
+4. **Evaluation Methodology**: To assess the quality and effectiveness of the generated counter-narratives, we employ a dual-assessment methodology:
+   - **Automated Evaluation with DeepEval**: Utilizing the open-source LLM evaluation framework DeepEval, we quantitatively assess metrics such as answer relevancy, faithfulness, context relevancy, and hallucination.
+   - **Persuasiveness Assessment Using LLMs**: We introduce a novel approach where LLMs act as judges to assess the persuasiveness of the counter-narratives, utilizing the Tree-of-Thoughts framework to facilitate reasoning exploration at intermediate steps.
+
+We evaluate our approach on a social media dataset related to the Ukraine biolab conspiracy theory. Our findings demonstrate significant improvements in countering disinformation:
+
+- **Enhanced Counter-Narrative Effectiveness**: Prompt engineering refines responses, generating varied narrative structures that resonate with different audience segments and neutralize manipulative influence operation tactics.
+
+- **Real-Time Adaptation**: The integration of BEND maneuvers enables real-time adaptation to evolving disinformation threats, making counter-narratives timely and impactful.
+
+- **Scalable Evaluation Metrics**: Automated metrics provide the ability to evaluate LLM-generated content at scale, characterizing content, reducing risk, and predicting effectiveness for researchers, public affairs, and public relations offices.
+
+Our research offers actionable insights for practitioners and policymakers, demonstrating an innovative deployment of AI capabilities to combat disinformation. The ICONEC framework contributes a scalable, adaptive model that strengthens defenses against influence operations and provides metrics to inform potential risks, ensuring that LLM-generated content aligns with messaging objectives. In future work, we aim to design and deploy surveys using Amazon's Mechanical Turk to further validate our findings.
+
+
+
+
+
+
 Certainly! Here's a condensed prompt that incorporates the previous information, designed for an LLM to follow instructions for code vulnerability detection and analysis:
 
 ---
