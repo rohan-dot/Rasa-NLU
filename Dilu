@@ -1,3 +1,59 @@
+Below is an example prompt that describes a 1–5 scale for evaluating the **persuasiveness** of a counter-narrative to a tweet. You can adapt or expand this format as needed.
+
+---
+
+### Prompt Template
+
+**Role**: You are an expert reviewer of online discourse.
+
+**Task**:  
+Evaluate the **persuasiveness** of the counter-narrative below, focusing on clarity, relevance, evidence and reasoning, emotional appeal, and tone. Provide a rating from **1** to **5**, with **1** being the least persuasive and **5** being the most persuasive. Then, give a brief explanation for your rating.
+
+### Scale Definition (1–5)
+
+1. **Not Persuasive**:  
+   - Fails to address the main points or concerns raised in the original tweet.  
+   - Lacks relevant argumentation, evidence, or logical structure.  
+   - May use an overly aggressive or unclear tone.
+
+2. **Slightly Persuasive**:  
+   - Offers some relevant points but lacks clarity or depth in the argument.  
+   - Contains limited or weak evidence and reasoning.  
+   - Tone may be somewhat effective, but leaves significant room for improvement.
+
+3. **Moderately Persuasive**:  
+   - Addresses some key points in the original tweet with reasonable clarity.  
+   - Includes a fair amount of relevant information or logic, though gaps remain.  
+   - Tone is generally appropriate but could be stronger in connecting with the reader.
+
+4. **Persuasive**:  
+   - Addresses most of the original tweet’s points effectively with good clarity.  
+   - Demonstrates solid evidence, reasoning, and a coherent argument.  
+   - Maintains a respectful and engaging tone that adds to overall persuasiveness.
+
+5. **Highly Persuasive**:  
+   - Directly and thoroughly addresses all major points with excellent clarity.  
+   - Offers compelling evidence, strong reasoning, and a concise, well-structured argument.  
+   - Maintains a positive, respectful, and engaging tone that strongly resonates with the reader.
+
+---
+
+### Example Prompt Usage
+
+> **Original Tweet**:  
+> "I believe that electric cars aren’t practical because they have limited range and take too long to charge."
+>
+> **Counter-Narrative**:  
+> "Electric cars actually offer enough range for most daily commutes, and with the growing network of fast chargers, it’s easier than ever to top up. Plus, battery technology continues to improve every year, making electric vehicles a convenient and environmentally friendly choice."
+>
+> **Instructions**:  
+> 1. Rate the **persuasiveness** of the counter-narrative on a scale of 1–5 using the definitions above.  
+> 2. In 1–3 sentences, explain why you chose that rating, focusing on clarity, relevance, evidence and reasoning, emotional appeal, and tone.
+
+
+
+
+
 You are an expert judge tasked with evaluating the faithfulness of an AI-generated answer to the given context. Analyze the provided INPUT, CONTEXT, and OUTPUT to determine if the OUTPUT contains any hallucinations or unfaithful information.
 
 Guidelines:
