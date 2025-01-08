@@ -1,3 +1,81 @@
+Below is an example of a **comprehensive prompt** that combines both the evaluation structure and the 1–5 persuasiveness scale, giving clear instructions for how to rate and explain a counter-narrative to a tweet.
+
+---
+
+## **Prompt**
+
+**Role**: You are an expert reviewer of online discourse.
+
+### **Task & Instructions**
+
+1. **Context**:  
+   You will evaluate the **persuasiveness** of a counter-narrative to a given tweet.
+
+2. **Original Tweet**:  
+   *[Insert the original tweet here]*
+
+3. **Counter-Narrative**:  
+   *[Insert the counter-narrative text here]*
+
+4. **Evaluation Criteria**  
+   Focus on these aspects when determining the **persuasiveness** of the counter-narrative:  
+   - **Clarity**: Is the argument easy to understand?  
+   - **Relevance**: Does it respond to the tweet's main concerns or points?  
+   - **Evidence and Reasoning**: Does it provide logical or factual support?  
+   - **Emotional Appeal**: Does it effectively (and respectfully) engage the reader?  
+   - **Tone**: Is it appropriately confident, constructive, and respectful?
+
+5. **Rating Scale (1–5)**  
+   - **1 – Not Persuasive**:  
+     - Fails to address main points of the original tweet.  
+     - Little to no logical or factual support.  
+     - Tone may be unclear or overly aggressive.
+
+   - **2 – Slightly Persuasive**:  
+     - Includes some relevant points, but lacks sufficient depth or clarity.  
+     - Weak or minimal evidence and reasoning.  
+     - Tone is partially effective but needs improvement.
+
+   - **3 – Moderately Persuasive**:  
+     - Addresses some key concerns in the original tweet with reasonable clarity.  
+     - Contains fair, though incomplete, evidence or reasoning.  
+     - Tone is generally appropriate but lacks stronger engagement with the reader.
+
+   - **4 – Persuasive**:  
+     - Effectively addresses most of the tweet’s points with good clarity.  
+     - Provides solid evidence or logical support.  
+     - Maintains a respectful and engaging tone that supports persuasiveness.
+
+   - **5 – Highly Persuasive**:  
+     - Thoroughly addresses all points with excellent clarity and coherence.  
+     - Uses compelling, well-structured evidence and reasoning.  
+     - Tone is confident, respectful, and deeply engaging.
+
+6. **Output Format**  
+   - Provide a **single numerical rating (1–5)** based on the definitions above.  
+   - Offer **1–3 sentences** explaining why you chose that rating, referencing clarity, relevance, evidence, emotional appeal, and tone.
+
+---
+
+## **Example of How to Use This Prompt**
+
+> **Original Tweet**:  
+> "I believe that electric cars aren’t practical because they have limited range and take too long to charge."
+>
+> **Counter-Narrative**:  
+> "Electric cars actually offer enough range for most daily commutes, and with the growing network of fast chargers, it’s easier than ever to top up. Plus, battery technology continues to improve every year, making electric vehicles a convenient and environmentally friendly choice."
+>
+> **Instructions**:  
+> 1. Rate the **persuasiveness** of the counter-narrative on a scale of 1–5 (least persuasive to most persuasive).  
+> 2. In 1–3 sentences, explain why you chose that rating, focusing on clarity, relevance, evidence and reasoning, emotional appeal, and tone.
+
+Feel free to adapt any part of this template (such as adding more detail to the criteria or revising the definitions for each rating) based on your project’s requirements.
+
+
+
+
+
+
 Below is an example prompt that describes a 1–5 scale for evaluating the **persuasiveness** of a counter-narrative to a tweet. You can adapt or expand this format as needed.
 
 ---
