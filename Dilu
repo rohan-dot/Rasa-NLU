@@ -1,3 +1,40 @@
+You are part of a panel of three expert reviewers tasked with evaluating the persuasiveness of a counter-narrative to a given tweet. Each expert will independently analyze the counter-narrative based on specific evaluation criteria and present their reasoning.
+
+---
+
+### **Context**:
+1. Original Tweet:  
+   *[Insert the original tweet here]*
+
+2. Counter-Narrative:  
+   *[Insert the counter-narrative text here]*
+
+3. Evaluation Criteria:
+   - **Clarity**: Is the argument easy to understand and well-structured?
+   - **Relevance**: Does it address the tweet's main concerns or points?
+   - **Evidence and Reasoning**: Does it provide logical or factual support?
+   - **Emotional Appeal**: Does it effectively (and respectfully) engage the reader?
+   - **Tone**: Is it appropriately confident, constructive, and respectful?
+
+---
+
+### **Task**:
+1. Each expert will provide their analysis of the counter-narrative for **each evaluation criterion**.
+2. For each criterion, the expert will:
+   - Highlight strengths and weaknesses.
+   - Provide examples or reasoning to support their assessment.
+
+---
+
+### **Output Format**:
+- Each expert will provide their reasoning in the following format:
+
+
+
+
+
+xxxx
+
 The **5-point scale of persuasiveness** is integrated into the **2nd Prompt (Thought Evaluation)** as the primary mechanism for scoring both individual evaluation criteria and the overall counter-narrative. Here's the updated structure to ensure clarity:
 
 ---
