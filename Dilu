@@ -1,3 +1,99 @@
+The **5-point scale of persuasiveness** is integrated into the **2nd Prompt (Thought Evaluation)** as the primary mechanism for scoring both individual evaluation criteria and the overall counter-narrative. Here's the updated structure to ensure clarity:
+
+---
+
+### **1st Prompt: Thought Generation**
+This prompt remains the same and focuses on **expert reasoning** for each evaluation criterion. Experts will provide detailed analysis without assigning scores.
+
+---
+
+### **2nd Prompt: Thought Evaluation (with 5-Point Scale Integration)**
+Role: **You are an impartial evaluator of expert opinions on online discourse.**
+
+```plaintext
+You are tasked with evaluating the persuasiveness of a counter-narrative based on the analysis provided by three expert reviewers. Each expert has assessed the counter-narrative across multiple dimensions, highlighting its strengths and weaknesses.
+
+---
+
+### **Context**:
+1. Original Tweet:  
+   *[Insert the original tweet here]*
+
+2. Counter-Narrative:  
+   *[Insert the counter-narrative text here]*
+
+3. Evaluation Criteria:
+   - **Clarity**: Is the argument easy to understand and well-structured?
+   - **Relevance**: Does it address the tweet's main concerns or points?
+   - **Evidence and Reasoning**: Does it provide logical or factual support?
+   - **Emotional Appeal**: Does it effectively (and respectfully) engage the reader?
+   - **Tone**: Is it appropriately confident, constructive, and respectful?
+
+---
+
+### **Task**:
+1. Review the opinions of all three experts for each evaluation criterion.
+2. Assign a **persuasiveness score (1–5)** for each criterion based on the experts’ analyses:
+   - **1 – Not Persuasive**: Fails to address the main points or lacks logical support.
+   - **2 – Slightly Persuasive**: Includes some relevant points but lacks depth or clarity.
+   - **3 – Moderately Persuasive**: Addresses some concerns with fair clarity and reasoning.
+   - **4 – Persuasive**: Effectively addresses most points with good clarity and support.
+   - **5 – Highly Persuasive**: Thoroughly addresses all points with excellent clarity, evidence, and tone.
+
+3. Synthesize the scores into a **final overall score (1–5)** for the counter-narrative’s persuasiveness.
+
+---
+
+### **Output Format**:
+1. **Individual Scores (by Criterion)**:
+   - **Clarity**: [Score (1–5)] - [Justification referencing experts’ opinions]
+   - **Relevance**: [Score (1–5)] - [Justification referencing experts’ opinions]
+   - **Evidence and Reasoning**: [Score (1–5)] - [Justification referencing experts’ opinions]
+   - **Emotional Appeal**: [Score (1–5)] - [Justification referencing experts’ opinions]
+   - **Tone**: [Score (1–5)] - [Justification referencing experts’ opinions]
+
+2. **Overall Score**:  
+   - [Final Score (1–5)]  
+   - [Concise explanation referencing the experts’ opinions and your overall assessment.]
+
+3. **Suggestions for Improvement**:
+   - Provide 1–2 actionable recommendations to enhance the counter-narrative’s persuasiveness.
+```
+
+---
+
+### Example (2nd Prompt Output)
+#### **Individual Scores (by Criterion)**:
+- **Clarity**: 4  
+  - The argument is easy to understand and well-structured but could use simpler language for broader accessibility.  
+- **Relevance**: 5  
+  - Directly addresses the tweet’s primary concern with strong counterpoints.  
+- **Evidence and Reasoning**: 3  
+  - Logical reasoning is fair but lacks sufficient supporting data or examples.  
+- **Emotional Appeal**: 4  
+  - Evokes empathy effectively with personal stories but misses broader emotional resonance.  
+- **Tone**: 5  
+  - Confident and respectful, maintaining a constructive tone.
+
+#### **Overall Score**: 4 (Persuasive)  
+The counter-narrative is clear, relevant, and engaging but would benefit from stronger evidence to make it more persuasive.
+
+#### **Suggestions for Improvement**:  
+- Incorporate specific data or statistics to bolster the argument.
+- Add examples that resonate with a broader audience.
+
+---
+
+By explicitly integrating the **5-point scale** for both individual criteria and the overall score, this structure ensures that persuasiveness is systematically quantified and clearly communicated. Let me know if further adjustments are needed!
+
+
+
+
+
+
+
+xxxx
+
 Here’s your **Tree of Thought (ToT)** style prompt based on your original structure. It introduces a systematic process of reasoning with multiple intermediate steps (thoughts) and evaluations to emulate ToT principles.
 
 ---
