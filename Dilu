@@ -1,3 +1,118 @@
+Here’s your **Tree of Thought (ToT)** style prompt based on your original structure. It introduces a systematic process of reasoning with multiple intermediate steps (thoughts) and evaluations to emulate ToT principles.
+
+---
+
+### **Tree of Thought Prompt: Evaluating Persuasiveness of a Counter-Narrative**
+
+#### **Role**:
+You are an expert reviewer of online discourse.
+
+---
+
+#### **Task**:
+You will evaluate the **persuasiveness** of a counter-narrative to a given tweet using a **Tree of Thought** approach. Systematically explore, evaluate, and refine your reasoning across multiple dimensions to arrive at a robust and well-justified judgment.
+
+---
+
+### **Step 1: Context Definition**
+```plaintext
+1. Original Tweet:  
+   *[Insert the original tweet here]*
+
+2. Counter-Narrative:  
+   *[Insert the counter-narrative here]*
+
+3. Evaluation Objective:  
+   Evaluate the **persuasiveness** of the counter-narrative across the following dimensions:
+   - **Clarity**: Is the argument easy to understand and well-structured?
+   - **Relevance**: Does it respond directly to the tweet’s main concerns?
+   - **Evidence and Reasoning**: Does it provide logical or factual support for its claims?
+   - **Emotional Appeal**: Does it engage the reader respectfully and effectively?
+   - **Tone**: Is it appropriately confident, constructive, and respectful?
+```
+
+---
+
+### **Step 2: Thought Generation**
+For each evaluation dimension, generate multiple reasoning paths (thoughts).  
+```plaintext
+1. Clarity:
+   - Identify 2–3 ways the counter-narrative succeeds or fails in being clear and well-structured.
+   - Example: "The argument is well-structured and avoids jargon, making it easy to follow."
+
+2. Relevance:
+   - Explore 2–3 ways the counter-narrative responds (or fails to respond) to the tweet's main points.
+   - Example: "The response directly addresses concerns about immigration policy."
+
+3. Evidence and Reasoning:
+   - Identify 2–3 strengths or weaknesses in the counter-narrative’s use of logic and evidence.
+   - Example: "The narrative cites a study on economic contributions of immigrants, but it lacks detailed data."
+
+4. Emotional Appeal:
+   - Suggest 2–3 ways the counter-narrative connects (or fails to connect) emotionally with the audience.
+   - Example: "The story about a hardworking immigrant family evokes empathy effectively."
+
+5. Tone:
+   - Explore 2–3 observations on the tone of the counter-narrative.
+   - Example: "The tone is constructive and respectful, avoiding inflammatory language."
+```
+
+---
+
+### **Step 3: Thought Evaluation**
+Evaluate the reasoning paths generated for each dimension using a heuristic scale (1–5):
+```plaintext
+1. Rate each reasoning path for its strength:
+   - 1: Weak or ineffective.
+   - 5: Highly effective.
+
+2. Retain the **top-rated reasoning paths** for each dimension.
+   - Example: "For clarity, reasoning path 2 scored highest because it highlights the clear and simple language used."
+```
+
+---
+
+### **Step 4: Synthesis**
+Synthesize the retained reasoning paths across dimensions into a final evaluation:
+```plaintext
+1. Assign an overall persuasiveness score (1–5) based on the aggregated ratings across dimensions.
+
+2. Provide a concise explanation (2–4 sentences) justifying your score:
+   - Reference retained reasoning paths for clarity, relevance, evidence, emotional appeal, and tone.
+
+3. Suggest improvements if necessary:
+   - Example: "To enhance persuasiveness, the counter-narrative could provide more detailed data to support its claims."
+```
+
+---
+
+### **Example Output**
+```plaintext
+**Numerical Rating**: 4 (Persuasive)
+
+**Justification**:
+- The counter-narrative is clear and well-structured (Clarity: 5).
+- It directly addresses concerns about immigration policy (Relevance: 4).
+- Evidence is compelling but lacks depth in supporting data (Evidence and Reasoning: 3).
+- It evokes empathy effectively through personal stories (Emotional Appeal: 5).
+- The tone is constructive and respectful (Tone: 5).
+
+**Suggestions for Improvement**:
+- Include more detailed evidence to strengthen the argument.
+- Use examples that reflect a broader audience for relatability.
+```
+
+---
+
+This ToT-style prompt enhances the original by incorporating **systematic exploration** (breadth-first thought generation), **evaluative reasoning**, and **synthesis**, ensuring a robust and deliberate analysis of the counter-narrative's persuasiveness.
+
+
+
+
+
+
+xxxxxx
+
 Below is an example of a **comprehensive prompt** that combines both the evaluation structure and the 1–5 persuasiveness scale, giving clear instructions for how to rate and explain a counter-narrative to a tweet.
 
 ---
