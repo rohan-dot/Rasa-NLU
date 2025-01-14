@@ -1,3 +1,64 @@
+Here's a concise **Tree of Thought (ToT)** prompt for analyzing a codebase for vulnerabilities:
+
+---
+
+### **Role**:  
+You are a security expert tasked with identifying vulnerabilities and gaps in the provided code.
+
+---
+
+### **Instructions**:
+1. **Decompose** the analysis into these dimensions:
+   - **Authentication/Authorization**: Issues in access control or hardcoded credentials.
+   - **Input Validation**: Risks like SQL injection or XSS from unsanitized inputs.
+   - **Error Handling**: Sensitive data exposure in exceptions or logs.
+   - **Data Storage**: Weak encryption or unsafe handling of sensitive data.
+   - **Dependency Management**: Outdated or vulnerable libraries.
+   - **Code Logic**: Logical flaws or risky conditions (e.g., infinite loops).
+
+2. **Explore**:
+   For each dimension, identify up to 3 potential vulnerabilities or gaps.  
+   Example: "Are user inputs sanitized to prevent SQL injection?"
+
+3. **Evaluate**:
+   For each vulnerability, provide:
+   - **Severity (1–5)**: How critical is the issue?
+   - **Likelihood (1–5)**: How likely is exploitation?
+   - **Impact (1–5)**: What damage could result?
+
+4. **Synthesize**:
+   Summarize findings with:
+   - A brief description of key vulnerabilities.
+   - Prioritized recommendations for fixes.
+
+---
+
+### **Output Format**:
+```plaintext
+**Dimension**: [e.g., Input Validation]  
+1. [Vulnerability Name/Description]  
+   - Severity: [1–5]  
+   - Likelihood: [1–5]  
+   - Impact: [1–5]  
+   - Suggested Fix: [Brief solution]  
+
+**Overall Recommendations**: [Summarized key takeaways.]
+```
+
+---
+
+This concise version keeps the **ToT framework** intact while minimizing context usage. Let me know if you need further refinements!
+
+
+
+
+
+
+
+
+
+
+xxxx
 You are tasked with evaluating the persuasiveness of a counter-narrative based on the analysis provided by three expert reviewers. Each expert has assessed the counter-narrative across multiple dimensions, highlighting its strengths and weaknesses.
 
 ---
