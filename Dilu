@@ -1,3 +1,31 @@
+**Summary / Key Features**  
+- Leverages Retrieval-Augmented Generation (RAG) to analyze large code repositories efficiently.  
+- Employs Chain-of-Thought prompting to enhance accuracy in identifying and injecting vulnerabilities.  
+- Utilizes semantic chunking of source code for improved context retrieval and precision.
+
+**National Needs**  
+Enhances cybersecurity tools and techniques, enabling the US government to proactively address software supply chain threats and safeguard critical infrastructure.
+
+**Problem Statement**  
+Existing methods struggle to accurately interpret large, complex codebases and detect or introduce subtle vulnerabilities, hindering efforts to build resilient software systems.
+
+**Approach**  
+By combining RAG with chain-of-thought prompt engineering, we create a framework that semantically chunks code for improved contextual understanding. This approach enables precise identification, injection, and analysis of vulnerabilities in open-source software.
+
+**Impact**  
+The framework will significantly strengthen vulnerability discovery, reduce false positives, and support the development of more secure software—ultimately improving trust in open-source ecosystems and US government software supply chains.
+
+**Future Work**  
+Plans include extending the framework to new programming languages, refining chunking strategies for increased accuracy, and integrating with automated testing tools to streamline vulnerability management.
+
+
+
+
+
+
+
+
+xxxxx
 Here’s a more explicit and comprehensive prompt for the LLM, ensuring it understands the "enhance" maneuver without prior knowledge and can apply it effectively:
 
 ---
