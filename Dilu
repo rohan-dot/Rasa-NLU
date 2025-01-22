@@ -1,3 +1,10 @@
+
+**National Need**  
+The U.S. government requires a constantly expanding repository of known, exploitable vulnerabilities—especially in open-source code—to drive rigorous testing, sharpen blue and red team strategies, and fortify national cyber defenses. By harnessing RAG-based analysis and controlled vulnerability injection, we can accelerate discovery, documentation, and overall readiness against emerging threats.
+
+
+
+
 Open-source documents are embedded and stored in a vector database for quick retrieval based on the user’s query. The retrieved context is then combined with the prompt, ensuring a more context-aware response from the LLM.
 
 
