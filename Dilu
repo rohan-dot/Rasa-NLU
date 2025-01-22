@@ -1,3 +1,8 @@
+Open-source documents are embedded and stored in a vector database for quick retrieval based on the user’s query. The retrieved context is then combined with the prompt, ensuring a more context-aware response from the LLM.
+
+
+
+
 **TECHNICAL HIGHLIGHT: Chain-of-thought prompting and RAG to understand large codebases**  
 - **Context-Aware Chunking:** Breaks massive codebases into semantically related segments, using chain-of-thought prompts to systematically analyze each portion. This ensures thorough coverage while reducing confusion in highly complex architectures.  
 - **Targeted Retrieval:** Incorporates Retrieval-Augmented Generation (RAG), so only the most relevant snippets are fed to the LLM. By injecting precisely the right context, the model produces more accurate, detailed insights about the code’s structure, dependencies, and potential security gaps.
