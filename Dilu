@@ -1,4 +1,8 @@
 
+
+
+**IMPACT**  
+Critical infrastructure increasingly depends on open-source software, yet OSS can be difficult to fully understand and maintain. Accelerated testing and rapid code evaluation are crucial for identifying vulnerabilities and safeguarding national security. LLM-driven analysis interprets complex architectures quickly, uncovering hidden risks more effectively than manual reviews. RAG-based methods generate realistic test scenarios, enabling robust vulnerability detection and mitigation strategies. By integrating these approaches, we speed up learning, testing, and securing critical open-source components.
 **National Need**  
 The U.S. government requires a constantly expanding repository of known, exploitable vulnerabilities—especially in open-source code—to drive rigorous testing, sharpen blue and red team strategies, and fortify national cyber defenses. By harnessing RAG-based analysis and controlled vulnerability injection, we can accelerate discovery, documentation, and overall readiness against emerging threats.
 
