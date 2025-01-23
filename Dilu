@@ -1,3 +1,10 @@
+**TECHNICAL HIGHLIGHTS**  
+1. **RAG & Chain-of-Thought for Code Understanding:** We chunk large open-source codebases and apply Retrieval-Augmented Generation with chain-of-thought prompts to efficiently parse, summarize, and clarify complex functions and structures.  
+2. **Vulnerability Detection & Injection:** Using the same chain-of-thought framework, we detect potential security flaws and inject them into code, creating realistic test scenarios that help developers and security teams refine their detection tools, defenses, and overall understanding of intricate OSS.
+
+
+
+
 **Technological Highlights**  
 Our **chain-of-thought** approach integrates with a **Retrieval-Augmented Generation (RAG)** pipeline to systematically analyze and modify open-source code. First, we **chunk** large codebases into logical segments for easier processing. Then, **chain-of-thought prompts** guide the LLM through relevant sections to identify or create potential vulnerabilities. By **injecting** these vulnerabilities in a controlled way, we produce **realistic test scenarios**, ensuring thorough evaluation of both detection capabilities and overall code comprehension.
 
