@@ -49,7 +49,47 @@ Function to analyze:
 {code}"""
 
 
+prompt = """Perform a comprehensive security analysis:
 
+Code Analysis:
+1. Identify inputs/parameters
+2. Trace data flow
+3. Note memory operations
+4. Review API calls
+
+Vulnerability Check:
+For each potential vulnerability:
+1. Input Validation (CWE-20)
+  - User input handling
+  - Type checking
+  - Bounds validation
+
+2. Memory Safety (CWE-119, CWE-416)
+  - Buffer operations
+  - Memory allocation/free
+  - Array indexing
+
+3. Injection (CWE-78, CWE-89) 
+  - Command execution
+  - Database queries
+  - Format strings
+
+4. Resource Management
+  - File operations
+  - Network connections
+  - System resources
+
+For each finding:
+- Vulnerable code section
+- Attack scenario
+- Severity (Critical/High/Medium/Low)
+- Exploitation complexity
+- Recommended fixes
+
+Code to analyze:
+{code}
+
+Provide a systematic analysis following these steps."""
 
 xxx
 Here’s a refined and concise explanation for including the **Judge LLM and DeepEval pipeline** as a **technical highlight** in your poster/task:
