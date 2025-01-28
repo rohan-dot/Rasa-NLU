@@ -1,3 +1,57 @@
+prompt = """Analyze this code function step by step:
+1. First, identify the function's inputs and outputs
+2. Break down the logic into discrete steps
+3. Explain what each major code block accomplishes
+4. Describe the function's overall purpose
+
+Code to analyze:
+{code}
+
+Provide your analysis following these steps."""
+
+
+
+
+
+prompt = """As a security expert, analyze this function for the following vulnerability categories:
+
+Memory/Buffer Issues:
+- Buffer Overflow (CWE-119)
+- Memory Leak (CWE-401)
+- Null Pointer (CWE-476)
+
+Input Validation:
+- Improper Input Validation (CWE-20)
+- Integer Overflow (CWE-190)
+- Format String (CWE-134)
+
+Injection Flaws:
+- SQL Injection (CWE-89)
+- Command Injection (CWE-78)
+- XSS (CWE-79)
+
+Access Control:
+- Path Traversal (CWE-22)
+- Missing Authorization (CWE-862)
+- IDOR (CWE-639)
+
+Cryptographic Issues:
+- Weak Crypto (CWE-326)
+- Hardcoded Credentials (CWE-798)
+
+For each vulnerability category:
+1. List specific vulnerable patterns found
+2. Provide evidence from code
+3. Risk level (High/Medium/Low)
+4. Recommended fixes with code examples
+
+Function to analyze:
+{code}"""
+
+
+
+
+xxx
 Here’s a refined and concise explanation for including the **Judge LLM and DeepEval pipeline** as a **technical highlight** in your poster/task:
 
 - **Holistic Evaluation**: The pipeline ensures counter-speech quality by combining **DeepEval metrics** (relevancy, faithfulness, hallucination checks) with a **Judge LLM** for advanced reasoning on clarity, emotional appeal, and persuasiveness.
