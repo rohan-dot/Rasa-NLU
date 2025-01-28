@@ -1,3 +1,22 @@
+Below is an example of how you might convert the given text into a methodology-style description, mirroring the structure and tone of your existing methodology section:
+
+---
+
+**Methodology**
+
+We employ a two-step Retrieval Augmented Generation (RAG) approach to imitate an author’s writing style and subsequently apply this style to new text. In the first stage, we utilize a Large Language Model (LLM) in conjunction with RAG to capture the target author’s stylistic features, facilitated by chain-of-thought prompting. This step enables the system to discern and internalize key linguistic patterns, tonal elements, and structural nuances characteristic of the source author.
+
+Once the author’s style is sufficiently modeled, we proceed to the second stage: rewriting the author’s text by explicitly incorporating these stylistic features into our prompt. Specifically, the Mistral model is leveraged to both extract and generate the impersonated text, ensuring the resulting output reflects the unique writing style of the author being imitated. In parallel, we utilize the GTE Large model to create embeddings for relevant documents as part of our RAG pipeline, thereby supporting effective retrieval of contextually pertinent information.
+
+By bifurcating the process into style acquisition and style application, this methodology not only preserves the semantic content of the original text but also infuses it with the targeted author’s identifiable linguistic characteristics. The use of chain-of-thought prompting in the initial phase further refines style replication by guiding the model through a step-by-step reasoning process. Consequently, the two-step RAG framework enables precise stylistic emulation while maintaining factual integrity and contextual relevance in the generated output.
+
+
+
+
+
+
+
+xxx
 For C++ code, especially when working with **SQLite** or similar systems, the following vulnerabilities from the CWE 2024 Top 25 list are particularly relevant:
 
 ---
