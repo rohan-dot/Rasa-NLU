@@ -1,4 +1,132 @@
+**Final Prompt (Incorporating Suggested Revisions)**
 
+Below is a two‐round evaluation setup, with three reviewers (“Experts”). In **Round 1**, each Expert assesses the **Original Tweet**; in **Round 2**, each Expert assesses the **Counter‐Narrative**. The goal is to evaluate how persuasive each message is, using the criteria and steps below. We avoid labeling the original tweet with terms that might pre‐judge its content (e.g., “hateful”); instead, treat it as a “provocative” or “controversial” statement.
+
+---
+
+## 1. Messages to Be Evaluated
+1. **Original Tweet**:  
+   *[Insert the text of the original, provocative/controversial tweet here]*  
+
+2. **Counter‐Narrative**:  
+   *[Insert the text of the counter‐argument or response here]*  
+
+---
+
+## 2. Evaluation Criteria  
+
+When rating **each** message, every Expert considers **five** main criteria. Each criterion is rated on a scale from **1** (strongly disagree) to **5** (strongly agree), with written justifications (strengths/weaknesses, examples, or reasoning) for the score:
+
+1. **Trustworthiness/Accuracy** – Does the message present information that is factually correct or credible?  
+2. **Potential to Influence** – Is the message likely to change or reinforce the Expert’s attitude?  
+3. **Clarity and Detail** – Does the message provide clear, structured, and sufficiently detailed information?  
+4. **Filling Knowledge Gaps** – Does the message reduce uncertainty by supplying context or explanations?  
+5. **Audience Tailoring** – Does the message suit its intended audience’s level of understanding or concerns?
+
+At the end of each round, each Expert provides a **Holistic Persuasiveness Score** (again **1** to **5**) that reflects the message’s overall impact or effectiveness.
+
+---
+
+## 3. Task and Output Format
+
+### Round 1: **Original Tweet**  
+Each of the three Experts will **objectively** evaluate the Original Tweet against the five criteria above, then give an overall Persuasiveness Score.  
+
+Structure your output as follows (repeat for **Expert 2** and **Expert 3**):
+
+```
+**Round 1 – Original Tweet**
+
+Expert 1
+
+1) Trustworthiness/Accuracy Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+2) Potential to Influence Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+3) Clarity and Detail Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+4) Filling Knowledge Gaps Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+5) Audience Tailoring Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+Holistic Persuasiveness Score: X
+(Brief explanation)
+```
+
+*(Then repeat the same structure for Expert 2 and Expert 3.)*
+
+---
+
+### Round 2: **Counter‐Narrative**  
+Now, each Expert will **imagine being the author** of the Original Tweet (or someone who strongly identifies with that viewpoint) and evaluate the Counter‐Narrative based on how persuasive or influential it would be **from that vantage point**. Experts again use the same five criteria and provide a final Holistic Persuasiveness Score.
+
+Follow the same structure, e.g.:
+
+```
+**Round 2 – Counter‐Narrative**
+
+Expert 1
+
+1) Trustworthiness/Accuracy Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+2) Potential to Influence Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+3) Clarity and Detail Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+4) Filling Knowledge Gaps Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+5) Audience Tailoring Score: X
+   - Strengths/Weaknesses:
+   - Examples/Reasoning:
+
+Holistic Persuasiveness Score: X
+(Brief explanation)
+```
+
+*(Again, repeat the same structure for Expert 2 and Expert 3.)*
+
+---
+
+## 4. Instructions Summary
+
+1. **Round 1:**  
+   - Each Expert (1, 2, 3) evaluates the **Original Tweet** from a neutral, third‐party perspective.  
+   - Rates each of the five criteria (1–5) and explains the reasoning.  
+   - Gives a **Holistic Persuasiveness Score** (1–5).  
+
+2. **Round 2:**  
+   - Each Expert **adopts the viewpoint** of the Original Tweet’s author (or someone closely aligned with it).  
+   - Evaluates how convincing the **Counter‐Narrative** would be to them.  
+   - Again, rates each criterion (1–5) with justifications.  
+   - Concludes with a **Holistic Persuasiveness Score** (1–5).  
+
+Please provide all outputs in the format shown above.
+
+
+
+
+
+
+
+xxxxx
 Sure! Below is a well-structured prompt to guide your LLaMA model in identifying the mentioned vulnerabilities in an SQLite codebase. This prompt directs the model to locate specific functions, analyze their behavior, and assess potential vulnerability insertion points.
 
 ---
