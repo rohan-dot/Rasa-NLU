@@ -1,3 +1,31 @@
+Here’s a simple PowerPoint slide comparing **Chain of Thought (CoT) vs. Tree of Thought (ToT) Prompting** in a clear, concise format:
+
+---
+
+### **Chain of Thought vs. Tree of Thought Prompting**  
+
+| Feature           | **Chain of Thought (CoT)**  | **Tree of Thought (ToT)**  |
+|------------------|--------------------------|--------------------------|
+| **Structure**    | Linear step-by-step reasoning | Branching exploration of multiple paths |
+| **Approach**     | Sequential thought generation | Divergent and convergent thinking |
+| **Decision Process** | Single path to final answer | Evaluates multiple reasoning paths |
+| **Best for**     | Arithmetic, logic, and simple reasoning | Complex problem-solving, creative tasks |
+| **Example**      | Solving a math problem step by step | Exploring multiple story endings before choosing the best one |
+
+#### **Key Takeaway:**  
+- **CoT** is like following a **straight path**, refining thoughts sequentially.  
+- **ToT** is like exploring **multiple paths**, selecting the best route.
+
+---
+
+Let me know if you want a visual or design enhancement!
+
+
+
+
+
+
+xxxxx
 **Final Prompt (Incorporating Suggested Revisions)**
 
 Below is a two‐round evaluation setup, with three reviewers (“Experts”). In **Round 1**, each Expert assesses the **Original Tweet**; in **Round 2**, each Expert assesses the **Counter‐Narrative**. The goal is to evaluate how persuasive each message is, using the criteria and steps below. We avoid labeling the original tweet with terms that might pre‐judge its content (e.g., “hateful”); instead, treat it as a “provocative” or “controversial” statement.
