@@ -1,3 +1,196 @@
+Below is an example of a multi‐turn few‐shot prompt that you might use to “teach” your local LLM how to both think about and generate a realistic, subtle vulnerability for a controlled CTF challenge. In this example the vulnerability is injected into the HTTP Basic authentication code. (Remember, this is for a controlled, ethical challenge environment only.) 
+
+Each “shot” includes a sample user prompt and a corresponding assistant response that not only provides a diff patch but also explains the reasoning behind the changes. You can feed these examples into your local LLM to help it learn the desired pattern and level of explanation.
+
+---
+
+### Few-Shot Prompt Example 1
+
+**User Prompt:**
+
+> I need to inject a vulnerability into our HTTP Basic authentication routine. Please modify the code so that it uses a fixed-size buffer for the "user:password" string and builds the Authorization header unsafely. Explain your reasoning step by step and produce a diff patch that only triggers if the username or password is extremely long.
+
+**Assistant Response:**
+
+> **Explanation:**
+> 
+> In the original code, the credentials are formatted using a safe helper (`apprintf()`) that dynamically allocates exactly the required memory. To inject a realistic vulnerability, I’ll replace this with a fixed-size buffer and an unsafe `sprintf()`. Under normal circumstances with short credentials, nothing unusual will happen—but if an attacker supplies extremely long username or password values (for example via a crafted URL), the fixed-size buffer may overflow, leading to memory corruption.
+> 
+> I also replace the dynamic allocation for the final header with a fixed-size allocation and unsafe formatting. This further increases the chance of overflow if the base64-encoded credentials exceed our buffer size.
+> 
+> **Diff Patch:**
+> 
+> ```diff
+> @@ Function: http_output_basic(struct Curl_easy *data, bool proxy)
+> -  char *out = aprintf("%s:%s", user ? user : "", pwd ? pwd : "");
+> -  if(!out)
+> -    return CURLE_OUT_OF_MEMORY;
+> +  /* [VULNERABILITY INJECTED]
+> +     Use a fixed-size buffer instead of dynamic allocation.
+> +     If the username or password is too long, this will overflow. */
+> +  char out[256];
+> +  sprintf(out, "%s:%s", user ? user : "", pwd ? pwd : "");
+> 
+>    result = Curl_base64_encode(out, strlen(out), &authorization, &size);
+>    if(result)
+>      goto fail;
+> @@ Function: http_output_basic(struct Curl_easy *data, bool proxy)
+> -  free(*userp);
+> -  *userp = aprintf("%sAuthorization: Basic %s\r\n",
+> -                   proxy ? "Proxy-" : "",
+> -                   authorization);
+> -  free(authorization);
+> -  if(!*userp) {
+> -    result = CURLE_OUT_OF_MEMORY;
+> -    goto fail;
+> -  }
+> +  free(*userp);
+> +  /* [VULNERABILITY INJECTED]
+> +     Allocate a fixed-size buffer and use unsafe sprintf formatting.
+> +     Overflow may occur if the base64-encoded credentials are unexpectedly large. */
+> +  *userp = malloc(300);
+> +  if(*userp == NULL) {
+> +      result = CURLE_OUT_OF_MEMORY;
+> +      goto fail;
+> +  }
+> +  sprintf(*userp, "%sAuthorization: Basic %s\r\n",
+> +          proxy ? "Proxy-" : "",
+> +          authorization);
+> +  free(authorization);
+> ```
+> 
+> **Summary:**  
+> This patch replaces safe dynamic allocations with fixed-size buffers and unsafe string formatting functions (`sprintf()`). The bug is “hidden” because under normal use (with normal-length credentials) it does not trigger; only when abnormally long input is provided does the overflow occur.
+
+---
+
+### Few-Shot Prompt Example 2
+
+**User Prompt:**
+
+> Show me how to inject a subtle vulnerability into the HTTP authentication function by weakening the string handling. I want the code to work normally with typical inputs but fail dangerously when given edge-case inputs. Please include an explanation of your thought process and a diff patch.
+
+**Assistant Response:**
+
+> **Thought Process:**  
+> The original HTTP authentication code builds credential strings safely. To create a realistic vulnerability for a CTF challenge, we want to change the safe string operations into unsafe ones. I decided to replace dynamic memory allocation with fixed buffers and use `sprintf()` instead of functions that check buffer size. This creates a classic buffer overflow vulnerability that is only triggered when the attacker sends unusually long credentials.
+> 
+> **Diff Patch:**
+> 
+> ```diff
+> @@ Function: http_output_basic(struct Curl_easy *data, bool proxy)
+> -  char *out = aprintf("%s:%s", user ? user : "", pwd ? pwd : "");
+> -  if(!out)
+> -    return CURLE_OUT_OF_MEMORY;
+> +  /* [VULNERABILITY INJECTED]
+> +     Vulnerable fixed-size buffer for user:password.
+> +     This will only overflow with abnormally long inputs. */
+> +  char out[256];
+> +  sprintf(out, "%s:%s", user ? user : "", pwd ? pwd : "");
+> 
+>    result = Curl_base64_encode(out, strlen(out), &authorization, &size);
+>    if(result)
+>      goto fail;
+> @@ Function: http_output_basic(struct Curl_easy *data, bool proxy)
+> -  free(*userp);
+> -  *userp = aprintf("%sAuthorization: Basic %s\r\n",
+> -                   proxy ? "Proxy-" : "",
+> -                   authorization);
+> -  free(authorization);
+> -  if(!*userp) {
+> -    result = CURLE_OUT_OF_MEMORY;
+> -    goto fail;
+> -  }
+> +  free(*userp);
+> +  /* [VULNERABILITY INJECTED]
+> +     Allocate a fixed buffer for the final header and format unsafely.
+> +     This is vulnerable to overflow if the credentials are larger than expected. */
+> +  *userp = malloc(300);
+> +  if(*userp == NULL) {
+> +      result = CURLE_OUT_OF_MEMORY;
+> +      goto fail;
+> +  }
+> +  sprintf(*userp, "%sAuthorization: Basic %s\r\n",
+> +          proxy ? "Proxy-" : "",
+> +          authorization);
+> +  free(authorization);
+> ```
+> 
+> **Summary:**  
+> This diff intentionally introduces unsafe fixed-size buffers and unbounded string formatting. The vulnerability is subtle and only appears when extremely long inputs are provided, making it ideal for a CTF challenge.
+
+---
+
+### Few-Shot Prompt Example 3
+
+**User Prompt:**
+
+> I want to design a CTF challenge where the HTTP Basic authentication code has a hidden bug. Please demonstrate how you would inject an edge-case buffer overflow vulnerability, and explain how you arrived at your solution.
+
+**Assistant Response:**
+
+> **Design Rationale:**  
+> In a secure codebase, user credentials are handled by functions that allocate memory dynamically. For our challenge, I aim to “hide” the vulnerability by replacing these safe practices with fixed-size buffers. This change will work normally with typical inputs, but if an attacker provides overly long strings, the fixed buffers will overflow. I chose the HTTP Basic authentication function because it is a common target in security challenges.
+> 
+> **Diff Patch:**
+> 
+> ```diff
+> @@ Function: http_output_basic(struct Curl_easy *data, bool proxy)
+> -  char *out = aprintf("%s:%s", user ? user : "", pwd ? pwd : "");
+> -  if(!out)
+> -    return CURLE_OUT_OF_MEMORY;
+> +  /* [VULNERABILITY INJECTED]
+> +     Replace safe dynamic allocation with a fixed buffer.
+> +     Overflow risk if username or password exceeds buffer size. */
+> +  char out[256];
+> +  sprintf(out, "%s:%s", user ? user : "", pwd ? pwd : "");
+> 
+>    result = Curl_base64_encode(out, strlen(out), &authorization, &size);
+>    if(result)
+>      goto fail;
+> @@ Function: http_output_basic(struct Curl_easy *data, bool proxy)
+> -  free(*userp);
+> -  *userp = aprintf("%sAuthorization: Basic %s\r\n",
+> -                   proxy ? "Proxy-" : "",
+> -                   authorization);
+> -  free(authorization);
+> -  if(!*userp) {
+> -    result = CURLE_OUT_OF_MEMORY;
+> -    goto fail;
+> -  }
+> +  free(*userp);
+> +  /* [VULNERABILITY INJECTED]
+> +     Use a fixed allocation for the final header and format with sprintf.
+> +     This can overflow if the encoded credentials are too long. */
+> +  *userp = malloc(300);
+> +  if(*userp == NULL) {
+> +      result = CURLE_OUT_OF_MEMORY;
+> +      goto fail;
+> +  }
+> +  sprintf(*userp, "%sAuthorization: Basic %s\r\n",
+> +          proxy ? "Proxy-" : "",
+> +          authorization);
+> +  free(authorization);
+> ```
+> 
+> **Summary:**  
+> This change introduces a realistic buffer overflow vulnerability by using fixed-size buffers and unsafe formatting. The bug remains dormant unless triggered with unusually long inputs, making it a suitable hidden challenge for experienced CTF participants.
+
+---
+
+### Final Note
+
+When using these few-shot examples with your local LLM, ensure you also include a disclaimer stating that the modifications are for a controlled, ethical challenge environment only. This helps reinforce that such vulnerabilities should never be introduced in production code.
+
+By reviewing these examples, your local LLM should learn both the format and the detailed reasoning behind the injected vulnerability.
+
+
+
+
+
+
+
+xxxxx
 Here’s a **condensed version of your Tree of Thought (ToT) prompt** and a brief explanation for your slide:
 
 ---
