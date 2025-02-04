@@ -1,3 +1,41 @@
+Here’s a **condensed version of your Tree of Thought (ToT) prompt** and a brief explanation for your slide:
+
+---
+
+### **Tree of Thought Prompt for Content Evaluation**  
+
+#### **Evaluation Task:**  
+Each expert will independently analyze the **persuasiveness of a counter-narrative** against a tweet based on five criteria:  
+- **Clarity** (Is it well-structured?)  
+- **Relevance** (Does it address key concerns?)  
+- **Evidence & Reasoning** (Is it logical and fact-based?)  
+- **Emotional Appeal** (Does it engage the reader respectfully?)  
+- **Tone** (Is it confident and constructive?)  
+
+**Process:**  
+- Highlight strengths & weaknesses  
+- Provide supporting examples  
+- Score each criterion (1-5)  
+- Give a holistic rating  
+
+---
+
+### **Why Tree of Thought (ToT) for Content Evaluation?**  
+- **Encourages Multi-Path Reasoning:** Experts explore multiple perspectives before forming judgments.  
+- **Breaks Down Complex Decisions:** Evaluating persuasion involves structured, iterative thinking.  
+- **Enhances Critical Analysis:** ToT ensures a well-rounded, stepwise assessment instead of a linear judgment.  
+
+This method **mimics human decision-making**, making evaluations **more nuanced and reliable**.  
+
+---
+
+This should effectively communicate why you're using ToT for content evaluation in your slide! Let me know if you need further tweaks.
+
+
+
+
+
+xxxxx
 Here’s a simple PowerPoint slide comparing **Chain of Thought (CoT) vs. Tree of Thought (ToT) Prompting** in a clear, concise format:
 
 ---
