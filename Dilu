@@ -1,3 +1,29 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load the Excel file
+df = pd.read_excel('Judge.xlsx')
+
+# Plot all columns
+plt.figure(figsize=(10, 6))
+for col in df.columns:
+    plt.plot(df.index, df[col], marker='o', label=col)
+
+plt.xlabel('Index')
+plt.ylabel('Score')
+plt.title('Trend Line of Scores')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+
+
+
+
+
+
+xxx
 Below is an example of a final write‐up that includes both a detailed explanation of the design choices (without revealing internal deliberative steps) and a sample diff patch that “injects” a subtle vulnerability into an HTTP function (in this case, into the HTTP Basic authentication routine in http.c). You can use the following text as part of a prompt to teach your local LLM how to generate such challenges.
 
 ---
