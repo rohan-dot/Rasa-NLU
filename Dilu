@@ -7,6 +7,46 @@ df = pd.read_excel('Judge.xlsx')
 # Calculate the average (mean) for each score category
 average_scores = df.mean()
 
+# Define distinct colors for each bar
+bar_colors = ['blue', 'green', 'orange', 'purple', 'cyan', 'magenta']
+
+# Create the plot
+plt.figure(figsize=(10, 6))
+
+# Bar plot with different colors
+bars = plt.bar(average_scores.index, average_scores.values, color=bar_colors, alpha=0.7, label='Average Score')
+
+# Trend line with a distinct color
+plt.plot(average_scores.index, average_scores.values, color='red', marker='o', linestyle='-', linewidth=2, label='Trend Line')
+
+# Add titles and labels
+plt.xlabel('Score Category')
+plt.ylabel('Average Score')
+plt.title('Average Scores with Trend Line')
+plt.ylim(0, 5)  # Since the scores range from 0 to 5
+plt.legend()
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+plt.show()
+
+
+
+
+
+
+
+
+
+xx
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load the Excel file
+df = pd.read_excel('Judge.xlsx')
+
+# Calculate the average (mean) for each score category
+average_scores = df.mean()
+
 # Create the plot
 plt.figure(figsize=(10, 6))
 
