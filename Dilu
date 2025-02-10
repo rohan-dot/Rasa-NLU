@@ -1,3 +1,33 @@
+Here’s a refined version of your discussion section with improved flow, clarity, and cohesion:
+
+---
+
+### 7 Discussion
+
+Our research highlights the vulnerabilities of **authorship verification (AV) models** when subjected to adversarial attacks through **authorship obfuscation** and **authorship impersonation** techniques using **large language models (LLMs)**. While prior studies have demonstrated the effectiveness of deep learning-based AV models in distinguishing between different authors, our results reveal significant weaknesses in these models when they encounter realistic, semantic, and context-preserving adversarial perturbations.
+
+Traditional methods like **homoglyph substitution**, **backtranslation**, and **synonym swapping** have shown some success in misleading AV models. However, these approaches often fail to maintain the semantic integrity of the text, which is problematic because it can result in unnatural or nonsensical outputs, reducing the practical applicability of such attacks. In contrast, our **zero-shot prompting strategies with Mistral** and **paraphrasing-based obfuscation techniques** (such as **DIPPER** and **PEGASUS**) demonstrate that AV models struggle to maintain reliable authorship attribution even when the meaning and coherence of the text are preserved. Specifically, our results show that **Mistral-based obfuscation** achieves high **attack success rates (ASR)** while maintaining textual coherence, effectively misleading AV models without compromising the quality or readability of the text.
+
+In parallel, our **authorship impersonation** task, which represents a more challenging **targeted attack**, seeks to manipulate text to **mimic the style of a specific author while preserving the original semantics**. Our **Retrieval-Augmented Generation (RAG) pipeline**, combined with Mistral, successfully **transfers stylistic elements from a target author to source content**. This multi-step RAG process first retrieves the stylistic properties from a target author's previous writings and then employs **chain-of-thought prompting** to refine these stylistic transformations while maintaining the original meaning. Our evaluation demonstrates that **LLM-driven impersonation** can deceive even the most robust AV models, achieving high success rates in flipping **False Trials (FT)** to **True Trials (TT)**. This effectively makes a target author's writing indistinguishable from that of a source author. Such vulnerabilities raise serious security concerns in areas like **academic authorship, forensic linguistics**, and **online misinformation detection**.
+
+A key factor in the success of these adversarial attacks is their ability to maintain the **semantic integrity** of the text while deceiving AV models. Our evaluations using linguistic metrics like **BLEU**, **BERTScore**, and **ROUGE** confirm that LLM-based attacks can preserve the meaning of the text while subtly modifying stylistic features enough to mislead AV classifiers. This ability to retrieve and synthesize stylistic features from large corpora poses a **novel security risk** for authorship attribution systems. Our **multi-step RAG approach** shows that even without fine-tuning, LLMs can effectively capture and mimic an author’s unique writing style with high fidelity.
+
+Another significant finding is the challenge of **generalization and real-world deployment** for AV models. Most AV systems are trained on static datasets with limited stylistic diversity, leaving them **ill-equipped to handle adversarially perturbed texts**. Our techniques, including **step-back prompting**, **author profile-aware conditioning**, and **fine-grained paraphrasing**, demonstrate how adversaries can systematically exploit these limitations. These findings emphasize the need for AV models to become more adaptable and robust to diverse writing styles and potential manipulations.
+
+In conclusion, our research underscores the urgent need for **enhancing AV models** to defend against sophisticated authorship manipulation techniques. As LLMs continue to advance, the potential for adversarial attacks on authorship verification will only grow, necessitating the development of more resilient and adaptable verification methods.
+
+---
+
+This version maintains the core content of your discussion while improving readability, coherence, and flow. Let me know if you'd like any further adjustments!
+
+
+
+
+
+
+
+xxxxx
+
 import pandas as pd
 import matplotlib.pyplot as plt
 
