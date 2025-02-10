@@ -1,1 +1,23 @@
+### 4 Methodology
 
+In this section, we describe our approach for **LLM-based author impersonation** using the **STRAP (Style Transfer via Paraphrasing)** framework combined with fine-tuned language models. Our methodology is designed to preserve the semantic integrity of the original text while effectively transferring the stylistic elements of a target author. The pipeline involves four key stages: paraphrasing, fine-tuning, style imputation, and verification.
+
+#### 4.1 Paraphrasing with STRAP
+
+The first step in our pipeline employs the **STRAP framework** to generate paraphrased versions of both the source and target author documents. STRAP reformulates unsupervised style transfer as a paraphrase generation task, where the style of a given sentence is modified without significantly altering its meaning. This process involves feeding the original sentences through a **diverse paraphrase model** to create **pseudo-parallel datasets**. The paraphrased outputs serve to **normalize stylistic elements**, effectively stripping identifiable authorial traits while maintaining semantic coherence.
+
+#### 4.2 Fine-tuning GPT-2 for Style Transfer
+
+Once the paraphrased documents are generated, we use them alongside their original counterparts to **fine-tune a GPT-2 model**. This fine-tuning process is crucial as it enables the model to learn the relationship between neutral, paraphrased text and its corresponding author-specific style. The GPT-2 model is trained to **reintroduce stylistic features** that are characteristic of the target author, focusing on elements such as **lexical choices, syntactic structures, and tone**. By leveraging both paraphrased and original text pairs, the model becomes proficient in embedding the target author's style into previously neutralized content.
+
+#### 4.3 Style Imputation on Source Text
+
+After fine-tuning, the GPT-2 model is applied to the paraphrased source documents. This step, referred to as **style imputation**, involves transforming the neutral source text to adopt the stylistic features of the target author. The goal is to create a text that is **stylistically indistinguishable from the target author’s writing** while preserving the original semantic content. This process effectively achieves **targeted adversarial impersonation**, where the writing style of the target author is transferred onto the source content.
+
+#### 4.4 Verification Using BigBird
+
+The final stage of our methodology involves verifying the success of the impersonation using **MIT Lincoln Laboratory's BigBird** model, a robust **authorship verification (AV) system**. BigBird is utilized to evaluate whether the transformed text convincingly mimics the target author's style. The model assesses the stylistic and structural properties of the generated text to determine if it can **successfully flip a False Trial (FT) into a True Trial (TT)**, meaning the impersonated text is classified as being authored by the target author. This verification step is critical for assessing the **effectiveness and robustness** of our impersonation pipeline.
+
+---
+
+This methodology integrates **semantic-preserving paraphrasing** with **style-specific fine-tuning** to achieve high-fidelity authorship impersonation, demonstrating the vulnerabilities of existing AV models to sophisticated LLM-driven adversarial attacks.
