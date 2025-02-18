@@ -1,3 +1,10 @@
+We did not showcase impersonation results on the Twitter dataset due to potential **data leakage** concerns. Since **LLMs are trained on large-scale web data, including social media content**, they may have already **internalized a celebrity’s writing style**, making it an **unreliable test for our RAG-based approach**. Such overlap could inflate performance metrics, **undermining the validity of our evaluation**.
+
+
+
+
+
+
 ### 4 Methodology
 
 In this section, we describe our approach for **LLM-based author impersonation** using the **STRAP (Style Transfer via Paraphrasing)** framework combined with fine-tuned language models. Our methodology is designed to preserve the semantic integrity of the original text while effectively transferring the stylistic elements of a target author. The pipeline involves four key stages: paraphrasing, fine-tuning, style imputation, and verification.
