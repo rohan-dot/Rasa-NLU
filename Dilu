@@ -1,3 +1,76 @@
+Below is an example prompt you can provide to your local LLM. It includes an outline of the steps (thinking method) the model should follow, a “few-shot” style demonstration of the desired output, and the essential instructions. Adapt it to your environment or style as needed.
+
+---
+
+## Prompt: Identify Vulnerabilities in `http.c` Without Adding New Bugs
+
+**System/Developer Instruction**:
+You are analyzing a C code file (`http.c`) for possible security or reliability vulnerabilities. Your primary tasks:
+
+1. **Identify** potentially weak or vulnerable areas in the code (e.g., unchecked buffer sizes, boundary issues, unvalidated input, risky memory usage, etc.).
+2. **Explain** why each flagged item could be a risk.
+3. **Do not** suggest or show how to create or insert new bugs.
+4. **Do not** break or remove functionality—just point out concerns and weaknesses.
+
+---
+
+### Thinking Method
+
+Follow this approach step-by-step:
+1. **Scan the code** for places that process data from external sources (e.g., network, user input).
+2. **Check** for integer overflow, out-of-bounds array usage, unchecked memory operations, or string handling with no length verification.
+3. **Inspect** authentication/authorization flows for any potential misuse.
+4. **Note** any areas where function return values aren’t checked but should be.
+5. **Summarize** each suspicious location or function with a short rationale.
+
+---
+
+### Code to Analyze
+
+```
+[PASTE OR LINK THE COMPLETE CONTENT OF http.c HERE]
+```
+
+---
+
+### Desired Output Format
+
+- A **numbered list** or set of “Potential Issue #X” entries.  
+- Each entry includes:
+  - **Location**: function name or approximate line numbers.
+  - **Explanation**: why it might be a vulnerability or could fail under certain conditions.
+
+**Example** (fictional illustration):
+
+```
+Potential Issue #1
+Function: http_readwrite_headers (Lines ~320–350)
+Explanation: The function copies data into 'headerb' without checking the maximum size. This could lead to a buffer overflow if 'headerb' is not large enough to hold all incoming header lines.
+
+Potential Issue #2
+Function: Curl_http_auth_act (Lines ~600–630)
+Explanation: The code sets 'newurl' based on user input without validating its length. A malicious user could potentially force an out-of-bounds write if there's insufficient boundary checking.
+```
+
+*(Note: These examples are illustrative. Please provide only the actual issues found in the real `http.c`.)*
+
+---
+
+### Important Reminders
+- **Do not** propose how to exploit or insert new bugs; only identify existing weaknesses.
+- If certain sections are secure or do not appear vulnerable, skip them.
+- Keep your analysis concise and technical.
+
+---
+
+*(End of Prompt)*
+
+
+
+
+
+
+xxxxx
 We did not showcase impersonation results on the Twitter dataset due to potential **data leakage** concerns. Since **LLMs are trained on large-scale web data, including social media content**, they may have already **internalized a celebrity’s writing style**, making it an **unreliable test for our RAG-based approach**. Such overlap could inflate performance metrics, **undermining the validity of our evaluation**.
 
 
