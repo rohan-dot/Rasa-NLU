@@ -1,3 +1,10 @@
+Here’s a revised Impact statement incorporating the red/blue team aspect:
+
+**Impact:**  
+“By building comprehensive corpora of known vulnerabilities and corresponding fixes, our work propels LLM-driven detection and patching—bolstering open-source software security at scale, enabling more effective red and blue team operations, and protecting critical infrastructure.”
+
+
+
 Here’s a refined version that highlights creating corpora, automated detection, and patching:
 
 **Impact:**  
