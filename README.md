@@ -1,6 +1,7 @@
-Here’s a more polished, contextually aligned version:
+Here’s a refined version that highlights creating corpora, automated detection, and patching:
 
-**"Complex, context-specific security flaws can go unnoticed, resulting in incomplete coverage within vulnerability repositories and leaving critical gaps unaddressed."**
+**Impact:**  
+“By building comprehensive corpora of known vulnerabilities and corresponding fixes, our work drives the advancement of LLM-based automated detection and patching—ultimately enhancing open-source software security and protecting critical infrastructure.”
 
 
 # Rasa-NLU
