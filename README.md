@@ -1,14 +1,7 @@
-Here’s a revised Impact statement incorporating the red/blue team aspect:
+Here’s a more cohesive “Impact” section tying both ideas together in one concise statement:
 
 **Impact:**  
-“By building comprehensive corpora of known vulnerabilities and corresponding fixes, our work propels LLM-driven detection and patching—bolstering open-source software security at scale, enabling more effective red and blue team operations, and protecting critical infrastructure.”
-
-
-
-Here’s a refined version that highlights creating corpora, automated detection, and patching:
-
-**Impact:**  
-“By building comprehensive corpora of known vulnerabilities and corresponding fixes, our work drives the advancement of LLM-based automated detection and patching—ultimately enhancing open-source software security and protecting critical infrastructure.”
+“Our approach accelerates the parsing and understanding of large-scale open-source codebases, helping developers and security teams swiftly pinpoint vulnerabilities. By building comprehensive corpora of known flaws and corresponding fixes, we drive the evolution of LLM-based automated detection and patching—significantly strengthening OSS security and supporting more effective red and blue team operations.”
 
 
 # Rasa-NLU
