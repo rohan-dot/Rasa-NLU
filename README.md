@@ -1,5 +1,6 @@
-Capable of automated vulnerability detection and intentional vulnerability injection through prompt engineering, though effectiveness may vary based on code complexity and context
+Here’s a more polished, contextually aligned version:
 
+**"Complex, context-specific security flaws can go unnoticed, resulting in incomplete coverage within vulnerability repositories and leaving critical gaps unaddressed."**
 
 
 # Rasa-NLU
