@@ -1,92 +1,76 @@
-Below is an example of a more focused prompt that emphasizes the “excite-based” (positivity and excitement-driven) aspect of the counter-narrative. Feel free to adjust the numbering or formatting to match your existing system. The key changes/additions are:
-
-1. Explicitly asking each expert to assess how well the counter-narrative elicits excitement/joy in a tweet format.
-2. Making it clear that the evaluation is from the standpoint of tweet-length messages.
-
----
-
-### Refined Prompt
-
-```
 BEGIN_OF_PROMPT
 
-You are part of a panel of three (3) expert reviewers tasked with evaluating an original hateful tweet and a corresponding "excite-based" counter-narrative tweet. The counter-narrative tweet is designed to counter hatred by generating positivity, joy, and excitement, all within typical tweet constraints (i.e., short, focused messages).
+You are part of a panel of three (3) expert reviewers tasked with evaluating an original hateful tweet and a corresponding "excite-based" counter-narrative tweet. The counter-narrative tweet is designed to counter hatred by generating positivity, joy, and excitement in a concise, tweet-friendly format.
 
 Each expert will:
 • Place themselves in the position of the person who posted the original hateful tweet.
-• Assess how persuasive, accurate, and emotionally impactful the counter-narrative is.
+• Assess how persuasive, accurate, and emotionally impactful the counter-narrative is, following the **strict** evaluation guidelines below.
 
 ---
-#### 1. Evaluation Criteria
+### 1. Evaluation Criteria (Strict Rating Guidelines)
 
-Experts must evaluate **each** of the following criteria on a 1–5 scale (1 = “strongly disagree,” 5 = “strongly agree”) and provide examples or reasoning to support their assessments:
+You must evaluate **each** of the following criteria on a 1–5 scale (1 = “strongly disagree,” 5 = “strongly agree”) and provide examples or reasoning to support each score. **Be critical and avoid giving high scores unless the tweet clearly meets the standard.**
 
 1. **Trustworthiness/Accuracy**  
-   - Is the counter-narrative truthful and factually sound?
+   - Is the counter-narrative factually sound and free of misinformation?
+   - **Score 5 only if** the content is verifiably accurate, contextually relevant, and does not include any misleading or unsubstantiated claims.
 
 2. **Attitude Change/Influence**  
-   - Does this counter-narrative have the potential to shift the attitude or perspective of someone who initially held hateful views?
+   - Does the counter-narrative have the potential to shift the hateful perspective?
+   - Does it provide a strong, logical reason for reconsidering hateful beliefs?
+   - **Score 5 only if** it convincingly addresses hate or prejudice and offers a meaningful, resonant alternative viewpoint.
 
 3. **Clarity and Depth of Information**  
-   - Does the counter-narrative provide clear, detailed, and well-structured information?
+   - Is the counter-narrative concise yet clear?
+   - Does it offer adequate detail or examples while remaining tweet-friendly?
+   - **Score 5 only if** it strikes an excellent balance between brevity and clear, well-reasoned content.
 
 4. **Filling Knowledge Gaps/Reducing Uncertainty**  
-   - Does it address missing context or misconceptions, thus reducing potential confusion about the topic?
+   - Does it correct misinformation or clarify misconceptions?
+   - **Score 5 only if** it directly addresses the hateful or incorrect assumptions, leaving minimal room for confusion.
 
 5. **Positivity and Excitement**  
-   - Does the counter-narrative elicit joy or excitement specifically?
-   - Is it uplifting and encouraging enough to spark a more positive outlook within a single tweet?
+   - Does the counter-narrative genuinely elicit joy or excitement?
+   - Is the positivity authentic, purposeful, and clearly connected to countering hate (rather than empty cheerleading)?
+   - **Score 5 only if** it demonstrates a **strong, genuine uplifting quality** that feels natural, resonates with the context, and effectively counters negative emotions (hate, anger, etc.). Forced or shallow positivity should receive a lower score.
+
+**Important Note**: If the counter-narrative fails to address the hateful content logically—or if the excitement appears forced, irrelevant, or superficial—do **not** give high marks. 
 
 ---
-#### 2. Original Tweet
-
-*(Hateful content here, but do not include in the final output.)*
-
----
-#### 3. Counter-Narrative Tweet
-
-*(Excite-based counter-narrative here, but do not include in the final output.)*
+### 2. Original Tweet
+*(Hateful content here, but do not include in your final output.)*
 
 ---
-#### 4. Expert Evaluations
-
-Each of the three experts will independently:
-
-1. Rate the counter-narrative on each of the five criteria using the 1–5 scale.
-2. For each criterion:
-   - Highlight strengths and weaknesses of the counter-narrative in fulfilling that criterion.
-   - Provide a brief rationale or examples that demonstrate why they gave that rating (e.g., clarity of language, emotional impact, relevance to the hateful content, etc.).
-   - Place special emphasis on how effectively it sparks positivity or excitement (Criterion #5).
-
-Each expert should present their analysis separately to ensure independence.
+### 3. Counter-Narrative Tweet
+*(Excite-based counter-narrative here, but do not include in your final output.)*
 
 ---
-#### 5. Overall Persuasiveness and Final Output
+### 4. Expert Evaluations
 
-- After each expert has provided their individual scores and reasoning:
-  1. **Calculate the average rating** across all three experts for each criterion.
-  2. Provide a **final persuasiveness score** (1–5) that reflects the overall effectiveness of the counter-narrative in countering hate and fostering positivity/excitement.
+Each of the three experts must **independently**:
 
-- **Important**: Do *not* include the text of the hateful tweet or the counter-narrative tweet in the final output. Only present:
-  1. The individual expert ratings and rationale for each criterion.
-  2. The average scores per criterion.
-  3. The final persuasiveness score.
+1. **Rate the counter-narrative** on each of the five criteria (1–5).  
+   - Reference the strict rating guidelines above.
+   - Provide a brief rationale for why you chose that score.
+2. Emphasize how effectively the tweet **counters hate** and **sparks genuine positivity** (Criterion #5).
+
+---
+### 5. Overall Persuasiveness and Final Output
+
+After each expert provides their individual scores:
+
+1. **Calculate the average rating** for each criterion (across all three experts).
+2. Provide a **final persuasiveness score** (1–5) that reflects the tweet’s overall effectiveness at:
+   - Countering hateful beliefs,
+   - Conveying accurate, relevant information,
+   - Eliciting authentic excitement/positivity.
+
+**Do not** include the text of the hateful tweet or the counter-narrative in the output. Only present:
+- The individual expert ratings and rationale for each criterion.
+- The average scores per criterion.
+- The final persuasiveness score.
 
 END_OF_PROMPT
-```
-
-### Why This Prompt Is Effective
-
-- **Focus on Excitement**: Criterion #5 explicitly checks for joy or excitement, ensuring the counter-narrative is judged on its uplifting quality.
-- **Tweet Constraints**: Acknowledge that both the hateful content and the response are short messages, maintaining realism for social media.
-- **Independent Expertise**: Having three experts each provide separate evaluations adds objectivity to the final assessment.
-- **Clear Instructions**: Stating exactly how to provide ratings, examples, and the final output format keeps the responses structured and consistent.
-
-
-
-
-
-
 xxxxx
 
 
