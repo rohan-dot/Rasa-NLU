@@ -1,3 +1,12 @@
+6. **Conciseness and Tweet Length**  
+   - Does the counter-narrative stay within typical tweet length constraints (under 280 characters) while remaining coherent and impactful?  
+   - **Score 5 only if** it is comfortably within the character limit, maintains clarity, and does not appear rushed or cut off.
+
+
+
+
+
+xxxx
 BEGIN_OF_PROMPT
 
 You are part of a panel of three (3) expert reviewers tasked with evaluating an original hateful tweet and a corresponding "excite-based" counter-narrative tweet. The counter-narrative tweet is designed to counter hatred by generating positivity, joy, and excitement in a concise, tweet-friendly format.
