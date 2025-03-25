@@ -1,3 +1,95 @@
+Below is an example of a more focused prompt that emphasizes the “excite-based” (positivity and excitement-driven) aspect of the counter-narrative. Feel free to adjust the numbering or formatting to match your existing system. The key changes/additions are:
+
+1. Explicitly asking each expert to assess how well the counter-narrative elicits excitement/joy in a tweet format.
+2. Making it clear that the evaluation is from the standpoint of tweet-length messages.
+
+---
+
+### Refined Prompt
+
+```
+BEGIN_OF_PROMPT
+
+You are part of a panel of three (3) expert reviewers tasked with evaluating an original hateful tweet and a corresponding "excite-based" counter-narrative tweet. The counter-narrative tweet is designed to counter hatred by generating positivity, joy, and excitement, all within typical tweet constraints (i.e., short, focused messages).
+
+Each expert will:
+• Place themselves in the position of the person who posted the original hateful tweet.
+• Assess how persuasive, accurate, and emotionally impactful the counter-narrative is.
+
+---
+#### 1. Evaluation Criteria
+
+Experts must evaluate **each** of the following criteria on a 1–5 scale (1 = “strongly disagree,” 5 = “strongly agree”) and provide examples or reasoning to support their assessments:
+
+1. **Trustworthiness/Accuracy**  
+   - Is the counter-narrative truthful and factually sound?
+
+2. **Attitude Change/Influence**  
+   - Does this counter-narrative have the potential to shift the attitude or perspective of someone who initially held hateful views?
+
+3. **Clarity and Depth of Information**  
+   - Does the counter-narrative provide clear, detailed, and well-structured information?
+
+4. **Filling Knowledge Gaps/Reducing Uncertainty**  
+   - Does it address missing context or misconceptions, thus reducing potential confusion about the topic?
+
+5. **Positivity and Excitement**  
+   - Does the counter-narrative elicit joy or excitement specifically?
+   - Is it uplifting and encouraging enough to spark a more positive outlook within a single tweet?
+
+---
+#### 2. Original Tweet
+
+*(Hateful content here, but do not include in the final output.)*
+
+---
+#### 3. Counter-Narrative Tweet
+
+*(Excite-based counter-narrative here, but do not include in the final output.)*
+
+---
+#### 4. Expert Evaluations
+
+Each of the three experts will independently:
+
+1. Rate the counter-narrative on each of the five criteria using the 1–5 scale.
+2. For each criterion:
+   - Highlight strengths and weaknesses of the counter-narrative in fulfilling that criterion.
+   - Provide a brief rationale or examples that demonstrate why they gave that rating (e.g., clarity of language, emotional impact, relevance to the hateful content, etc.).
+   - Place special emphasis on how effectively it sparks positivity or excitement (Criterion #5).
+
+Each expert should present their analysis separately to ensure independence.
+
+---
+#### 5. Overall Persuasiveness and Final Output
+
+- After each expert has provided their individual scores and reasoning:
+  1. **Calculate the average rating** across all three experts for each criterion.
+  2. Provide a **final persuasiveness score** (1–5) that reflects the overall effectiveness of the counter-narrative in countering hate and fostering positivity/excitement.
+
+- **Important**: Do *not* include the text of the hateful tweet or the counter-narrative tweet in the final output. Only present:
+  1. The individual expert ratings and rationale for each criterion.
+  2. The average scores per criterion.
+  3. The final persuasiveness score.
+
+END_OF_PROMPT
+```
+
+### Why This Prompt Is Effective
+
+- **Focus on Excitement**: Criterion #5 explicitly checks for joy or excitement, ensuring the counter-narrative is judged on its uplifting quality.
+- **Tweet Constraints**: Acknowledge that both the hateful content and the response are short messages, maintaining realism for social media.
+- **Independent Expertise**: Having three experts each provide separate evaluations adds objectivity to the final assessment.
+- **Clear Instructions**: Stating exactly how to provide ratings, examples, and the final output format keeps the responses structured and consistent.
+
+
+
+
+
+
+xxxxx
+
+
 Hook your readers with a surprising fact, then explain in one sentence why it matters. Use active, vivid language, and end with a question that prompts engagement. Keep it concise but let a bit of personality shine through so the information feels fresh and exciting
 
 
