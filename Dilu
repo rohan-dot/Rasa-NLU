@@ -1,3 +1,67 @@
+Thanks for sharing the prompt. I’ll now structure it into a tree-of-thought format to promote more structured, interpretable reasoning, and then design a follow-up validator prompt to evaluate how well the judges reasoned through each point. I’ll share both shortly.
+
+1. **Tree-of-Thought Version of the Judge Prompt (Counter-Narrative Tweet Evaluation)**
+
+   For each of the following six criteria, follow the guided sub-questions to evaluate the counter-narrative tweet. These checkpoints will help you reason step-by-step and ensure a thorough, transparent assessment. 
+
+   **Criterion 1: Trustworthiness / Accuracy**  
+   - *Claims Identification:* What factual claims or information does the tweet present (explicitly or implicitly)?  
+   - *Evidence Check:* Are these claims supported by credible evidence, common knowledge, or reliable sources? Is there any known counter-evidence or misinformation to note?  
+   - *Accuracy of Content:* Does the tweet contain any exaggeration, misleading statements, or factual errors? Are all statistics, names, or events mentioned correctly?  
+   - *Credibility Assessment:* Given the above, how trustworthy is the information in this tweet? Would an informed reader find it accurate and reliable?
+
+   **Criterion 2: Persuasiveness / Attitude Change Potential**  
+   - *Persuasive Strategy:* What approach does the tweet use to influence opinions (e.g., factual argument, emotional appeal, personal anecdote, humor, questioning)? Who is the likely target audience (the original hater, bystanders, general public)?  
+   - *Strength of Appeal:* Why might this tweet be compelling (or not) to the target audience? Does it address underlying beliefs or emotions? Does it present new insights or reframe the issue in a way that could change someone’s perspective?  
+   - *Empathy and Connection:* Does the tweet establish any common ground, empathy, or understanding that could open the audience to change? Conversely, could any wording trigger defensiveness or backlash in the reader?  
+   - *Attitude Shift Evaluation:* Considering the content and tone, how likely is the tweet to **positively influence** the reader’s attitude or reduce the hateful viewpoint? What evidence or reasoning supports your conclusion about its persuasive impact?
+
+   **Criterion 3: Clarity of Expression**  
+   - *Message Understanding:* Is the tweet’s core message easy to understand on the first read? Restate the main point of the tweet in your own words – is it clear and unambiguous?  
+   - *Language and Structure:* Are the sentences and wording straightforward? Note any jargon, confusing phrasing, or ambiguous terms. Does the tweet stay on topic without rambling or going off on tangents?  
+   - *Coherence:* Is the counter-narrative logically organized and cohesive? Does each part of the tweet support the overall point, or do any parts seem out of place?  
+   - *Overall Clarity:* Given the above observations, rate the clarity of the tweet. Would most readers grasp the intended counter-narrative easily, or would some readers be confused about the meaning?
+
+   **Criterion 4: Tone and Civility**  
+   - *Respectfulness:* What is the tone of the tweet? Does it remain respectful and calm towards the original poster and the audience? Note if there are any insults, sarcasm, or aggressive remarks.  
+   - *Politeness vs. Confrontation:* Does the tweet avoid derogatory language and mocking? Even while disagreeing with the hate content, does it maintain a civil, non-hateful stance?  
+   - *Empathy & Professionalism:* Does the tone show understanding or compassion (either for the targeted group or even for why the hater might feel that way), or is it judgmental and scolding? How might the tone make the reader feel (defensive, receptive, encouraged)?  
+   - *Tone Appropriateness:* Evaluate if the tone is appropriate for constructive dialogue. Could this tone help de-escalate tension and invite open conversation, or might it escalate the conflict?
+
+   **Criterion 5: Relevance and Focus**  
+   - *Direct Address of Hate Content:* Does the counter-narrative directly address the specific hateful statement or underlying issue? Identify the hateful claim or sentiment and check if the tweet responds to **that point** (rather than talking past it or ignoring it).  
+   - *On-Topic Content:* Is everything in the tweet relevant to the hate topic at hand? Highlight any parts of the tweet that stray into unrelated issues or generalities not pertinent to the original hate speech.  
+   - *Targeted Counter:* Does the tweet counter **the key stereotype, misconception, or prejudice** presented in the hate speech? (For example, if the hate speech says “Group X is dangerous,” does the tweet provide a narrative that challenges that specific idea?)  
+   - *Completeness of Response:* Determine if the tweet covers the necessary points to refute or respond to the hate message. Is anything important left unaddressed, or does the tweet hit the main points directly and sufficiently?
+
+   **Criterion 6: Quality of Counter-Argument**  
+   - *Logical Soundness:* How strong is the tweet’s argument in disproving or pushing back against the hate speech? Evaluate the logic – does the counter-narrative make sense as a rebuttal?  
+   - *Evidence and Examples:* Does the tweet provide any supporting facts, examples, or reasoning to back up its stance? If so, are they effective and relevant? If not, would the addition of a fact or example strengthen it, or is it still effective without them?  
+   - *Addressing Core Issues:* Does the counter-argument tackle the core fear, misinformation, or value conflict behind the hate speech? (E.g., if the hate speech is based on a false stereotype, does the tweet directly debunk that stereotype or provide an alternate perspective?)  
+   - *Overall Effectiveness of Argument:* Considering the points above, how well does the tweet succeed in countering the hate rationally? Even if the tone is good and facts are correct, is the **argument convincing and well-founded**? Identify any weaknesses in the reasoning or missed opportunities to strengthen the case.
+
+   *After completing all sub-questions for each criterion, use your analysis to inform the scoring or final judgement for that criterion as per the rating guidelines.* Each step ensures you’ve thoroughly examined different facets of the tweet before arriving at a conclusion. By following these checkpoints, your evaluation will be more transparent and easier to justify.
+
+2. **Follow-up Validator Prompt (Evaluating Judge Panel’s Reasoning Rigor)**
+
+   Now, assume the role of a **validator** reviewing the judge panel’s evaluations. Your task is to ensure the judges applied the above Tree-of-Thought criteria rigorously and fairly. Go through each criterion’s analysis provided by the judges and check for the following:
+
+   - **Completeness of Sub-Step Answers:** Verify that for **each sub-question** in every criterion, the judges have provided a relevant and sufficient answer. Are any sub-questions ignored or answered with only a cursory phrase? Flag any omissions or overly superficial answers (e.g., a one-word answer where explanation was needed).  
+   - **Depth and Justification:** Examine whether the judges’ responses demonstrate deep reasoning. Did they support their observations with examples or evidence from the tweet? Identify any **shallow judgments** – for instance, a judge giving a high score without detailing why, or criticizing an aspect without explaining the reasoning. Each rating or comment should be backed by the analysis from the sub-steps.  
+   - **Consistency and Rubric Adherence:** Check that the judges’ final ratings for each criterion (if provided) align with their own sub-step analysis. Are there any **inconsistencies**? (e.g., a judge notes multiple factual errors in the tweet but still rated “Trustworthiness/Accuracy” as high). Ensure that they applied the rating rubric correctly: if the rubric says certain flaws merit a low score, the judges’ rating should reflect that. Conversely, no criterion should be marked down without an explained flaw.  
+   - **Identification of Bias or Omission:** Make sure the judges remained objective and focused on the criteria. Note if they introduced any bias or evaluated something outside the given criteria. Also, confirm they didn’t miss evaluating an important aspect of the tweet that was relevant to the criteria. For example, if the tweet had a clearly respectful tone but the judges failed to mention tone at all, that’s an omission.  
+   - **Final Rigor Assessment:** Based on the above checks, assign a **Judge Rigor Score** on a scale from 1 to 5. This score reflects how thorough, consistent, and well-justified the panel’s evaluations were. A score of **1** indicates a very poor, shallow analysis with multiple issues, while a **5** indicates an excellent, rigorous evaluation with all criteria addressed in depth. Provide a brief rationale for this score, summarizing the key observations (e.g., “The judges answered all sub-questions in detail and their ratings matched their reasoning, demonstrating high rigor – Score: 5/5.”).
+
+   *Your validation will ensure the judge panel’s reasoning is transparent and meets the expected standard. By following these steps, you will highlight any areas where the evaluation fell short and confirm where it was done well, ultimately giving confidence in the fairness and quality of the judgments.*
+
+
+
+
+
+
+
+xxxxc
+
 Thanks! I’ll write a detailed Methodology section that highlights the full experimental setup and showcases the superiority of your RAG-enhanced Mistral pipeline for CVE-to-TTP mapping. I’ll focus on the architecture, process flow, and where it clearly outperforms traditional methods.
 
 I'll get started and let you know as soon as it's ready.
