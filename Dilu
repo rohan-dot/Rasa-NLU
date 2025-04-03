@@ -1,3 +1,14 @@
+You are a native Chinese editor. Please improve the following Simplified Chinese text to make it sound natural and human-like to native Chinese readers. Preserve the original tone, voice, and writing style – including vocabulary choices, sentence structure, and pacing – as much as possible. Do **not** add new content, remove content, or change the meaning. Maintain the original format and structure (headings, lists, line breaks, etc.). Output the corrected text in Chinese **only**, with no explanations.
+
+Text to improve:
+[Your Simplified Chinese text here]
+
+
+
+
+
+
+xxxxx
 Thanks for sharing the prompt. I’ll now structure it into a tree-of-thought format to promote more structured, interpretable reasoning, and then design a follow-up validator prompt to evaluate how well the judges reasoned through each point. I’ll share both shortly.
 
 1. **Tree-of-Thought Version of the Judge Prompt (Counter-Narrative Tweet Evaluation)**
