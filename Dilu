@@ -1,3 +1,212 @@
+Thanks! Since you're using 2 A100 GPUs and want to fine-tune the LLaMA 3 70B Instruct model with QLoRA via PEFT, I’ll put together updated training code that:
+
+- Loads the 70B model in 4-bit with BitsAndBytes
+- Uses Hugging Face PEFT to add LoRA adapters
+- Sets up `TrainingArguments` with `gradient_accumulation`, `fp16`, and multi-GPU support
+- Handles tokenizer, data collation, and masking properly for causal language modeling
+
+I’ll include recommendations for LoRA config tuned for 70B (e.g., `r=64`, `target_modules='all-linear'`, `lora_dropout=0.1`) and how to train with Hugging Face Trainer.
+
+I’ll get that code and guidance ready for you shortly.
+
+# QLoRA Fine-tuning Example for LLaMA 3 70B Instruct
+
+In this example, we show how to fine-tune a **LLaMA-3 70B Instruct** model on a small CVE vulnerability injection dataset using **QLoRA** (Quantized LoRA) with Hugging Face Transformers and PEFT. The code below loads the 70B model in 4-bit precision, adds LoRA adapters to all linear layers, prepares the dataset of prompt-target pairs, and runs efficient multi-GPU training on 2×A100 GPUs.
+
+## 1. Setup and Model Loading (4-bit Quantization)
+
+First, install the required libraries if you haven't already (Transformers, PEFT, BitsAndBytes, Accelerate):
+
+```bash
+pip install transformers accelerate bitsandbytes peft
+```
+
+Now we load the 70B model in **4-bit precision** using `bitsandbytes`. We use `device_map="auto"` to automatically shard the model across the two GPUs, and configure 4-bit **NF4** quantization with double quantization for efficiency ([Making LLMs even more accessible with bitsandbytes, 4-bit quantization and QLoRA](https://huggingface.co/blog/4bit-transformers-bitsandbytes#:~:text=from%20transformers%20import%20BitsAndBytesConfig)). We also load the corresponding tokenizer and set the padding token:
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+model_name = "<path-or-name-of-llama3-70b-instruct>"
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",         # NormalFloat4 quantization ([Making LLMs even more accessible with bitsandbytes, 4-bit quantization and QLoRA](https://huggingface.co/blog/4bit-transformers-bitsandbytes#:~:text=from%20transformers%20import%20BitsAndBytesConfig))
+    bnb_4bit_use_double_quant=True,    # Use double quantization for memory save ([Making LLMs even more accessible with bitsandbytes, 4-bit quantization and QLoRA](https://huggingface.co/blog/4bit-transformers-bitsandbytes#:~:text=from%20transformers%20import%20BitsAndBytesConfig))
+    bnb_4bit_compute_dtype=torch.bfloat16  # Use BF16 for computation on A100 ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=All%20models%20use%20NormalFloat4%20datatype,schedule%20and%20paged%20AdamW%20optimizer))
+)
+
+# Load the tokenizer and model in 4-bit, sharding across GPUs
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
+if tokenizer.pad_token_id is None:
+    tokenizer.pad_token_id = tokenizer.eos_token_id  # Set pad token to EOS (common practice for LLaMA)
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    quantization_config=bnb_config,
+    device_map="auto",    # Automatically distribute layers across available GPUs ([Making LLMs even more accessible with bitsandbytes, 4-bit quantization and QLoRA](https://huggingface.co/blog/4bit-transformers-bitsandbytes#:~:text=from%20transformers%20import%20AutoModelForCausalLM))
+    use_auth_token=True   # if model is behind authentication (optional)
+)
+```
+
+> **Note:** Loading with `device_map="auto"` will place different layers of the 70B model on each GPU, enabling one process to utilize both GPUs as shared memory for the model ([Making LLMs even more accessible with bitsandbytes, 4-bit quantization and QLoRA](https://huggingface.co/blog/4bit-transformers-bitsandbytes#:~:text=from%20transformers%20import%20AutoModelForCausalLM)). This means you do **not** need to launch multiple processes for distributed training in this setup. The model remains in 4-bit quantized mode (NF4) but computations use higher precision (BF16) for accuracy ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=All%20models%20use%20NormalFloat4%20datatype,schedule%20and%20paged%20AdamW%20optimizer)).
+
+## 2. Configuring LoRA with PEFT
+
+Next, we configure the LoRA parameters using the PEFT library. We apply LoRA to **all linear layers** of the model (Q, K, V, O in self-attention and the gated feed-forward projections) as recommended by QLoRA ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=All%20models%20use%20NormalFloat4%20datatype,schedule%20and%20paged%20AdamW%20optimizer)). We'll use LoRA rank `r=64` and set `lora_alpha=16` (scaling factor) following the QLoRA paper settings ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=All%20models%20use%20NormalFloat4%20datatype,schedule%20and%20paged%20AdamW%20optimizer)). The LoRA dropout is set to `0.1` (10%), which is a typical value for models up to 13B ([LoRA Fine-tuning & Hyperparameters Explained (in Plain English) | Entry Point AI](https://www.entrypointai.com/blog/lora-fine-tuning/#:~:text=The%20QLoRA%20paper%20set%20dropout,for%2033B%20and%2065B%20models)) (for 70B, the QLoRA paper suggests 0.05, but we use 0.1 as an example). We target all transformer linear layer names (`q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj`) for LoRA injection:
+
+```python
+from peft import LoraConfig, get_peft_model
+
+lora_config = LoraConfig(
+    r=64,
+    lora_alpha=16,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0.1,
+    bias="none",           # We will not tune biases
+    task_type="CAUSAL_LM"  # Language model fine-tuning
+)
+# Wrap the base model with LoRA adapters
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()  # Optional: verify number of trainable params vs total
+```
+
+This will add trainable LoRA weight matrices to each target linear layer while keeping the original 70B weights frozen. The `print_trainable_parameters()` should report a small fraction of total parameters as trainable (only the LoRA layers). For example, with r=64 on all linear layers, the trainable parameter count is on the order of a few hundred million (which is tiny relative to 70B).
+
+## 3. Preparing the Dataset and Tokenization
+
+Assume we have a Hugging Face `Dataset` of examples, each with a `"prompt"` (the fixed code + CVE description) and a `"target"` (the vulnerable code). We need to combine these into a single input sequence for the model, and mask the prompt part in the labels so that the loss is only computed on the target portion. 
+
+We will concatenate the prompt and target with an end-of-sequence token, tokenize them, and set the labels such that tokens corresponding to the prompt are `-100` (ignored in loss calculation). This ensures a causal language modeling setup where the model is trained to predict only the vulnerable code given the prompt.
+
+```python
+from datasets import Dataset  # or DatasetDict if you have train/val
+
+# Example: assume `raw_dataset` is your Dataset with 'prompt' and 'target' columns.
+# If you have a DatasetDict with a train split, use raw_datasets["train"] accordingly.
+raw_dataset = Dataset.from_dict({
+    "prompt": ["<example prompt 1>", "<example prompt 2>"], 
+    "target": ["<example vulnerable code 1>", "<example vulnerable code 2>"]
+})
+# Define a preprocessing function to tokenize and mask labels
+def preprocess_example(example):
+    prompt_text = example["prompt"]
+    target_text = example["target"]
+    # Concatenate prompt and target, with an EOS token at the end of target
+    full_text = prompt_text + target_text + tokenizer.eos_token
+    tokens = tokenizer(full_text, truncation=True)  # you can add max_length if needed
+    input_ids = tokens["input_ids"]
+    # Create labels copying input_ids, then mask prompt portion
+    labels = input_ids.copy()
+    prompt_len = len(tokenizer(prompt_text, add_special_tokens=False)["input_ids"])
+    # Mask all prompt tokens (and padding if any) in the labels
+    for i in range(prompt_len):
+        labels[i] = -100
+    # (Optional) also mask padding tokens just in case
+    # But here we didn't add padding yet; will handle padding in collator.
+    return {"input_ids": input_ids, "attention_mask": tokens["attention_mask"], "labels": labels}
+
+# Apply preprocessing to the entire dataset
+tokenized_dataset = raw_dataset.map(preprocess_example, remove_columns=raw_dataset.column_names)
+```
+
+**Data formatting tips:** Make sure each `prompt` already contains any necessary formatting that the model expects (for example, special tokens or separators between the fixed code and CVE description, if needed for clarity). In this simple example, we directly concatenate them. The model's EOS token is appended to mark the end of the response, which helps the model learn when to stop. By setting prompt tokens' labels to `-100`, we ensure the loss only comes from predicting the `target` (vulnerable code), not from regurgitating the prompt.
+
+## 4. Setting Up Training Arguments
+
+We use the Hugging Face `Trainer` API for convenience. Here are some important training hyperparameters and configurations for 2×A100 GPUs:
+
+- **Batch Size & Gradient Accumulation:** We set `per_device_train_batch_size=1` (one sequence per GPU at a time, given the model size) and use `gradient_accumulation_steps` to accumulate gradients over multiple steps for a larger effective batch. For example, with 8 accumulation steps, the effective batch size is 8 × 1 = 8. Adjust this based on memory and dataset size.
+- **Precision:** We enable `fp16=True` (or `bf16=True` if supported) to use half-precision gradients, which is standard when training with BF16 compute on A100.
+- **Optimizer:** We use the 8-bit AdamW optimizer provided by bitsandbytes (`optim="paged_adamw_8bit"`), which is memory-efficient and was used in the QLoRA paper ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=linear%20layers%20with%20BFloat16%20as,schedule%20and%20paged%20AdamW%20optimizer)).
+- **Learning Rate & Scheduling:** A constant learning rate (`lr_scheduler_type="constant"`) with no warmup is often used for LoRA fine-tuning ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=linear%20layers%20with%20BFloat16%20as,schedule%20and%20paged%20AdamW%20optimizer)). We choose a learning rate of 1e-4 for a 70B model (larger models often use slightly lower LR, e.g., QLoRA used 1e-4 for 33B/65B ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=33B%20All%2032%201e,4%202343%20512%201024)) and 2e-4 for 7B/13B).
+- **Logging & Saving:** Configure `logging_steps` for frequent logging (since dataset is small) and `save_steps` or `save_strategy` to save checkpoints. We also set `max_grad_norm=0.3` for gradient clipping (per QLoRA's recommendations ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=All%20models%20use%20NormalFloat4%20datatype,schedule%20and%20paged%20AdamW%20optimizer))).
+
+```python
+from transformers import TrainingArguments, Trainer
+
+training_args = TrainingArguments(
+    output_dir="./qlora-70b-cve",       # output directory for checkpoints
+    overwrite_output_dir=True,
+    num_train_epochs=3,                # small number of epochs for demonstration
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=8,     # accumulate gradients to simulate batch size 8
+    learning_rate=1e-4,
+    lr_scheduler_type="constant",      # constant LR (no decay)
+    warmup_steps=0,
+    optim="paged_adamw_8bit",          # 8-bit AdamW optimizer for efficiency ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=linear%20layers%20with%20BFloat16%20as,schedule%20and%20paged%20AdamW%20optimizer))
+    fp16=True,                         # use FP16 mixed precision (or bf16=True if on A100 and desired)
+    max_grad_norm=0.3,                 # gradient clipping for stability ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=All%20models%20use%20NormalFloat4%20datatype,schedule%20and%20paged%20AdamW%20optimizer))
+    logging_steps=10,
+    save_strategy="epoch",
+    report_to="none",                  # (or "tensorboard"/"wandb" if logging to a tool)
+    gradient_checkpointing=True        # Enable grad checkpointing to reduce memory usage
+)
+```
+
+> **Note:** We enabled `gradient_checkpointing=True` to trade compute for lower memory usage, which is helpful for large models. With our model already sharded in 4-bit, this further ensures we stay within memory limits. Also, since we are using a single process with `device_map` for multi-GPU, we set `ddp_find_unused_parameters=False` by default (Trainer handles this) because only LoRA params are trainable and all should be used.
+
+## 5. Initializing Trainer and Training on 2 GPUs
+
+Now we create a `Trainer` with our model, dataset, and training arguments. We also need to handle padding in the data collator. The dataset examples may have different lengths, so we'll pad them to the same length per batch. We can define a custom `data_collator` that pads `input_ids`, `attention_mask`, and `labels` to the max length in the batch, using `tokenizer.pad_token_id` for padding and `-100` for label padding (so padded labels don't contribute to loss).
+
+```python
+# Define a custom data collator for padding
+import numpy as np
+
+def data_collator(batch):
+    # Batch is a list of dicts with keys: input_ids, attention_mask, labels
+    max_length = max(len(sample["input_ids"]) for sample in batch)
+    # Pad sequences to max_length
+    input_ids = []
+    attention_masks = []
+    labels = []
+    for sample in batch:
+        seq_len = len(sample["input_ids"])
+        pad_len = max_length - seq_len
+        # Pad input_ids and attention_mask
+        input_ids.append(sample["input_ids"] + [tokenizer.pad_token_id] * pad_len)
+        attention_masks.append(sample["attention_mask"] + [0] * pad_len)
+        # Pad labels with -100
+        labels.append(sample["labels"] + [-100] * pad_len)
+    # Convert to tensors
+    input_ids = torch.tensor(input_ids, dtype=torch.long)
+    attention_masks = torch.tensor(attention_masks, dtype=torch.long)
+    labels = torch.tensor(labels, dtype=torch.long)
+    return {"input_ids": input_ids, "attention_mask": attention_masks, "labels": labels}
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized_dataset,  # use tokenized_dataset (or tokenized_dataset["train"] if a DatasetDict)
+    data_collator=data_collator
+)
+```
+
+Everything is set up. Finally, we launch the training:
+
+```python
+trainer.train()
+```
+
+During training, you'll see logs every 10 steps (as set by `logging_steps`). The model weights remain in 4-bit on each GPU, and only the LoRA adapter weights are updated. After training, you can save the LoRA adapters (using `model.save_pretrained`) or the full model (which will still consist of the original 70B base in 4-bit plus the small LoRA weights).
+
+**Multi-GPU usage:** Because we used `device_map="auto"` to shard the model, we run this script as a single process (no explicit `accelerate.launch` needed). The Trainer will utilize both GPUs as the model is split across them. If you instead wanted to use distributed data parallel (DDP) with model replication (not usually feasible for 70B on a single GPU), you would omit `device_map` and launch the script with `torchrun` or `accelerate`. In our case, sharding is necessary to fit the model, so one process per node is ideal.
+
+## Summary
+
+We have provided a comprehensive example of fine-tuning a 70B LLaMA 3 model with QLoRA on 2 A100 GPUs. The key steps include loading the model in 4-bit precision ([Making LLMs even more accessible with bitsandbytes, 4-bit quantization and QLoRA](https://huggingface.co/blog/4bit-transformers-bitsandbytes#:~:text=from%20transformers%20import%20BitsAndBytesConfig)), applying LoRA to all linear layers (r=64, α=16) ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=All%20models%20use%20NormalFloat4%20datatype,schedule%20and%20paged%20AdamW%20optimizer)), preparing prompt-target sequences with proper label masking, and leveraging the Hugging Face Trainer with 8-bit optimizers ([timdettmers/qlora-unnatural-instructions-65b · Hugging Face](https://huggingface.co/timdettmers/qlora-unnatural-instructions-65b#:~:text=linear%20layers%20with%20BFloat16%20as,schedule%20and%20paged%20AdamW%20optimizer)) and gradient accumulation for efficient multi-GPU training. This script should be ready to run, assuming the dataset and model are correctly specified. Happy fine-tuning!
+
+
+
+
+
+
+
+
+
+xxxxx
+
+
+
 Got it. I’ll gather the best practices for preparing the cveFixes1 dataset—specifically targeting C code—for fine-tuning a LLaMA 3 model using PEFT/QLoRA. The goal is to create a text-to-text format where the model learns to insert a specific CVE into safe code, transforming it into a vulnerable version.
 
 I’ll also clarify the exact semantics of `function_before` and `function_after` in this dataset to confirm which one is vulnerable and which is fixed.
