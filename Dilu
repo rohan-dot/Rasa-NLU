@@ -1,474 +1,247 @@
-You are a native Chinese editor. Please improve the following Simplified Chinese text to make it sound natural and human-like to native Chinese readers. Preserve the original tone, voice, and writing style – including vocabulary choices, sentence structure, and pacing – as much as possible. Do **not** add new content, remove content, or change the meaning. Maintain the original format and structure (headings, lists, line breaks, etc.). Output the corrected text in Chinese **only**, with no explanations.
+Got it. I’ll gather the best practices for preparing the cveFixes1 dataset—specifically targeting C code—for fine-tuning a LLaMA 3 model using PEFT/QLoRA. The goal is to create a text-to-text format where the model learns to insert a specific CVE into safe code, transforming it into a vulnerable version.
+
+I’ll also clarify the exact semantics of `function_before` and `function_after` in this dataset to confirm which one is vulnerable and which is fixed.
+
+I’ll be back shortly with the complete guidance.
+
+# Fine-Tuning LLaMA&nbsp;3 on CVE Vulnerability Injection (QLoRA Guide)
+
+## Understanding the CVE Fixes Dataset (`cveFixes1`)
+
+The **cveFixes1** dataset is a collection of code changes associated with CVE fixes across multiple programming languages (C, Go, Java, Python, Ruby). Each entry contains a code snippet **before** and **after** a vulnerability fix, along with metadata like CVE and CWE IDs. In particular, for each C function in the dataset: 
+
+- **`func_before`**: The function **before** the vulnerability was fixed – this is the vulnerable version of the code. In other words, if an entry is labeled as vulnerable, `func_before` contains the code with the CVE vulnerability present.  
+- **`func_after`**: The function **after** the vulnerability was fixed – this is the patched (non-vulnerable) version of the code.
+
+For our task, we want the model to learn to **insert a specific CVE vulnerability** into a given piece of safe code. This means our training will use the **fixed code** plus its CVE ID as input, and the **vulnerable code** as the target output. Concretely:
+- **Input**: Non-vulnerable function (patched code from `func_after`) + an indicator of the vulnerability (the `cve_id`).  
+- **Output**: Vulnerable version of that function (code from `func_before`, which includes the vulnerability).
+
+The dataset’s C subset has about 2,621 examples of such C function pairs. Each example is one function where a CVE-related fix was applied. (Note: Some functions can be quite large, so we may need to handle or filter lengthy examples that exceed the model’s context window.)
+
+## Preparing the Dataset for Text-to-Text Fine-Tuning
+
+To fine-tune LLaMA 3 in a text-to-text fashion, we need to format each example into a prompt and an expected completion. We will create a **prompt** that includes the fixed code and the CVE ID, and a **target** that is the vulnerable code. Here’s a step-by-step plan:
+
+1. **Load the Dataset**: Use Hugging Face’s `datasets` library to load the C subset of cveFixes1. For example:  
+   ```python
+   from datasets import load_dataset
+   data = load_dataset("euisuh15/cveFixes1", split="c")
+   ```  
+   This gives a dataset where each item has fields like `func_before`, `func_after`, and `cve_id`.
+
+2. **Define the Prompt-Output Format**: We need a clear format so the model can distinguish input from output during training. A simple approach is to concatenate the CVE ID and the fixed code with some separators or prompt text. For example, one might format the training pair as:  
+   **Prompt:** *"CVE-{ID}: Below is a C function with the vulnerability fixed. Insert the vulnerability back into this function.\n<code_after_snippet>\nVulnerable version:"*  
+   **Target:** *"<code_before_snippet>"* (the vulnerable code).
+
+   In practice, you can make the prompt more straightforward since we have a consistent task. For instance:  
+   ```text
+   [CVE-2021-1234] 
+   Non-vulnerable code: 
+   <func_after code here> 
+   Vulnerable code:
+   ```  
+   The model would then be trained to produce the vulnerable code after the "Vulnerable code:" prompt.
+
+3. **Construct Prompt-Target Pairs**: Using the loaded dataset, iterate through each example and build the prompt and target strings. In code, this might look like:  
+   ```python
+   def make_prompt_and_target(example):
+       cve = example["cve_id"]
+       fixed_code = example["func_after"]
+       vuln_code = example["func_before"]
+       prompt = f"CVE-{cve}:\nFixed function:\n{fixed_code}\n\nVulnerable version:\n"
+       target = vuln_code
+       return {"prompt": prompt, "target": target}
+   
+   data = data.map(make_prompt_and_target, remove_columns=data.column_names)
+   ```  
+   This will produce a new dataset with just `"prompt"` and `"target"` fields for each sample, where `"prompt"` is the input text and `"target"` is the expected output text.
+
+4. **Verify Example Formatting**: It’s good to double-check one example to ensure the format is correct. For instance:  
+   **Prompt example:**  
+   ```
+   CVE-2014-0160:
+   Fixed function:
+   static int heartbeat() {
+       // ... (safe code)
+   }
+   
+   Vulnerable version:
+   ```  
+   **Target example:** (the model should output)  
+   ```
+   static int heartbeat() {
+       // ... (code with the Heartbleed vulnerability)
+   }
+   ```  
+   Make sure the prompt clearly separates the fixed code from where the vulnerable code should start. The newline and "Vulnerable version:" (or any chosen marker) before the target help indicate where the model’s output begins.
+
+## Choosing a Data Format (JSONL vs. HuggingFace Dataset)
+
+For fine-tuning with Hugging Face Transformers and PEFT, using a **Hugging Face Dataset** object is very convenient. The `datasets` library can handle large datasets efficiently and works well with the Trainer API. Two common approaches are:
+
+- **Hugging Face `Dataset` Object**: After creating the prompt-target pairs as shown above, you can keep the data in a `Dataset` and feed it to the training pipeline. This is convenient for directly using the Hugging Face Trainer, which can take a `Dataset` for training. You may further split into train/val if needed (for example, `data.train_test_split`).
+
+- **JSONL (JSON Lines) File**: This is a simple text file format where each line is a JSON object. You could export the dataset to JSONL if you plan to use custom loading or need to share the processed data. For example, Hugging Face Datasets allows saving to disk:  
+  ```python
+  data.to_json("finetune_cve_injection.jsonl", orient="records", lines=True)
+  ```  
+  This would produce a file where each line has `{"prompt": "...","target": "..."}`. JSONL is human-inspectable and easily loaded if you prefer writing a custom DataLoader.
+
+In practice, if you intend to use the Hugging Face Trainer/PEFT pipeline, you can keep the data in memory as a `Dataset`. If you prefer a custom PyTorch training loop, you might convert it to a PyTorch `DataLoader`. Either approach is fine; what matters is that the format cleanly separates input and output text. 
+
+**Recommendation**: Use the Hugging Face Dataset format for integration with Transformers. It natively supports methods to tokenize and collate data. You can always export to JSONL for backup or debugging, but it’s not strictly required for fine-tuning.
+
+## Preprocessing and Tokenization for LLaMA 3
+
+Before training, we need to tokenize our prompt and target texts using LLaMA 3’s tokenizer. LLaMA 3 (like LLaMA 2) is a decoder-only model, meaning it expects a single sequence of tokens as input, and we will train it in a causal language modeling manner. Key considerations:
+
+- **Load the Tokenizer**: Use the appropriate tokenizer for the LLaMA 3 model (from Hugging Face, e.g., `AutoTokenizer`). For example:  
+  ```python
+  from transformers import AutoTokenizer
+  tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3-7b-hf")  # hypothetical name
+  tokenizer.pad_token = tokenizer.eos_token  # LLaMA uses EOS as padding if needed
+  ```  
+  Ensure you have the correct model checkpoint name for LLaMA 3.
+
+- **Tokenize Prompt and Target**: We will combine the prompt and target into one sequence for the model, but we need to keep track of which tokens are the prompt (so we can mask them out in the loss). A common strategy is:  
+  1. Tokenize the **prompt** and the **target** separately.  
+  2. Concatenate them, and create a label array that is `-100` (ignore index) for all prompt tokens and equals the token IDs for the target part ([Large Language Model Finetuning Practice | by Haifeng Zhao](https://medium.com/@piscaries/large-language-model-finetuning-practice-7e131291046e#:~:text=,return)). This way, during training the loss is only computed for the target (vulnerable code) tokens, not for regurgitating the prompt. 
+
+  For example:  
+  ```python
+  def tokenize_func(example):
+      prompt_ids = tokenizer.encode(example["prompt"], add_special_tokens=False)
+      target_ids = tokenizer.encode(example["target"], add_special_tokens=False)
+      # Ensure an EOS token between or at end:
+      input_ids = prompt_ids + target_ids + [tokenizer.eos_token_id]
+      # Create labels: -100 for prompt, and actual ids for target (plus EOS)
+      labels = [-100] * len(prompt_ids) + target_ids + [tokenizer.eos_token_id]
+      return {"input_ids": input_ids, "labels": labels}
+  
+  tokenized_data = data.map(tokenize_func, remove_columns=["prompt","target"])
+  ```  
+  In this scheme, `input_ids` contains the whole sequence (prompt followed by target), and `labels` has `-100` for each prompt token position (so the model isn’t trained to output the prompt) and the actual token IDs for the vulnerable code portion ([Large Language Model Finetuning Practice | by Haifeng Zhao](https://medium.com/@piscaries/large-language-model-finetuning-practice-7e131291046e#:~:text=,return)).
+
+- **Handle Length and Truncation**: LLaMA 3 models typically have a context length (e.g., 2048 or 4096 tokens). Some functions in cveFixes1 are very large, possibly exceeding this. You should decide on a maximum sequence length (perhaps the model’s max context or a bit less to allow for the prompt + output). In the tokenization step, use `tokenizer(truncation=True, max_length=N)` for a safe `N` (like 1024 or 2048, depending on GPU memory and model context). Truncate from the end of the sequence if needed (or from the code – but generally you want to ensure the beginning of the prompt is intact, which it will be if truncating at end, possibly cutting off some of the target if it’s too long).
+
+- **Padding**: If you use a `DataCollator` to batch examples, ensure it handles padding. For example, `DataCollatorForLanguageModeling` with `mlm=False` will pad sequences to the same length in a batch and set padding token labels to `-100` by default. Since we already set `-100` for prompt tokens, any additional padding should also be `-100` (the collator typically does this). Setting `tokenizer.pad_token = tokenizer.eos_token` (as above) helps avoid errors with models that have no pad token.
+
+- **Validation**: It’s wise to double-check that for a sample, the `input_ids` correspond to `[Prompt tokens] [Target tokens] <eos>` and `labels` are `[-100,...-100, token_ids_of_target..., eos_id]`. This ensures the model will learn to predict only the vulnerable code given the fixed code context.
+
+## Setting Up LLaMA 3 with QLoRA (via PEFT)
+
+With our data ready, we can now configure the model for efficient fine-tuning. We’ll use **QLoRA**, which means we load LLaMA 3 in 4-bit precision and attach LoRA adapters (low-rank weight updates) to train on our dataset. The Hugging Face [PEFT](https://github.com/huggingface/peft) library makes this straightforward. Here are the steps:
+
+1. **Load the Base Model in 4-bit**: Use `bitsandbytes` integration to load the model in 4-bit precision. We create a `BitsAndBytesConfig` for 4-bit NormalFloat (NF4) quantization. For example:  
+   ```python
+   from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+   bnb_config = BitsAndBytesConfig(
+       load_in_4bit=True,
+       bnb_4bit_quant_type="nf4",
+       bnb_4bit_use_double_quant=True,
+       bnb_4bit_compute_dtype=torch.float16  # or torch.bfloat16 if using newer GPUs
+   )
+   model = AutoModelForCausalLM.from_pretrained(
+       "meta-llama/Llama-3-7b-hf", 
+       quantization_config=bnb_config,
+       device_map="auto"  # if using multiple GPUs or "cpu"/"cuda" as needed
+   )
+   ```  
+   This loads the LLaMA 3 model weights in 4-bit precision. The `nf4` quantization type and double quantization are recommended for QLoRA. 
+
+2. **Prepare Model for QLoRA Training**: There’s a utility in PEFT to prepare a quantized model for training. This will tweak some model settings (like turning off weight decay for certain layers, etc.). Use:  
+   ```python
+   from peft import prepare_model_for_kbit_training
+   model = prepare_model_for_kbit_training(model)
+   ```  
+   This step handles some low-level fixes (for example, making sure gradient checkpointing is enabled and some layers are cast to FP32 as needed). Now the model is ready for attaching LoRA adapters.
+
+3. **Configure LoRA**: Decide on LoRA hyperparameters. Key parameters are:
+   - `r`: LoRA rank (the dimensionality of the update matrices). Higher `r` means more capacity to learn (but also more memory use). Common values are 8, 16, 32, or 64. For an 8–13B model, `r=16` or `32` is often used; for very complex tasks or larger models, `r=64` can be beneficial at the cost of more VRAM. You can start with `r=16` and increase if the model underfits.
+   - `lora_alpha`: Scaling factor for the LoRA updates. Often set proportional to `r` (like alpha = r or 2*r). For example, many LoRA setups use `alpha = 2*r` or `alpha = r`. In one LLaMA-3 8B example, `r=64` and `alpha=16` was used (so alpha was smaller in that case). The QLoRA paper often used α=16 or 32 for various setups. You can set `lora_alpha=16` as a reasonable default and adjust if needed.
+   - `lora_dropout`: Dropout applied to LoRA layers. If your dataset is small (a few thousand examples), a bit of dropout (e.g. 0.05–0.1) helps prevent overfitting. If you have plenty of data or want maximum retention of details, you can use 0.0.
+   - `target_modules`: Which layers to apply LoRA to. For LLaMA models, the safe bet is to target all the key weight matrices in the Transformer blocks (e.g. the query, key, value, and output projection of self-attention). In LLaMA these are named `"q_proj"`, `"k_proj"`, `"v_proj"`, `"o_proj"`. Some setups also target the feed-forward layers (e.g., `"gate_proj"`, `"down_proj"`, `"up_proj"` for LLaMA-2 architecture) by using `target_modules="all-linear"` which applies LoRA to *every* linear layer. Targeting all linear layers can improve fine-tuning efficacy at the cost of more parameters. For initial experiments, you can stick with attention projections only, and later consider expanding if needed.
+   - `bias`: Usually `"none"` (we don’t train any bias terms in LoRA).
+
+   Now create the LoRA config and wrap the model:  
+   ```python
+   from peft import LoraConfig, get_peft_model
+   lora_config = LoraConfig(
+       r=16,
+       lora_alpha=16,
+       target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],  # or "all-linear"
+       lora_dropout=0.05,
+       bias="none",
+       task_type="CAUSAL_LM"
+   )
+   model = get_peft_model(model, lora_config)
+   model.print_trainable_parameters()
+   ```  
+   This will transform the model so that it has trainable LoRA layers (and all original weights are frozen in 4-bit). The `print_trainable_parameters()` should report a small fraction of total parameters as trainable. For example, with `r=16` on a 7B model, trainable params might be on the order of tens of millions (<<1% of total).
+
+## Training Configuration and Execution (QLoRA Fine-Tuning)
+
+With model and data ready, the final step is to set up training. Key aspects include the training loop or Trainer, learning rate, batching, and number of epochs:
+
+- **Training Loop**: You can use the Hugging Face `Trainer` API to simplify training. It will handle feeding data to the model and applying optimizers. For QLoRA, it's recommended to use a **paged AdamW optimizer** from bitsandbytes for efficiency ([QLoRA · GitHub](https://gist.github.com/SauravMaheshkar/4134e86f0d637d03699f098a8ea3d7e8?short_path=77b237e#:~:text=,enable%20for)). Fortunately, Transformers v4.30+ allows specifying `optim="paged_adamw_8bit"` in `TrainingArguments` to use the 8-bit optimizer which is memory-efficient for LoRA ([QLoRA · GitHub](https://gist.github.com/SauravMaheshkar/4134e86f0d637d03699f098a8ea3d7e8?short_path=77b237e#:~:text=,enable%20for)). 
+
+  Set up `TrainingArguments` with appropriate values:  
+  ```python
+  from transformers import TrainingArguments, Trainer, DataCollatorForLanguageModeling
+
+  training_args = TrainingArguments(
+      output_dir="./llama3-cve-qlora",
+      per_device_train_batch_size=1,  # adjust based on GPU memory
+      gradient_accumulation_steps=8,  # accumulate grads for larger effective batch
+      num_train_epochs=3,
+      learning_rate=2e-4,
+      warmup_steps=100,
+      logging_steps=50,
+      optim="paged_adamw_8bit",
+      fp16=True,  # use mixed precision if supported
+      evaluation_strategy="no",  # or "steps"/"epoch" if you have a eval set
+      save_strategy="epoch",
+      report_to="none"
+  )
+
+  # Data collator to pad sequences and mask out prompt portion appropriately
+  data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+  trainer = Trainer(
+      model=model,
+      args=training_args,
+      train_dataset=tokenized_data,
+      data_collator=data_collator
+  )
+  trainer.train()
+  ```  
+  In the above: 
+  - `per_device_train_batch_size` is set to 1 as a safe default given the potentially long sequences; you can increase it if memory allows.
+  - `gradient_accumulation_steps=8` effectively means a batch of 8 sequences before an optimizer step (simulate batch_size = 8). Adjust this along with the per-device batch to achieve a desired effective batch size.
+  - `learning_rate` for LoRA is often in the range 2e-4 to 3e-4 ([QLoRA · GitHub](https://gist.github.com/SauravMaheshkar/4134e86f0d637d03699f098a8ea3d7e8?short_path=77b237e#:~:text=,%29%2C%5Cn)). We use 2e-4 with a small warmup. Monitor loss and adjust if needed (if underfitting, could increase; if unstable, decrease).
+  - `fp16=True` to use half-precision compute for speed (since the base model is 4-bit, this mainly affects optimizer states and LoRA computations).
+  - We turned off actual evaluation (`evaluation_strategy="no"`) for simplicity, but if you have a validation split, you can set it to evaluate every X steps or each epoch.
+  - We use the `DataCollatorForLanguageModeling` with `mlm=False`, which will ensure that the `labels` tensor is correctly created. Since we already set up `labels` in the dataset with `-100` for prompt tokens, the collator should leave those as is. It will pad `input_ids` and `labels` to the longest sequence in each batch, padding labels with `-100` as needed (so padding tokens are ignored in loss).
+
+- **Training Process**: As training runs, the model will learn to generate the vulnerable code given the fixed code and CVE context. Watch the training loss to ensure it's decreasing. Given the dataset size (~2.6k examples for C), a few epochs (2–4) are usually enough. Too many epochs might cause overfitting (the model might memorize patterns and not generalize).
+
+- **PEFT Saving**: By default, Trainer will save the full model (with LoRA adapters merged into a PeftModel). You can also choose to save just the LoRA adapter weights (using `model.save_pretrained` from PEFT). If using the Trainer’s default save, it will save a minimal checkpoint that includes the base model reference and the LoRA weights – which is fine. After training, you can reload the model for inference via:  
+  ```python
+  from peft import PeftModel, PeftConfig
+  base_model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3-7b-hf", device_map="auto", quantization_config=bnb_config)
+  model = PeftModel.from_pretrained(base_model, "./llama3-cve-qlora")
+  model.eval()
+  ```
+  This loads the base 4-bit model and then applies the trained LoRA weights.
+
+- **Inference Check**: To test, feed a prompt in the same format as training (fixed code + CVE) and see if the model generates a plausible vulnerable version. Make sure to stop generation at an appropriate token (you might rely 
 
-Text to improve:
-[Your Simplified Chinese text here]
 
 
 
 
 
 
-xxxxx
-Thanks for sharing the prompt. I’ll now structure it into a tree-of-thought format to promote more structured, interpretable reasoning, and then design a follow-up validator prompt to evaluate how well the judges reasoned through each point. I’ll share both shortly.
 
-1. **Tree-of-Thought Version of the Judge Prompt (Counter-Narrative Tweet Evaluation)**
 
-   For each of the following six criteria, follow the guided sub-questions to evaluate the counter-narrative tweet. These checkpoints will help you reason step-by-step and ensure a thorough, transparent assessment. 
 
-   **Criterion 1: Trustworthiness / Accuracy**  
-   - *Claims Identification:* What factual claims or information does the tweet present (explicitly or implicitly)?  
-   - *Evidence Check:* Are these claims supported by credible evidence, common knowledge, or reliable sources? Is there any known counter-evidence or misinformation to note?  
-   - *Accuracy of Content:* Does the tweet contain any exaggeration, misleading statements, or factual errors? Are all statistics, names, or events mentioned correctly?  
-   - *Credibility Assessment:* Given the above, how trustworthy is the information in this tweet? Would an informed reader find it accurate and reliable?
-
-   **Criterion 2: Persuasiveness / Attitude Change Potential**  
-   - *Persuasive Strategy:* What approach does the tweet use to influence opinions (e.g., factual argument, emotional appeal, personal anecdote, humor, questioning)? Who is the likely target audience (the original hater, bystanders, general public)?  
-   - *Strength of Appeal:* Why might this tweet be compelling (or not) to the target audience? Does it address underlying beliefs or emotions? Does it present new insights or reframe the issue in a way that could change someone’s perspective?  
-   - *Empathy and Connection:* Does the tweet establish any common ground, empathy, or understanding that could open the audience to change? Conversely, could any wording trigger defensiveness or backlash in the reader?  
-   - *Attitude Shift Evaluation:* Considering the content and tone, how likely is the tweet to **positively influence** the reader’s attitude or reduce the hateful viewpoint? What evidence or reasoning supports your conclusion about its persuasive impact?
-
-   **Criterion 3: Clarity of Expression**  
-   - *Message Understanding:* Is the tweet’s core message easy to understand on the first read? Restate the main point of the tweet in your own words – is it clear and unambiguous?  
-   - *Language and Structure:* Are the sentences and wording straightforward? Note any jargon, confusing phrasing, or ambiguous terms. Does the tweet stay on topic without rambling or going off on tangents?  
-   - *Coherence:* Is the counter-narrative logically organized and cohesive? Does each part of the tweet support the overall point, or do any parts seem out of place?  
-   - *Overall Clarity:* Given the above observations, rate the clarity of the tweet. Would most readers grasp the intended counter-narrative easily, or would some readers be confused about the meaning?
-
-   **Criterion 4: Tone and Civility**  
-   - *Respectfulness:* What is the tone of the tweet? Does it remain respectful and calm towards the original poster and the audience? Note if there are any insults, sarcasm, or aggressive remarks.  
-   - *Politeness vs. Confrontation:* Does the tweet avoid derogatory language and mocking? Even while disagreeing with the hate content, does it maintain a civil, non-hateful stance?  
-   - *Empathy & Professionalism:* Does the tone show understanding or compassion (either for the targeted group or even for why the hater might feel that way), or is it judgmental and scolding? How might the tone make the reader feel (defensive, receptive, encouraged)?  
-   - *Tone Appropriateness:* Evaluate if the tone is appropriate for constructive dialogue. Could this tone help de-escalate tension and invite open conversation, or might it escalate the conflict?
-
-   **Criterion 5: Relevance and Focus**  
-   - *Direct Address of Hate Content:* Does the counter-narrative directly address the specific hateful statement or underlying issue? Identify the hateful claim or sentiment and check if the tweet responds to **that point** (rather than talking past it or ignoring it).  
-   - *On-Topic Content:* Is everything in the tweet relevant to the hate topic at hand? Highlight any parts of the tweet that stray into unrelated issues or generalities not pertinent to the original hate speech.  
-   - *Targeted Counter:* Does the tweet counter **the key stereotype, misconception, or prejudice** presented in the hate speech? (For example, if the hate speech says “Group X is dangerous,” does the tweet provide a narrative that challenges that specific idea?)  
-   - *Completeness of Response:* Determine if the tweet covers the necessary points to refute or respond to the hate message. Is anything important left unaddressed, or does the tweet hit the main points directly and sufficiently?
-
-   **Criterion 6: Quality of Counter-Argument**  
-   - *Logical Soundness:* How strong is the tweet’s argument in disproving or pushing back against the hate speech? Evaluate the logic – does the counter-narrative make sense as a rebuttal?  
-   - *Evidence and Examples:* Does the tweet provide any supporting facts, examples, or reasoning to back up its stance? If so, are they effective and relevant? If not, would the addition of a fact or example strengthen it, or is it still effective without them?  
-   - *Addressing Core Issues:* Does the counter-argument tackle the core fear, misinformation, or value conflict behind the hate speech? (E.g., if the hate speech is based on a false stereotype, does the tweet directly debunk that stereotype or provide an alternate perspective?)  
-   - *Overall Effectiveness of Argument:* Considering the points above, how well does the tweet succeed in countering the hate rationally? Even if the tone is good and facts are correct, is the **argument convincing and well-founded**? Identify any weaknesses in the reasoning or missed opportunities to strengthen the case.
-
-   *After completing all sub-questions for each criterion, use your analysis to inform the scoring or final judgement for that criterion as per the rating guidelines.* Each step ensures you’ve thoroughly examined different facets of the tweet before arriving at a conclusion. By following these checkpoints, your evaluation will be more transparent and easier to justify.
-
-2. **Follow-up Validator Prompt (Evaluating Judge Panel’s Reasoning Rigor)**
-
-   Now, assume the role of a **validator** reviewing the judge panel’s evaluations. Your task is to ensure the judges applied the above Tree-of-Thought criteria rigorously and fairly. Go through each criterion’s analysis provided by the judges and check for the following:
-
-   - **Completeness of Sub-Step Answers:** Verify that for **each sub-question** in every criterion, the judges have provided a relevant and sufficient answer. Are any sub-questions ignored or answered with only a cursory phrase? Flag any omissions or overly superficial answers (e.g., a one-word answer where explanation was needed).  
-   - **Depth and Justification:** Examine whether the judges’ responses demonstrate deep reasoning. Did they support their observations with examples or evidence from the tweet? Identify any **shallow judgments** – for instance, a judge giving a high score without detailing why, or criticizing an aspect without explaining the reasoning. Each rating or comment should be backed by the analysis from the sub-steps.  
-   - **Consistency and Rubric Adherence:** Check that the judges’ final ratings for each criterion (if provided) align with their own sub-step analysis. Are there any **inconsistencies**? (e.g., a judge notes multiple factual errors in the tweet but still rated “Trustworthiness/Accuracy” as high). Ensure that they applied the rating rubric correctly: if the rubric says certain flaws merit a low score, the judges’ rating should reflect that. Conversely, no criterion should be marked down without an explained flaw.  
-   - **Identification of Bias or Omission:** Make sure the judges remained objective and focused on the criteria. Note if they introduced any bias or evaluated something outside the given criteria. Also, confirm they didn’t miss evaluating an important aspect of the tweet that was relevant to the criteria. For example, if the tweet had a clearly respectful tone but the judges failed to mention tone at all, that’s an omission.  
-   - **Final Rigor Assessment:** Based on the above checks, assign a **Judge Rigor Score** on a scale from 1 to 5. This score reflects how thorough, consistent, and well-justified the panel’s evaluations were. A score of **1** indicates a very poor, shallow analysis with multiple issues, while a **5** indicates an excellent, rigorous evaluation with all criteria addressed in depth. Provide a brief rationale for this score, summarizing the key observations (e.g., “The judges answered all sub-questions in detail and their ratings matched their reasoning, demonstrating high rigor – Score: 5/5.”).
-
-   *Your validation will ensure the judge panel’s reasoning is transparent and meets the expected standard. By following these steps, you will highlight any areas where the evaluation fell short and confirm where it was done well, ultimately giving confidence in the fairness and quality of the judgments.*
-
-
-
-
-
-
-
-xxxxc
-
-Thanks! I’ll write a detailed Methodology section that highlights the full experimental setup and showcases the superiority of your RAG-enhanced Mistral pipeline for CVE-to-TTP mapping. I’ll focus on the architecture, process flow, and where it clearly outperforms traditional methods.
-
-I'll get started and let you know as soon as it's ready.
-
-# Methodology
-
-## Dataset and Annotation  
-We evaluate our approaches on a curated dataset of **7,013 CVEs from the year 2021**, each manually annotated with the corresponding MITRE ATT&CK technique identifier (TID). CVE entries (Common Vulnerabilities and Exposures) are standardized public vulnerability records ([The mystery of the CVEs that are not vulnerabilities - ThreatDown by Malwarebytes](https://www.threatdown.com/blog/the-mystery-of-the-cves-that-are-not-vulnerabilities/#:~:text=,with%20the%20MITRE%20CVE%20list)), while ATT&CK techniques represent adversary methods catalogued by MITRE (each technique has a unique ID like “T1566”) ([What is MITRE ATT&CK®: An Explainer | Exabeam](https://www.exabeam.com/explainers/mitre-attck/what-is-mitre-attck-an-explainer/#:~:text=MITRE%20ATT%26CK%C2%A0is%20a%20globally,network%2C%20ICS%2C%20and%20mobile%20platforms)). In our dataset, each CVE description is labeled with one ATT&CK Technique ID that best represents the exploit or tactic it enables. We split the data into an 80% training set (for model training or retrieval corpus), 10% validation, and 10% test. All text is lowercased and punctuation-normalized, but no complex preprocessing (such as stemming) is applied to preserve the meaningful tokens in the CVE descriptions.  
-
-## Baseline Approaches  
-
-To benchmark the effectiveness of our proposed pipeline, we implement two categories of baseline models: (1) classical machine learning with TF‑IDF features and (2) deep learning with transformer-based language models. All baseline models treat the CVE-to-TTP mapping as a multi-class classification problem where the output is one of the ATT&CK technique IDs. We briefly describe these baseline methods below.
-
-### Classical Machine Learning Baselines  
-For the classical approach, we first convert each CVE description into a fixed-length feature vector using **Term Frequency–Inverse Document Frequency (TF‑IDF)** weighting. This representation captures the important keywords in the vulnerability text in a high-dimensional sparse vector. We then train three different traditional classifiers on these vectors to predict the technique labels:  
-
-- **Decision Tree:** a CART decision tree classifier that learns a hierarchy of if-else rules on TF‑IDF features to partition CVEs by technique.  
-- **Random Forest:** an ensemble of decision trees that improves generalization by averaging predictions from multiple trees trained on random feature subsets.  
-- **Logistic Regression:** a multi-class logistic classifier (with one-vs-rest strategy) that learns linear weight combinations of the TF‑IDF features to discriminate between ATT&CK technique classes.  
-
-Each of these models is trained on the 80% training split with the default parameters (tuned minimally on the validation set to prevent overfitting). The **TF‑IDF + Logistic Regression** model serves as a strong classical baseline, while the tree-based models offer interpretable decision boundaries. These algorithms are efficient to train but rely on keyword overlaps; they cannot easily capture context or semantic meaning in the CVE text beyond exact token matches.  
-
-### Deep Learning Baselines  
-We next evaluate modern deep learning approaches using pre-trained transformer language models. In these baselines, **CVE descriptions are tokenized and fed into transformer encoders**, and the model learns to output an ATT&CK technique ID. We fine-tune each model’s weights on the training set for the classification task, adding a final classification layer on top of the transformer. We experiment with both general-purpose and cybersecurity-specific transformers:  
-
-- **BERT (base)** – a 110M-parameter Bidirectional Encoder Representations from Transformers model trained on general English text. We fine-tune BERT to classify CVE text into technique IDs.  
-- **RoBERTa (base)** – a robustly optimized BERT variant, which we also fine-tune on our CVE dataset.  
-- **MPNet** – Microsoft’s MPNet model (base size), included to test another off-the-shelf transformer architecture on this task.  
-- **CyBERT** – a domain-adapted BERT model pre-trained on cybersecurity text (e.g., security reports), as introduced by Ranade *et al.* and others, which we fine-tune for vulnerability-to-technique mapping.  
-- **SecBERT** – a security-focused BERT-based model (similar in spirit to CyBERT, with domain-specific pre-training on security corpora) fine-tuned on our data.  
-
-Fine-tuning is performed using the training set CVEs and their labels, optimizing cross-entropy loss. We selected these models to represent both **generic language understanding** (BERT, RoBERTa, MPNet) and **security domain expertise** (CyBERT, SecBERT). The deep learning baselines can capture context and semantics better than TF‑IDF, potentially recognizing that, for example, terms like “overflow” or “buffer” relate to exploitation. However, fine-tuning these models requires substantial labeled data, and their knowledge is limited to what was seen during training (they have no inherent knowledge of MITRE ATT&CK unless learned from the annotations). Training also must be redone for new technique classes or additional data, which can be resource-intensive.
-
-## Proposed In-Context LLM Pipeline  
-Our proposed approach reframes the task as an **in-context learning problem** for a Large Language Model, avoiding explicit model fine-tuning. Instead of training a classifier from scratch, we leverage the powerful **Mistral 7B** LLM (an open-weight GPT-style model with 7.3B parameters) to **generate ATT&CK technique predictions directly from the CVE description**. We enhance this generative model with **Retrieval-Augmented Generation (RAG)** to supply it with relevant contextual information about ATT&CK techniques and past examples. This approach allows the LLM to ground its predictions in factual knowledge and similar cases, making it far more adaptable and scalable. Figure 1 provides an overview of this in-context classification pipeline.
-
- ([image]()) *Figure 1: Illustration of the CVE-to-TTP mapping pipeline using the proposed in-context LLM approach (Mistral 7B with RAG). In this example, two CVE descriptions (left: an Intel driver vulnerability, right: a reflected XSS vulnerability) are processed. The system retrieves relevant context (green and purple boxes) from a knowledge database – including ATT&CK technique definitions and similar CVE instances – and adds this information to the LLM’s prompt. The Mistral 7B model, guided by this in-context data, generates the corresponding ATT&CK Technique ID (e.g., T1190 or T1566) as the classification output.*  
-
-### Retrieval-Augmented Generation Setup  
-To provide the LLM with knowledge of the ATT&CK framework and examples of CVE-to-technique mappings, we build a **vector store** (embedding database) of reference texts. This knowledge repository includes: **(a)** official MITRE ATT&CK technique descriptions (for all techniques that appear in our dataset) and **(b)** all CVE descriptions from the training set along with their known technique labels. Each piece of text is converted into an embedding vector using a sentence-transformer encoder, and stored in the vector database. When the LLM needs to predict a technique for a new CVE, it will query this database to retrieve the most relevant entries as additional context. By augmenting the prompt with relevant snippets, the LLM can effectively **consult an external memory** rather than relying solely on its internal parameters. This follows the RAG paradigm, which has been shown to improve factual accuracy on knowledge-intensive tasks ([[2005.11401] Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401#:~:text=far%20been%20only%20investigated%20for,intensive%20NLP)). In essence, the LLM + RAG pipeline combines parametric knowledge in the model with non-parametric memory from the database, enabling more precise and up-to-date predictions ([[2005.11401] Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401#:~:text=fine,only%20seq2seq%20baseline)).
-
-### In-Context Prompting and Inference  
-We craft a specific prompt template for the Mistral 7B model to perform classification. The prompt provides an instruction and context, for example: *“You are a cybersecurity expert. Determine the MITRE ATT&CK Technique ID for the following CVE description.”* Then it inserts the **CVE description** in question, followed by the **retrieved context** (the top $k$ relevant passages from the vector store). These retrieved passages typically include one or two ATT&CK technique definitions that potentially match the CVE, as well as a few similar CVE examples from the training set with their technique annotations. By seeing actual examples and definitions, the LLM can infer the correct mapping for the new CVE. We do not fine-tune the model’s weights at all – the learning happens *in-context*, during the formation of the prompt. The large capacity of Mistral 7B (7.3B parameters, open-sourced under Apache 2.0) makes it well-suited to understanding the complex vulnerability text; notably, Mistral 7B’s strong performance is comparable to much larger proprietary models ([Mistral 7B: Basics, Benchmarks, and How to Get Started](https://www.acorn.io/resources/learning-center/mistral-7b/#:~:text=The%20model%20is%20recognized%20for,of%20the%20Llama%202%2013B)), yet it remains efficient to run on modest hardware. 
-
-At inference time, the pipeline executes the following steps:  
-
-1. **Embedding Retrieval:** Given a new CVE description (from the test set), we compute its embedding and perform a similarity search in the vector database. The top-$k$ most similar items (where $k$ is tuned on the validation set, e.g. $k=5$) are retrieved. These might include, for instance, the MITRE ATT&CK entry for *“Phishing (T1566)”* if the CVE mentions social engineering, or a training example CVE that describes a similar buffer overflow mapped to *“Exploitation for Privilege Escalation (T1068)”*.  
-2. **Prompt Construction:** We assemble an input prompt consisting of the CVE description and the retrieved texts. The relevant snippets are appended in a readable format, separated by delimiters, and an instruction is given: e.g., *“Using only the provided information, identify the best-matching ATT&CK technique ID for the above CVE.”* This packaging ensures the model knows to base its answer on the supplied context (mitigating any hallucinations).  
-3. **LLM Inference:** The augmented prompt is fed into the Mistral 7B LLM. The model processes the CVE and context and generates an output sentence. We design the prompt so that the model’s answer is concise – ideally just the technique ID (such as “T1566”) or the ID plus technique name. If the model’s output includes additional text or explanation, we post-process it to extract the technique ID string.  
-4. **Prediction Output:** The extracted ATT&CK Technique ID is produced as the final prediction for the given CVE. This output can then be compared to the ground truth label for evaluation.  
-
-Because the LLM is referencing authentic ATT&CK definitions and real examples on the fly, it effectively performs an **open-book classification**. This approach is far more **adaptable** than the fixed baselines – for instance, if a new ATT&CK technique is introduced or a new trend in vulnerabilities emerges, we can update the reference database with new entries, and the LLM will immediately leverage them, without requiring retraining. It also provides a degree of interpretability: the retrieved context can explain *why* the model arrived at a certain prediction (much like rationale), since the model’s answer is grounded in those snippets.  
-
-### Example Pipeline Walk-Through  
-To illustrate the pipeline, consider a real example from our test set. One CVE description reads: *“Reflected cross-site scripting (XSS) was possible on the login page of Product X, allowing an attacker to potentially steal session tokens via a crafted link.”* This CVE involves a web vulnerability that could be used in a phishing scenario. Our system retrieves the MITRE ATT&CK technique entry for **Phishing (T1566)** – which describes various phishing methods including use of malicious links – as well as a few similar CVEs from the training corpus that were labeled with phishing-related techniques. Given this augmented context, the Mistral model correctly generates **“T1566”** as the predicted technique. In effect, the LLM recognized that the described XSS vulnerability can serve as a means for an adversary to conduct a phishing attack (by tricking users into clicking a malicious reflected-XSS link), aligning it with the Phishing technique in ATT&CK. This step-by-step transformation from raw CVE text, through retrieved knowledge, to the final TTP label demonstrates the reasoning enabled by our in-context approach. The left side of Figure 1 provides a similar walk-through for a CVE involving an Intel driver flaw, which the model maps to the appropriate exploitation technique (T1190, Exploit Public-Facing Application) after consulting the context. Such examples highlight how the pipeline leverages both **specific evidence** (ATT&CK definitions and past cases) and **general language understanding** to make an informed classification.
-
-## Advantages of the In-Context LLM Approach  
-The proposed Mistral 7B + RAG pipeline offers several key advantages over traditional ML/DL classifiers in this domain. First, it achieves **higher predictive performance**: by injecting relevant domain knowledge at inference time, the LLM’s classification accuracy improves substantially. In our experiments, the in-context LLM approach attained a **weighted F1-score of 0.91**, far outperforming the best deep learning baseline (SecBERT, F1 ≈ 0.77) and the best classical baseline (Logistic Regression, F1 ≈ 0.73). This large margin (roughly 18% relative improvement over the strongest non-LLM model) showcases the **power of coupling LLMs with context retrieval**. The LLM was especially strong in identifying techniques for CVEs that had little direct keyword overlap with the technique name – a scenario where simple models often fail. By seeing contextual clues (for example, recognizing that a CVE about a malicious document corresponds to a known *“User Execution”* technique), the LLM can infer the correct TTP even for hard examples.
-
- ([image]()) *Figure 2: Performance comparison of different CVE→TTP mapping methods on the test set (weighted precision, recall, and F1-score). The in-context Mistral 7B approach (“Large Language Model”) outperforms all baselines, achieving the highest precision (0.93) and F1 (0.91). Traditional machine learning models (Decision Tree, Random Forest, Logistic Regression) and fine-tuned deep learning models (BERT, RoBERTa, etc.) show significantly lower scores, as they lack the dynamic knowledge integration that the RAG-enhanced LLM enjoys.*  
-
-Second, our approach is **scalable and adaptable**. Adding new CVEs or even new ATT&CK techniques to the system only involves updating the vector store with new text embeddings – **no re-training of the LLM is necessary**. In contrast, the deep learning baselines would require collecting new labeled samples and re-training or fine-tuning the model to handle new classes or data distributions. This makes the LLM pipeline much more flexible in real-world settings where the threat landscape evolves rapidly. The burden of extensive labeled data is also reduced: the LLM can make reasonable predictions by drawing on a handful of relevant examples in context, whereas a supervised model would typically need many labeled instances of a new class to learn it. Practitioners can thus adapt the tool to different organizations or update it for emerging vulnerabilities with minimal effort – a clear advantage in operational cybersecurity environments.
-
-Finally, the in-context approach provides **explainability** benefits. The retrieved snippets (ATT&CK definitions and similar cases) that influenced the LLM’s decision can be presented to analysts as justification for the mapping. This is valuable for user trust and for validating the system’s reasoning. In summary, our methodology demonstrates that a thoughtfully engineered in-context LLM solution can exceed the performance of conventional classifiers on CVE-to-TTP mapping, while also being easier to maintain and update as knowledge evolves. It leverages the best of both worlds: the **linguistic and reasoning capabilities** of state-of-the-art LLMs, and the **factual grounding** provided by the MITRE ATT&CK knowledge base and historical examples.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-xxxxxxxx
-6. **Conciseness and Tweet Length**  
-   - Does the counter-narrative stay within typical tweet length constraints (under 280 characters) while remaining coherent and impactful?  
-   - **Score 5 only if** it is comfortably within the character limit, maintains clarity, and does not appear rushed or cut off.
-
-
-
-
-
-xxxx
-BEGIN_OF_PROMPT
-
-You are part of a panel of three (3) expert reviewers tasked with evaluating an original hateful tweet and a corresponding "excite-based" counter-narrative tweet. The counter-narrative tweet is designed to counter hatred by generating positivity, joy, and excitement in a concise, tweet-friendly format.
-
-Each expert will:
-• Place themselves in the position of the person who posted the original hateful tweet.
-• Assess how persuasive, accurate, and emotionally impactful the counter-narrative is, following the **strict** evaluation guidelines below.
-
----
-### 1. Evaluation Criteria (Strict Rating Guidelines)
-
-You must evaluate **each** of the following criteria on a 1–5 scale (1 = “strongly disagree,” 5 = “strongly agree”) and provide examples or reasoning to support each score. **Be critical and avoid giving high scores unless the tweet clearly meets the standard.**
-
-1. **Trustworthiness/Accuracy**  
-   - Is the counter-narrative factually sound and free of misinformation?
-   - **Score 5 only if** the content is verifiably accurate, contextually relevant, and does not include any misleading or unsubstantiated claims.
-
-2. **Attitude Change/Influence**  
-   - Does the counter-narrative have the potential to shift the hateful perspective?
-   - Does it provide a strong, logical reason for reconsidering hateful beliefs?
-   - **Score 5 only if** it convincingly addresses hate or prejudice and offers a meaningful, resonant alternative viewpoint.
-
-3. **Clarity and Depth of Information**  
-   - Is the counter-narrative concise yet clear?
-   - Does it offer adequate detail or examples while remaining tweet-friendly?
-   - **Score 5 only if** it strikes an excellent balance between brevity and clear, well-reasoned content.
-
-4. **Filling Knowledge Gaps/Reducing Uncertainty**  
-   - Does it correct misinformation or clarify misconceptions?
-   - **Score 5 only if** it directly addresses the hateful or incorrect assumptions, leaving minimal room for confusion.
-
-5. **Positivity and Excitement**  
-   - Does the counter-narrative genuinely elicit joy or excitement?
-   - Is the positivity authentic, purposeful, and clearly connected to countering hate (rather than empty cheerleading)?
-   - **Score 5 only if** it demonstrates a **strong, genuine uplifting quality** that feels natural, resonates with the context, and effectively counters negative emotions (hate, anger, etc.). Forced or shallow positivity should receive a lower score.
-
-**Important Note**: If the counter-narrative fails to address the hateful content logically—or if the excitement appears forced, irrelevant, or superficial—do **not** give high marks. 
-
----
-### 2. Original Tweet
-*(Hateful content here, but do not include in your final output.)*
-
----
-### 3. Counter-Narrative Tweet
-*(Excite-based counter-narrative here, but do not include in your final output.)*
-
----
-### 4. Expert Evaluations
-
-Each of the three experts must **independently**:
-
-1. **Rate the counter-narrative** on each of the five criteria (1–5).  
-   - Reference the strict rating guidelines above.
-   - Provide a brief rationale for why you chose that score.
-2. Emphasize how effectively the tweet **counters hate** and **sparks genuine positivity** (Criterion #5).
-
----
-### 5. Overall Persuasiveness and Final Output
-
-After each expert provides their individual scores:
-
-1. **Calculate the average rating** for each criterion (across all three experts).
-2. Provide a **final persuasiveness score** (1–5) that reflects the tweet’s overall effectiveness at:
-   - Countering hateful beliefs,
-   - Conveying accurate, relevant information,
-   - Eliciting authentic excitement/positivity.
-
-**Do not** include the text of the hateful tweet or the counter-narrative in the output. Only present:
-- The individual expert ratings and rationale for each criterion.
-- The average scores per criterion.
-- The final persuasiveness score.
-
-END_OF_PROMPT
-xxxxx
-
-
-Hook your readers with a surprising fact, then explain in one sentence why it matters. Use active, vivid language, and end with a question that prompts engagement. Keep it concise but let a bit of personality shine through so the information feels fresh and exciting
-
-
-
-
-
-
-
-xxxx
-
-
-Below is your original text with corrected grammar and clearer phrasing, preserving its original intent and structure:
-
----
-
-**Corrected Text**
-
-You are an AI Large Language Model whose task is to counter hateful speech provided by the user, using only the information available in the context. 
-
-Use the complete information in the context and nothing else.
-
-Please follow these steps in a logical, step-by-step manner to generate counter hateful speech:
-
-1. The counter hateful speech should be exciting for the audience—eliciting positivity and joy—so that readers can thoroughly reject the hateful narrative.
-
-2. You are only to use the information provided in the context and no other source. The information in the context contains all the facts needed to counter the hateful speech. Rewrite these facts to make them compelling and engaging.
-
-3. Avoid sounding AI-generated or machine-like; try to be as genuine and human as possible.
-
-Refine this prompt as needed.
-
-
-
-
-
-
-
-
-xxxxx
-I want you to use a Tree-of-Thought process with the following steps. 
-Please **show your reasoning steps** briefly, but ensure the final answer is concise, positive, and free of hate.
-
-1. **Identify Key Elements from Context**  
-   - Summarize the hateful statement in your own words.  
-   - Identify the target of the hate speech.  
-   - Note any essential contextual details (from [Your Context Here]).
-
-2. **Clarify the Goal**  
-   - Restate that our mission is to craft an EXCITE-driven, uplifting counter-narrative.  
-   - Emphasize we must only rely on the context provided.
-
-3. **Generate Possible Response Paths (Tree of Thought Expansion)**  
-   - Path A: Focus on empathy and shared humanity.  
-   - Path B: Use only context-based facts to correct misunderstandings.  
-   - Path C: Provide a motivational, future-oriented perspective.  
-
-4. **Evaluate & Refine Each Path**  
-   - Which elements of each path are most uplifting, unifying, and contextually grounded?  
-   - Eliminate anything that is not in the provided context or that is negative/hostile.
-
-5. **Synthesize the Best Elements into a Final Draft**  
-   - Merge the most positive, context-relevant, and empathetic points.  
-   - Keep the tone warm, constructive, and anchored in the provided info.
-
-6. **Produce the Polished Counter-Narrative**  
-   - Address the hateful statement directly.  
-   - Use a positive, dignifying, and respectful tone.  
-   - End on a note of encouragement or unity, reflecting the EXCITE principle.  
-   - Keep it concise (1–2 paragraphs). 
-
-
-
-
-
-zzzxxx
-
-The technique I used here is the **Excite Strategy**, which is a method of counter-narrative generation that directly responds to hate speech by **highlighting positive outcomes, benefits, and inspiring narratives**. Rather than simply contradicting or arguing against the hate, the Excite Strategy aims to:
-
-- **Reframe negative assumptions** with positive, enthusiastic messaging.
-- **Celebrate diversity and inclusion**, emphasizing strengths rather than conflicts.
-- **Generate excitement and optimism**, shifting the narrative from fear or resentment to inspiration and potential.
-
-In this example, I shifted the conversation from negative stereotypes about immigrants to emphasizing their positive impacts, cultural contributions, economic benefits, and collective societal upliftment.
-
-
-
-
-
-
-
-
-You are an AI language model tasked with generating counter-narratives to hate speech using the 'Explain' maneuver from the BEND framework, as described in the context of social cybersecurity.
-
-### Context: The BEND Framework
-The BEND framework identifies narrative and structural maneuvers that alter the dynamics of online conversations and communities. Within this framework, maneuvers are categorized to shape either the narrative (what is communicated) or the social network (who communicates with whom). The "Explain" maneuver specifically targets narrative manipulation positively by providing detailed information, clarification, context, or elaboration on a particular topic. It aims to counter misinformation or negative narratives by elaborating facts, providing context, clarifying misunderstandings, and presenting logical reasoning to encourage rational thinking and mitigate emotional reactions.
-
-### Your Task
-Given an instance of hate speech, your task is to generate a counter-narrative that employs the "Explain" maneuver to neutralize, correct, and educate the audience about why the hate speech is inaccurate, misleading, or harmful. Your response should:
-
-1. **Clearly state and analyze the hate speech** provided in the input.
-2. **Use the "Explain" maneuver** to deliver detailed, fact-based information that:
-   - Corrects inaccuracies and misinformation.
-   - Provides a clear explanation highlighting context, facts, and evidence.
-   - Educates the audience on the real-world implications and harms of the hate speech.
-
-2. **Maintain a neutral, informative tone** aimed at reducing hostility and fostering understanding, without escalating emotional tensions.
-
-3. **Offer evidence or logical reasoning** that supports why the narrative presented in the hate speech is incorrect or harmful.
-
-4. **Suggest a constructive perspective or understanding** that promotes inclusivity, reduces prejudice, and encourages positive interaction.
-
-### Example Template
-- **Hate Speech Input:** [Hate speech example here]
-- **Counter-Narrative (Explain Maneuver)**:
-   - Restate or summarize the problematic elements of the hate speech.
-   - Provide evidence, facts, or clear logic explaining why this narrative is false or damaging.
-   - Offer detailed explanations to correct misinformation.
-   - Encourage the reader to reconsider their viewpoint by presenting clear, truthful information that fosters empathy and understanding.
-
-Your response must prioritize educating and correcting misinformation rather than confronting the speaker aggressively.
-
-
-
-
-
-
-
-
-
-
-
-
-Below is an example prompt you can provide to your local LLM. It includes an outline of the steps (thinking method) the model should follow, a “few-shot” style demonstration of the desired output, and the essential instructions. Adapt it to your environment or style as needed.
-
----
-
-## Prompt: Identify Vulnerabilities in `http.c` Without Adding New Bugs
-
-**System/Developer Instruction**:
-You are analyzing a C code file (`http.c`) for possible security or reliability vulnerabilities. Your primary tasks:
-
-1. **Identify** potentially weak or vulnerable areas in the code (e.g., unchecked buffer sizes, boundary issues, unvalidated input, risky memory usage, etc.).
-2. **Explain** why each flagged item could be a risk.
-3. **Do not** suggest or show how to create or insert new bugs.
-4. **Do not** break or remove functionality—just point out concerns and weaknesses.
-
----
-
-### Thinking Method
-
-Follow this approach step-by-step:
-1. **Scan the code** for places that process data from external sources (e.g., network, user input).
-2. **Check** for integer overflow, out-of-bounds array usage, unchecked memory operations, or string handling with no length verification.
-3. **Inspect** authentication/authorization flows for any potential misuse.
-4. **Note** any areas where function return values aren’t checked but should be.
-5. **Summarize** each suspicious location or function with a short rationale.
-
----
-
-### Code to Analyze
-
-```
-[PASTE OR LINK THE COMPLETE CONTENT OF http.c HERE]
-```
-
----
-
-### Desired Output Format
-
-- A **numbered list** or set of “Potential Issue #X” entries.  
-- Each entry includes:
-  - **Location**: function name or approximate line numbers.
-  - **Explanation**: why it might be a vulnerability or could fail under certain conditions.
-
-**Example** (fictional illustration):
-
-```
-Potential Issue #1
-Function: http_readwrite_headers (Lines ~320–350)
-Explanation: The function copies data into 'headerb' without checking the maximum size. This could lead to a buffer overflow if 'headerb' is not large enough to hold all incoming header lines.
-
-Potential Issue #2
-Function: Curl_http_auth_act (Lines ~600–630)
-Explanation: The code sets 'newurl' based on user input without validating its length. A malicious user could potentially force an out-of-bounds write if there's insufficient boundary checking.
-```
-
-*(Note: These examples are illustrative. Please provide only the actual issues found in the real `http.c`.)*
-
----
-
-### Important Reminders
-- **Do not** propose how to exploit or insert new bugs; only identify existing weaknesses.
-- If certain sections are secure or do not appear vulnerable, skip them.
-- Keep your analysis concise and technical.
-
----
-
-*(End of Prompt)*
-
-
-
-
-
-
-xxxxx
-We did not showcase impersonation results on the Twitter dataset due to potential **data leakage** concerns. Since **LLMs are trained on large-scale web data, including social media content**, they may have already **internalized a celebrity’s writing style**, making it an **unreliable test for our RAG-based approach**. Such overlap could inflate performance metrics, **undermining the validity of our evaluation**.
-
-
-
-
-
-
-### 4 Methodology
-
-In this section, we describe our approach for **LLM-based author impersonation** using the **STRAP (Style Transfer via Paraphrasing)** framework combined with fine-tuned language models. Our methodology is designed to preserve the semantic integrity of the original text while effectively transferring the stylistic elements of a target author. The pipeline involves four key stages: paraphrasing, fine-tuning, style imputation, and verification.
-
-#### 4.1 Paraphrasing with STRAP
-
-The first step in our pipeline employs the **STRAP framework** to generate paraphrased versions of both the source and target author documents. STRAP reformulates unsupervised style transfer as a paraphrase generation task, where the style of a given sentence is modified without significantly altering its meaning. This process involves feeding the original sentences through a **diverse paraphrase model** to create **pseudo-parallel datasets**. The paraphrased outputs serve to **normalize stylistic elements**, effectively stripping identifiable authorial traits while maintaining semantic coherence.
-
-#### 4.2 Fine-tuning GPT-2 for Style Transfer
-
-Once the paraphrased documents are generated, we use them alongside their original counterparts to **fine-tune a GPT-2 model**. This fine-tuning process is crucial as it enables the model to learn the relationship between neutral, paraphrased text and its corresponding author-specific style. The GPT-2 model is trained to **reintroduce stylistic features** that are characteristic of the target author, focusing on elements such as **lexical choices, syntactic structures, and tone**. By leveraging both paraphrased and original text pairs, the model becomes proficient in embedding the target author's style into previously neutralized content.
-
-#### 4.3 Style Imputation on Source Text
-
-After fine-tuning, the GPT-2 model is applied to the paraphrased source documents. This step, referred to as **style imputation**, involves transforming the neutral source text to adopt the stylistic features of the target author. The goal is to create a text that is **stylistically indistinguishable from the target author’s writing** while preserving the original semantic content. This process effectively achieves **targeted adversarial impersonation**, where the writing style of the target author is transferred onto the source content.
-
-#### 4.4 Verification Using BigBird
-
-The final stage of our methodology involves verifying the success of the impersonation using **MIT Lincoln Laboratory's BigBird** model, a robust **authorship verification (AV) system**. BigBird is utilized to evaluate whether the transformed text convincingly mimics the target author's style. The model assesses the stylistic and structural properties of the generated text to determine if it can **successfully flip a False Trial (FT) into a True Trial (TT)**, meaning the impersonated text is classified as being authored by the target author. This verification step is critical for assessing the **effectiveness and robustness** of our impersonation pipeline.
-
----
-
-This methodology integrates **semantic-preserving paraphrasing** with **style-specific fine-tuning** to achieve high-fidelity authorship impersonation, demonstrating the vulnerabilities of existing AV models to sophisticated LLM-driven adversarial attacks.
