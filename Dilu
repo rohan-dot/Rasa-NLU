@@ -1,3 +1,21 @@
+Subject: Presenter Confirmation and Urgent Conference Registration
+
+Dear [Group Office],
+
+I hope this email finds you well. After discussion with my co-authors, we have decided that I will be the presenter for our upcoming conference session. 
+
+In light of this, I would like to kindly remind you that we need to complete the conference registration today to avoid any potential issues or complications later on. Your assistance in ensuring the registration is completed promptly would be greatly appreciated.
+
+Thank you for your attention to this matter.
+
+Best regards,  
+Yoshikage Kira
+
+
+
+
+
+
 # Now that tokenizer is available, create the data collator for completion-only language modeling
 collator = DataCollatorForCompletionOnlyLM(
     response_template="### Response:",
