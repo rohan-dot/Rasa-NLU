@@ -1,3 +1,259 @@
+Great — since you're using TRL v0.16.1 and want to fine-tune in instruction-response format only on `.c` code from the dataset, I’ll fix the dataset formatting bug and restrict training to C-language functions only.
+
+I'll provide a corrected version of:
+- Data loading and filtering for only `c` split
+- A proper `formatting_func` compatible with TRL v0.16.1
+- QLoRA-compatible training code for LLaMA 3 70B using PEFT and Hugging Face ecosystem
+
+Hang tight, I’ll get this updated code and setup ready for you shortly.
+
+# QLoRA Fine-tuning Pipeline for LLaMA-3 70B Instruct on CVEfixes1 'C' Dataset
+
+In this script, we fine-tune Meta's **LLaMA-3 70B Instruct** model on the **CVEfixes1** dataset (using only the 'C' subset for C language functions) with the **QLoRA** technique. We will prepare the data in an **instruction-response** format as specified, apply a 90/10 train/validation split, and use Hugging Face's TRL **SFTTrainer** (v0.16.1) with PEFT LoRA for training. The code includes necessary formatting and checks to ensure compatibility with TRL v0.16.1 and robust handling of edge cases in the dataset.
+
+## Setup and Imports
+
+First, install and import the required libraries: Hugging Face Transformers, Datasets, BitsAndBytes (for 4-bit quantization), PEFT (for LoRA), and TRL (v0.16.1 for SFTTrainer). We also set the device and data type for computation. 
+
+```python
+!pip install transformers>=4.45.0 datasets bitsandbytes peft trl==0.16.1
+
+import torch
+from datasets import load_dataset
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM
+
+# Determine compute dtype: use bfloat16 if available (Ampere GPUs or higher), else float16
+if torch.cuda.is_available():
+    device_capability = torch.cuda.get_device_capability()
+    # Ampere (SM>=80) or higher GPUs support bfloat16
+    compute_dtype = torch.bfloat16 if device_capability[0] >= 8 else torch.float16
+else:
+    compute_dtype = torch.float16  # use float16 as fallback for CPU/offline training
+print("Using compute dtype:", compute_dtype)
+```
+
+## Load and Prepare the CVEfixes1 'C' Dataset
+
+We load the **CVEfixes1** dataset from Hugging Face and select only the **'c' split** (C language functions). We then filter out any entries with missing fields and perform a 90/10 train-validation split. This ensures we train on 90% of the data and reserve 10% for evaluation. 
+
+```python
+# Load the CVEfixes1 dataset and select only the 'c' split (C language functions)
+dataset = load_dataset("euisuh15/cveFixes1")
+c_dataset = dataset["c"]  # subset for C functions (2.62k examples)
+
+# Filter out any records that don't have the required fields (cve_id, func_before, func_after)
+def has_required_fields(example):
+    return example.get("cve_id") and example.get("func_before") and example.get("func_after")
+
+c_dataset = c_dataset.filter(has_required_fields)
+
+# Shuffle and split the dataset into train (90%) and validation (10%)
+c_dataset = c_dataset.shuffle(seed=42)
+split_datasets = c_dataset.train_test_split(test_size=0.1, seed=42)
+train_dataset = split_datasets["train"]
+eval_dataset = split_datasets["test"]
+
+print(f"Train examples: {len(train_dataset)}, Validation examples: {len(eval_dataset)}")
+# Inspect a sample to verify presence of fields
+sample = train_dataset[0]
+print("Sample keys:", sample.keys())
+print("CVE ID:", sample["cve_id"])
+print("func_after snippet:", sample["func_after"][:60], "...")
+print("func_before snippet:", sample["func_before"][:60], "...")
+```
+
+## Define Formatting Function for Instruction-Response Data
+
+Next, we create a formatting function to convert each dataset record into the **instruction-response** prompt format required. For each example:
+- **Instruction**: `"Insert vulnerability CVE-ID {cve_id} into the following function:"` followed by the `func_after` code (the fixed version of the function).
+- **Response**: The corresponding `func_before` code (the vulnerable function before the fix).
+- We prefix the instruction with `### Instruction:` and the response with `### Response:`. The final formatted text will look like: 
+
+  ```
+  ### Instruction:
+  Insert vulnerability CVE-ID <ID> into the following function:
+  <func_after code>
+  
+  ### Response:
+  <func_before code>
+  ```
+- We also **append an EOS token** at the end of each sequence to explicitly mark the end of the response. This is important because LLaMA-3's tokenizer may not add an EOS by default, and including it helps the model learn when to stop ([How to set the Pad Token for meta-llama/Llama-3 Models - Models - Hugging Face Forums](https://discuss.huggingface.co/t/how-to-set-the-pad-token-for-meta-llama-llama-3-models/103418#:~:text=If%20you%20want%20to%20fine,be%20correct%20at%20inference%20time)).
+
+Finally, we set up a data collator from TRL (`DataCollatorForCompletionOnlyLM`) with the instruction and response templates. This collator will ensure that only the response part contributes to the training loss (it masks out the instruction tokens) so the model learns to predict the response given the instruction ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=You%20can%20use%20the%20,how%20it%20would%20work%20to)).
+
+```python
+# Load the LLaMA-3 Instruct tokenizer and model (we'll configure the model in the next section)
+model_name = "meta-llama/Llama-3.3-70B-Instruct"  # or "Meta-Llama-3-70B-Instruct" depending on availability
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, trust_remote_code=True)
+
+# Ensure the tokenizer has a padding token set. 
+# LLaMA models don't have a pad token by default; we'll use a reserved special token for padding if available.
+if tokenizer.pad_token_id is None:
+    try:
+        tokenizer.pad_token = "<|finetune_right_pad_id|>"  # Use reserved pad token if present ([How to set the Pad Token for meta-llama/Llama-3 Models - Models - Hugging Face Forums](https://discuss.huggingface.co/t/how-to-set-the-pad-token-for-meta-llama-llama-3-models/103418#:~:text=If%20you%20want%20to%20fine,be%20correct%20at%20inference%20time))
+    except Exception as e:
+        tokenizer.pad_token = tokenizer.eos_token  # Fallback: use EOS as pad (not ideal for training ([How to set the Pad Token for meta-llama/Llama-3 Models - Models - Hugging Face Forums](https://discuss.huggingface.co/t/how-to-set-the-pad-token-for-meta-llama-llama-3-models/103418#:~:text=If%20you%20want%20to%20fine,be%20correct%20at%20inference%20time)))
+    tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids(tokenizer.pad_token)
+print("Pad token set to:", tokenizer.pad_token, "(ID:", tokenizer.pad_token_id, ")")
+
+# Define the formatting function for each example
+def format_example(example):
+    cve_id = example["cve_id"]
+    func_after = example["func_after"]
+    func_before = example["func_before"]
+    # Construct instruction and response strings
+    instruction = f"Insert vulnerability CVE-ID {cve_id} into the following function:\n{func_after}"
+    response = func_before
+    formatted = f"### Instruction:\n{instruction}\n\n### Response:\n{response}"
+    # Append EOS token to mark end of response (important for LLaMA-3) ([How to set the Pad Token for meta-llama/Llama-3 Models - Models - Hugging Face Forums](https://discuss.huggingface.co/t/how-to-set-the-pad-token-for-meta-llama-llama-3-models/103418#:~:text=If%20you%20want%20to%20fine,be%20correct%20at%20inference%20time))
+    eos = tokenizer.eos_token
+    if eos and not formatted.endswith(eos):
+        formatted += eos
+    return formatted
+
+# Example formatting (print a single example to verify format)
+formatted_text = format_example(sample)
+print("--- Formatted example ---")
+print(formatted_text[:200], "...\n")  # print first 200 characters for brevity
+
+# Set up the data collator to mask everything except the response during training
+instruction_template = "### Instruction:\n"
+response_template = "### Response:\n"
+collator = DataCollatorForCompletionOnlyLM(
+    instruction_template=instruction_template,
+    response_template=response_template,
+    tokenizer=tokenizer,
+    mlm=False
+)
+```
+
+## Initialize LLaMA-3 70B Model with 4-bit Quantization
+
+Now we load the **LLaMA-3 70B Instruct** model with 4-bit precision (using BitsAndBytes for NVidia's 4-bit quantization). This significantly reduces memory usage, making fine-tuning feasible (the essence of QLoRA). We specify `bnb_4bit_quant_type="nf4"` (normal float4) and enable double quantization for better accuracy. We also use `device_map="auto"` to automatically distribute the model layers across available GPUs (or CPU if needed).
+
+After loading, we call `prepare_model_for_kbit_training` from PEFT, which **enables gradient checkpointing and disables a few modules' gradients** to optimize 4-bit training (e.g., it keeps norm layers in FP32). This prepares the model for LoRA fine-tuning in 4-bit ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=model%20%3D%20FastLanguageModel,gate_proj)).
+
+```python
+# Configure 4-bit quantization for QLoRA
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=compute_dtype  # use the compute dtype determined earlier (bf16/fp16)
+)
+
+# Load the base LLaMA-3 70B Instruct model in 4-bit mode
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    quantization_config=bnb_config,
+    device_map="auto",
+    trust_remote_code=True
+)
+
+# Prepare model for 4-bit training (enables grad checkpointing, etc.)
+model = prepare_model_for_kbit_training(model)
+model.gradient_checkpointing_enable()  # Ensure gradient checkpointing is on for memory savings
+```
+
+## Configure LoRA (QLoRA) Parameters
+
+Next, we configure the **LoRA** (Low-Rank Adaptation) parameters for QLoRA. We use PEFT's `LoraConfig` to specify:
+- `r = 16`: LoRA rank (projection dimension).  
+- `lora_alpha = 16`: LoRA scaling factor.
+- `target_modules`: the list of model sub-modules to apply LoRA to. For LLaMA, we target the transformer projection layers in attention (`q_proj`, `k_proj`, `v_proj`, `o_proj`) and feed-forward (`gate_proj`, `up_proj`, `down_proj`) ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=model%20%3D%20FastLanguageModel,gate_proj)). This covers all major weight matrices, as recommended for LLaMA fine-tuning.
+- `lora_dropout = 0.0`: No dropout in LoRA (often 0 is used for stability).
+- `bias = "none"`: We do not train any bias terms.
+- `task_type = "CAUSAL_LM"`: This sets up LoRA for a causal language modeling task.
+
+We then wrap the base model with `get_peft_model` to inject LoRA adapters. This will add trainable LoRA layers to the model while keeping all original model weights frozen (since we called `prepare_model_for_kbit_training`, most weights require grad = False). We also print out the number of trainable vs total parameters to verify that only a small fraction are trainable.
+
+```python
+# Configure LoRA (Low-Rank Adaptation) parameters for QLoRA
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=16,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0.0,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
+
+# Wrap the base model with PEFT LoRA
+model = get_peft_model(model, lora_config)
+
+# Optional: Print trainable parameter ratio for verification
+trainable_params = 0
+total_params = 0
+for name, param in model.named_parameters():
+    total_params += param.numel()
+    if param.requires_grad:
+        trainable_params += param.numel()
+print(f"Trainable params: {trainable_params} / {total_params} ({100 * trainable_params/total_params:.2f}% of total)")
+```
+
+## Prepare SFT Trainer for Fine-Tuning
+
+With the model, data, and formatting ready, we set up the **SFTTrainer** from TRL. We create an `SFTConfig` (which extends Hugging Face `TrainingArguments`) to specify training hyperparameters and output settings:
+- `output_dir`: where to save the model checkpoints.
+- `max_length`: maximum sequence length for training. We use 1024 tokens to truncate or pad sequences longer than this (adjustable if memory allows longer contexts) ([trl/trl/trainer/sft_config.py at main · huggingface/trl · GitHub](https://github.com/huggingface/trl/blob/main/trl/trainer/sft_config.py#:~:text=max_length%20%28%60int%60%20or%20%60None%60%2C%20,1024)).
+- `num_train_epochs`: we set a few epochs (e.g., 3). Given the small dataset (≈2.3k train examples), multiple epochs can help the model see all data.
+- `per_device_train_batch_size`: set to 1 (common for very large models due to memory constraints).
+- `gradient_accumulation_steps`: set to 8 so that the effective batch size is 8 (this accumulates gradients over 8 steps before an optimizer step).
+- `learning_rate`: we set a learning rate (e.g., 2e-4) suitable for LoRA fine-tuning. (TRL's default is 2e-5 ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=,TrainingArguments)), but we can use a higher LR for a small dataset; this can be tuned).
+- `warmup_ratio`: a 3% linear warmup to gradually ramp up the learning rate at start.
+- `evaluation_strategy = "epoch"` and `save_strategy = "epoch"`: evaluate on the validation set and save the model at the end of each epoch.
+- `logging_steps`: how frequently to log training info; we set to 50 for example.
+
+We then initialize the `SFTTrainer` with the model, datasets, tokenizer, our `format_example` function, and the data collator. The trainer will automatically format each example using `format_example`, tokenize it, and apply the collator to prepare batches. Finally, we start training with `trainer.train()`.
+
+```python
+# Configure training arguments for SFTTrainer
+training_args = SFTConfig(
+    output_dir="./qlora-llama3-cve",   # output directory for model checkpoints
+    max_length=1024,                  # max sequence length (truncates sequences longer than this) ([trl/trl/trainer/sft_config.py at main · huggingface/trl · GitHub](https://github.com/huggingface/trl/blob/main/trl/trainer/sft_config.py#:~:text=max_length%20%28%60int%60%20or%20%60None%60%2C%20,1024))
+    num_train_epochs=3,
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=8,    # accumulate gradients to simulate larger batch
+    learning_rate=2e-4,
+    warmup_ratio=0.03,                # 3% of training steps for warmup
+    logging_steps=50,
+    evaluation_strategy="epoch",
+    save_strategy="epoch",
+    save_total_limit=1,              # keep only the most recent checkpoint
+    logging_strategy="steps"
+)
+
+# Initialize the SFTTrainer
+trainer = SFTTrainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,
+    tokenizer=tokenizer,
+    formatting_func=format_example,       # apply our formatting to each dataset example
+    data_collator=collator               # collator that masks instruction tokens
+)
+
+# Start the training
+trainer.train()
+
+# After training, the LoRA-adapted model will be saved in output_dir.
+# (The final model includes the base model with LoRA weights. You can also separately save LoRA adapters if needed.)
+```
+
+
+
+
+
+
+
+
+xxxx 
+
+
+
 Thanks for the image — the traceback shows this error in your `format_example` function:
 
 ```
