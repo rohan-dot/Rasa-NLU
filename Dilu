@@ -1,3 +1,63 @@
+# Now that tokenizer is available, create the data collator for completion-only language modeling
+collator = DataCollatorForCompletionOnlyLM(
+    response_template="### Response:",
+    tokenizer=tokenizer,
+    mlm=False  # not doing masked language modeling, this is causal LM
+)
+
+# Define training arguments via SFTConfig (which is similar to HF TrainingArguments)
+sft_config = SFTConfig(
+    model_name_or_path=None,  # not needed since we pass the model object to trainer
+    output_dir="./llama3-70b-vuln-qlora", 
+    num_train_epochs=3,
+    learning_rate=2e-4,
+    lr_scheduler_type="cosine",          # cosine decay schedule (just an example choice)
+    warmup_steps=100,                    # brief warmup for stability
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=8,       # accumulate gradients to simulate larger batch
+    optim="paged_adamw_8bit",            # use memory-efficient 8-bit AdamW optimizer&#8203;:contentReference[oaicite:26]{index=26}
+    logging_steps=50,
+    evaluation_strategy="epoch",
+    save_strategy="epoch",
+    bf16=True,        # use bfloat16 precision for training (if supported by your GPU, else use fp16)
+    tf32=True         # enable TF32 on Ampere GPUs for faster math (optional)
+)
+
+# Initialize the SFT Trainer
+trainer = SFTTrainer(
+    model=model, 
+    train_dataset=train_dataset, 
+    eval_dataset=eval_dataset,
+    data_collator=collator,
+    formatting_func=formatting_prompts_func,  # apply our prompt formatting
+    args=sft_config
+)
+
+# Train the model!
+trainer.train()
+
+
+
+
+# Evaluate on validation set
+eval_results = trainer.evaluate()
+val_loss = eval_results["eval_loss"]
+print(f"Validation loss: {val_loss:.4f}")
+try:
+    import math
+    print(f"Validation perplexity: {math.exp(val_loss):.2f}")
+except OverflowError:
+    print("Validation perplexity is inf (loss might be too high or not applicable).")
+
+
+
+
+
+
+
+xxxxx
+
+
 Thanks for the details. I’ll prepare the data processing pipeline and fine-tuning code for using QLoRA/PEFT to train a LLaMA 3 70B Instruct model where the model learns to inject specific CVEs into code. I'll structure the dataset so that:
 
 - **Input**: Instruction to insert a given CVE ID into the code, followed by the non-vulnerable code (`function_after`).
