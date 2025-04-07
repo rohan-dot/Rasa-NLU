@@ -1,15 +1,62 @@
-Subject: Presenter Confirmation and Urgent Conference Registration
+Thanks for the image — the traceback shows this error in your `format_example` function:
 
-Dear [Group Office],
+```
+TypeError: string indices must be integers, not 'str'
+```
 
-I hope this email finds you well. After discussion with my co-authors, we have decided that I will be the presenter for our upcoming conference session. 
+### Root Cause:
+This means you're trying to index into a **string** as if it were a **dictionary**. Specifically, the error is at this line:
+```python
+return (f"Insert vulnerability CVE-ID {example['cve_id']} into the following function:\n"
+        f"{example['func_after']}\n\n### Response:\n{example['func_before']}")
+```
 
-In light of this, I would like to kindly remind you that we need to complete the conference registration today to avoid any potential issues or complications later on. Your assistance in ensuring the registration is completed promptly would be greatly appreciated.
+The issue is that `example` is actually a **string**, not a dictionary — likely because you're passing a **batched string** to the function instead of an object like `{"cve_id": ..., "func_after": ..., "func_before": ...}`.
 
-Thank you for your attention to this matter.
+---
 
-Best regards,  
-Yoshikage Kira
+### Fix:
+
+Update your `formatting_prompts_func` like this:
+
+```python
+def formatting_prompts_func(example):
+    return (f"Insert vulnerability CVE-ID {example['cve_id']} into the following function:\n"
+            f"{example['func_after']}\n\n### Response:\n{example['func_before']}")
+```
+
+Then **remove the batching**. Pass this function as `formatting_func`, not wrapped in a list comprehension.
+
+Also, make sure you're not wrapping it again in a batch:
+
+```python
+# No list comprehension needed
+trainer = SFTTrainer(
+    model=model,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,
+    data_collator=collator,
+    formatting_func=formatting_prompts_func,  # NOT a batched version
+    args=sft_config
+)
+```
+
+If the `SFTTrainer` expects a batched version (which depends on your TRL version), you can instead add a check:
+
+```python
+def formatting_prompts_func(example_or_batch):
+    if isinstance(example_or_batch, dict) and 'cve_id' in example_or_batch:
+        return (f"Insert vulnerability CVE-ID {example_or_batch['cve_id']} into the following function:\n"
+                f"{example_or_batch['func_after']}\n\n### Response:\n{example_or_batch['func_before']}")
+    elif isinstance(example_or_batch, list):
+        return [formatting_prompts_func(ex) for ex in example_or_batch]
+    else:
+        raise ValueError("Invalid input format for formatting function")
+```
+
+This version is robust and handles both single examples and batches.
+
+Let me know if you want help testing it live or checking token lengths per example.
 
 
 
