@@ -1,3 +1,195 @@
+Thanks for the details. I’ll prepare the data processing pipeline and fine-tuning code for using QLoRA/PEFT to train a LLaMA 3 70B Instruct model where the model learns to inject specific CVEs into code. I'll structure the dataset so that:
+
+- **Input**: Instruction to insert a given CVE ID into the code, followed by the non-vulnerable code (`function_after`).
+- **Output**: Vulnerable version of the code (`function_before`).
+
+I'll include:
+- Code to load and preprocess the dataset
+- Format each sample into instruction-tuning format compatible with LLaMA 3
+- Split into train and validation (90/10)
+- Fine-tuning code using PEFT/QLoRA
+
+I’ll let you know once everything is ready.
+
+# Fine-tuning LLaMA 3 70B with QLoRA for Vulnerability Injection
+
+## Introduction and Overview
+
+In this guide, we will fine-tune Meta's **LLaMA 3 70B Instruct** model (70 billion parameters) to perform a specialized code transformation task: **inserting vulnerabilities** (based on specific CVE IDs) into given code functions. The training data comes from the *CVEfixes1* dataset, which contains thousands of real-world vulnerability-fixing code changes (before-and-after code for over 5,000 CVEs) ([CVEfixes Dataset: Automatically Collected Vulnerabilities and Their Fixes from Open-Source Software](https://zenodo.org/records/4476564#:~:text=organized%20as%20a%20relational%20database,18249%20files%2C%20and%2050322%20functions)). We will use **instruction tuning**: each training sample is a prompt instructing the model to inject a particular CVE vulnerability into a piece of code, and the expected output is the code with that vulnerability injected.
+
+Because a 70B model is extremely large, we employ **QLoRA (Quantized Low-Rank Adaptation)** ([[2305.14314] QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314#:~:text=,new%20data%20type%20that%20is)) in combination with Hugging Face's **PEFT (Parameter-Efficient Fine-Tuning)** framework. QLoRA allows fine-tuning a 70B model on a single or few GPUs by: (a) loading the base model in 4-bit precision (to drastically reduce memory), and (b) attaching small Low-Rank Adapter (LoRA) weights which are the only trainable parameters ([[2305.14314] QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314#:~:text=,innovations%20to%20save%20memory%20without)). The base model remains frozen (in 4-bit quantized form) and gradients update only the LoRA layers. This approach preserves nearly full fine-tuning performance while using a fraction of the memory of full 16-bit training ([[2305.14314] QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314#:~:text=,new%20data%20type%20that%20is)). We will also enable **gradient checkpointing** (to save memory by recomputing activations), and take advantage of **FlashAttention** for faster training if available ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=pip%20install%20)). Model parallelism (distributing the model across GPUs) will be handled automatically by Hugging Face Accelerate's `device_map`, since a 70B model in 4-bit may still need multiple devices.
+
+**Key steps in this tutorial:**
+
+- **Data Preparation:** Load the CVE fixes dataset, combine code snippets, and format each example as an instruction-response pair (with a 90/10 train/validation split).
+- **Model Loading (LLaMA 3 70B Instruct):** Load the LLaMA 3 70B instruct model and tokenizer in 4-bit precision using `bitsandbytes`, verifying we use LLaMA 3's new tokenizer (with expanded vocabulary) ([Welcome Llama 3 - Meta's new open LLM](https://huggingface.co/blog/llama3#:~:text=A%20big%20change%20in%20Llama,the%208B%20version%20of%20the)) and 8k token context window ([Welcome Llama 3 - Meta's new open LLM](https://huggingface.co/blog/llama3#:~:text=The%20Llama%203%20release%20introduces,context%20length%20of%208K%20tokens)).
+- **QLoRA Setup:** Prepare the model for 4-bit training (casting certain layers to float32 for stability) and add LoRA adapters to the appropriate layers (e.g. query/key projection layers of the Transformer).
+- **Training Configuration:** Define hyperparameters and a training loop using Hugging Face Transformers + TRL. We'll use the `SFTTrainer` from 🤗 TRL (Transformer Reinforcement Learning library) for supervised fine-tuning, along with a special data collator that ensures only the *response* portion of each sample is used for computing the loss (so the model is trained to predict the vulnerable code given the prompt).
+- **Optimization for 70B:** Enable gradient checkpointing, use a memory-efficient optimizer (8-bit AdamW ([[2305.14314] QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314#:~:text=sacrificing%20performance%3A%20%28a%29%204,performance%20across%208%20instruction%20datasets))】, and optionally FlashAttention 2 for faster attention computatio ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=pip%20install%20))】.
+- **Running Training & Evaluation:** Train the model on the training set and evaluate on the held-out validation set. We will demonstrate how to save the LoRA adapter and how to use the fine-tuned model to generate vulnerable code given a new instruction.
+
+Throughout this guide, we include well-documented code snippets and explanations for each step.
+
+## 1. Setup and Dataset Preparation
+
+First, install and import the required libraries: Hugging Face 🤗 Transformers, Datasets, PEFT, TRL, and BitsAndBytes (for 4-bit quantization). Ensure you have a compatible GPU with sufficient memory (multiple GPUs may be needed for a 70B model). Then load the **cveFixes1** dataset from Hugging Face. This dataset contains code **before** and **after** fixing a vulnerability, along with the CVE ID and other metadata. We will combine all programming languages in the dataset and then split into 90% train and 10% validation.
+
+```python
+!pip install transformers accelerate peft trl bitsandbytes datasets
+
+from datasets import load_dataset
+
+# Load the CVEfixes1 dataset. It has splits by language; we combine them.
+dataset = load_dataset("euisuh15/cveFixes1")  # returns a dict of splits: 'c', 'go', 'java', 'python', 'ruby'
+
+# Concatenate all language splits into one dataset
+all_splits = [dataset[lang] for lang in dataset.keys()]  # dataset.keys() -> ['c','go','java','python','ruby']
+full_dataset = all_splits[0].concatenate(*all_splits[1:])
+
+print(f"Total examples (all languages): {len(full_dataset)}")  # Expect ~4380 examples in total
+
+# Shuffle and split 90/10 into train and validation sets
+full_dataset = full_dataset.shuffle(seed=42)
+train_val = full_dataset.train_test_split(test_size=0.1, seed=42)
+train_dataset = train_val["train"]
+eval_dataset = train_val["test"]
+
+print(f"Train examples: {len(train_dataset)}; Validation examples: {len(eval_dataset)}")
+```
+
+**Explanation:** The dataset provides code in several languages (C, Java, Python, etc.), each containing functions *before* and *after* a vulnerability fix. By combining them, we get around 4.3K function pairs. We then shuffle and split the data into a training set (≈90%) and a validation set (≈10%). This ensures the model is evaluated on code it hasn't seen during training.
+
+Each dataset record has fields like `func_before` (the vulnerable function), `func_after` (the fixed function), and `cve_id` (the identifier of the vulnerability). For our fine-tuning, we only need these three fields:
+- **`cve_id`**: e.g., "CVE-2014-0160"
+- **`func_after`**: the function *after* the fix (i.e., secure code).
+- **`func_before`**: the function *before* the fix (i.e., vulnerable code).
+
+## 2. Formatting Data for Instruction Tuning
+
+We will format each training example as an **instruction** and an **expected response**. The instruction will prompt the model to insert a specific vulnerability into a given function. According to the specification:
+
+- **Prompt (Instruction)**: *"Insert vulnerability CVE-ID `{cve_id}` into the following function:"* followed by the **`func_after`** code (the non-vulnerable code).
+- **Expected Output (Response)**: The corresponding **`func_before`** code (the vulnerable version of the function).
+
+To clearly separate the instruction from the model's response during training, we will insert a special marker **"### Response:"** before the vulnerable code. This marker will help our training collator distinguish the prompt from the completion. (This follows a common format in instruction tuning where prompts and responses are separated by tokens like `"### Response: ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=For%20instruction%20fine,This%20allows%20people%20to))1】.) For example, a formatted sample might look like:
+
+```
+Insert vulnerability CVE-ID CVE-2014-0160 into the following function:
+<secure function code here>
+
+### Response:
+<vulnerable function code here>
+```
+
+We now prepare a formatting function and a data collator to apply this template to our dataset during training:
+
+```python
+from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
+
+# Define a formatting function to combine fields into a single prompt-response string
+def format_example(example):
+    return (f"Insert vulnerability CVE-ID {example['cve_id']} into the following function:\n"
+            f"{example['func_after']}\n\n### Response:\n{example['func_before']}")
+
+# Wrap the formatting function to work on lists of examples for efficiency (vectorized mapping)
+def formatting_prompts_func(batch):
+    return [format_example(ex) for ex in batch]
+
+# Initialize a data collator that will mask out the prompt portion in the loss.
+tokenizer = None  # We will load the tokenizer later after model is loaded.
+# We'll create the collator after initializing the tokenizer and model, because it needs the tokenizer.
+```
+
+**Explanation:** The `format_example` function constructs the instruction and response text. We include two newline characters before `"### Response:"` to ensure the response starts on a new line for clarity. During fine-tuning, the model will see the full text up to `"### Response:"` as the input prompt, and it should learn to produce the text *after* `"### Response:"` (the vulnerable code). We will use Hugging Face TRL's `DataCollatorForCompletionOnlyLM` to handle tokenization and labeling. This collator will tokenize the combined text, find the `"### Response:"` marker, and set the **labels** such that all tokens in the prompt (everything before and including the `"### Response:"` marker) are **ignored (label -100)**, and only the tokens of the response (the vulnerable code) are **predicted by the model ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=For%20instruction%20fine,This%20allows%20people%20to)) ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=You%20can%20use%20the%20,how%20it%20would%20work%20to))9】. This way, the loss is computed only on the model's output portion.
+
+We haven't loaded the tokenizer or model yet, so we left the tokenizer as `None` for now. In the next step, we'll load the LLaMA 3 model and tokenizer, then finalize the collator.
+
+## 3. Loading LLaMA 3 70B Instruct Model with 4-bit Quantization (QLoRA)
+
+Now let's load the pre-trained **LLaMA 3 70B Instruct** model from Hugging Face. We use the instruct variant of LLaMA 3 70B (which has already been fine-tuned by Meta for following instruction ([Welcome Llama 3 - Meta's new open LLM](https://huggingface.co/blog/llama3#:~:text=The%20Llama%203%20release%20introduces,context%20length%20of%208K%20tokens))8】 as our base model. It's important to use the correct **tokenizer** for LLaMA 3, since LLaMA 3 uses a new tokenizer with a much larger vocabulary (128k tokens vs 32k in LLaMA  ([Welcome Llama 3 - Meta's new open LLM](https://huggingface.co/blog/llama3#:~:text=A%20big%20change%20in%20Llama,the%208B%20version%20of%20the))4】. This tokenizer is needed to properly encode code and text for the model.
+
+Because the model is so large, we'll load it in 4-bit precision using **BitsAndBytes** (via `quantization_config`). We also disable `use_cache` and enable gradient checkpointing to reduce memory usage during training. Gradient checkpointing will force the model to recompute certain layers on the fly instead of storing all intermediate activations, trading compute for memory – a necessary trade-off for 70B models.
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import prepare_model_for_kbit_training
+
+model_name = "meta-llama/Meta-Llama-3-70B-Instruct"  # placeholder HF model name for LLaMA3 70B instruct
+
+# Define 4-bit quantization configuration (using NF4 quantization, per QLoRA pap ([[2305.14314] QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314#:~:text=sacrificing%20performance%3A%20%28a%29%204,performance%20across%208%20instruction%20datasets))4】)
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,   # double quantization to reduce memo ([[2305.14314] QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314#:~:text=sacrificing%20performance%3A%20%28a%29%204,performance%20across%208%20instruction%20datasets))4】
+    bnb_4bit_quant_type="nf4",        # NormalFloat4 (NF4) quantizati ([[2305.14314] QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314#:~:text=sacrificing%20performance%3A%20%28a%29%204,performance%20across%208%20instruction%20datasets))4】
+    bnb_4bit_compute_dtype=torch.bfloat16  # use bfloat16 for computation (or float16 if bfloat16 not available)
+)
+
+# Load the tokenizer
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
+# Note: use_fast=False because LLaMA tokenizer is usually implemented as a slow tokenizer. 
+# Ensure the tokenizer is the one for LLaMA3 to get the 128k voc ([Welcome Llama 3 - Meta's new open LLM](https://huggingface.co/blog/llama3#:~:text=A%20big%20change%20in%20Llama,the%208B%20version%20of%20the))4】.
+
+# Load the model in 4-bit mode across available devices
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    quantization_config=bnb_config,
+    device_map="auto",    # automatically split layers across GPUs (or CPU if needed)
+    use_cache=False,      # disable cache for gradient checkpointing
+    trust_remote_code=True  # if the model repo requires custom code (may not be needed for LLaMA3)
+)
+
+# Prepare model for 4-bit training
+model.gradient_checkpointing_enable()  # enable gradient checkpointing for memory savings
+model = prepare_model_for_kbit_training(model)
+```
+
+**Explanation:** We use `AutoTokenizer` and `AutoModelForCausalLM` to load the tokenizer and model. The `BitsAndBytesConfig` sets the model to load in 4-bit quantized mode (with NF4 quantization and double quantizatio ([[2305.14314] QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314#:~:text=sacrificing%20performance%3A%20%28a%29%204,performance%20across%208%20instruction%20datasets))4】. The `device_map="auto"` will automatically distribute the model's layers across all available GPUs (and CPU memory if necessary) using Hugging Face Accelerate. This is a form of model parallelism that is essential for handling a 70B model. For example, if you have 2×40GB GPUs, it might put roughly half the model on each GPU. If you only have a single GPU with enough memory (e.g., 48GB), it will put the whole model there. If the model still doesn't fit, some layers could be sharded to CPU RAM (which slows down training). You can adjust the `device_map` or use more advanced parallelism (like Fully Sharded Data Parallel) if needed, but `"auto"` is a convenient starting point.
+
+We set `use_cache=False` because the model’s key/value cache is not needed during training and disabling it is required when using gradient checkpointing to avoid inconsistencies. We explicitly enable gradient checkpointing via `model.gradient_checkpointing_enable()`, and call `prepare_model_for_kbit_training(model)`. This utility from PEFT adjusts the model for low-bit training: it casts certain layers (e.g., layer norms and output embeddings) to FP32 for stability, and may handle some device placement tweaks for int8/4-bit traini ([Optimizing Language Model Fine-Tuning with PEFT, QLORA ...](https://medium.com/@tejpal.abhyuday/optimizing-language-model-fine-tuning-with-peft-qlora-integration-and-training-time-reduction-04df39dca72b#:~:text=Optimizing%20Language%20Model%20Fine,initializes%20the%20model%20for))7】. At this point, the 70B model is loaded in memory in 4-bit form, but we have not added our LoRA adapters yet.
+
+**Optional – Flash Attention:** If you have the [FlashAttention 2](https://github.com/HazyResearch/flash-attention) library installed, you can **speed up attention computation** and reduce memory usage further. Simply install the library (`pip install flash-attn`) and when loading the model, pass `attn_implementation="flash_attention_2"` to `from_pretraine ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=To%20use%20Flash%20Attention%202%2C,attn%60%20package))9】. This uses optimized CUDA kernels for self-attention (supported on NVIDIA GPUs with SM>=70, e.g., A100, V100). FlashAttention 2 can be used with quantization and checkpointing for additional efficien ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=Note%20that%20Flash%20Attention%20only,other%20tools%20such%20as%20quantization)) ([Supervised Fine-tuning Trainer](https://huggingface.co/docs/trl/en/sft_trainer#:~:text=In%20contrast%20to%20Flash%20Attention,that%20also%20includes%20padding%20tokens))0】. If not installed, the model will use the default PyTorch implementation (which on PyTorch 2.x may already leverage FlashAttention under the hood for some operations).
+
+## 4. Applying LoRA Adapters with PEFT
+
+With the base model loaded and prepared, the next step is to configure LoRA adapters. LoRA will inject trainable weight matrices into the model's attention (and/or feed-forward) layers. Given the standard practice and QLoRA's recommendations, we will target the **query (`q_proj`) and value (`v_proj`) projection matrices** in each Transformer attention block for LLaMA. This keeps the number of trainable parameters small while still being effective at modeling new behavior (since Q and V are crucial for attention dynamics).
+
+We choose a LoRA **rank** of, say, 8 or 16 (this controls the dimensionality of the low-rank updates; higher rank means more capacity but more VRAM usage). We also set a **LoRA scaling (alpha)**, often set to 16 or 32, which is a factor that scales the LoRA updates. We will not train any new biases (setting `bias="none"`). These hyperparameters can be tuned; here we use rank=8 and alpha=16 for demonstration, which yields a very lightweight adapter.
+
+Let's attach LoRA to the model:
+
+```python
+from peft import LoraConfig, get_peft_model
+
+# Configure LoRA
+lora_config = LoraConfig(
+    r=8,             # LoRA rank (increased for more capacity if needed, e.g., 16 or 32)
+    lora_alpha=16,   # LoRA scaling factor
+    target_modules=["q_proj", "v_proj"],  # which sub-modules to apply LoRA to (LLaMA's attention projections)
+    bias="none", 
+    task_type="CAUSAL_LM"  # type of task
+)
+
+# Wrap the model with PEFT LoRA
+model = get_peft_model(model, lora_config)
+
+# Print the number of trainable parameters to verify we are tuning a small subset
+trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+total_params = sum(p.numel() for p in model.parameters())
+print(f"Trainable params: {trainable_params} (~{100 * trainable_params/total_params:.4f}% of total)")
+```
+
+**Explanation:** We create a `LoraConfig` specifying how to inject the LoRA layers. By targeting `"q_proj"` and `"v_proj"` in each transformer block, we
+
+
+
+
+
+
+
+
+xxxxxxx
+
 Thanks! Since you're using 2 A100 GPUs and want to fine-tune the LLaMA 3 70B Instruct model with QLoRA via PEFT, I’ll put together updated training code that:
 
 - Loads the 70B model in 4-bit with BitsAndBytes
