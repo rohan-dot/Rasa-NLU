@@ -1,3 +1,62 @@
+from peft import PeftModel
+from transformers import AutoModelForCausalLM
+
+# Load the base LLaMA-3 model and apply LoRA adapters
+base_model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    quantization_config=bnb_config,
+    device_map="auto",
+    trust_remote_code=True
+)
+model = PeftModel.from_pretrained(base_model, "./qlora-llama3-cve")
+
+# Optional: merge LoRA weights into base model for faster generation
+model = model.merge_and_unload()
+
+# Inference prompt
+cve_id = "CVE-2014-0160"
+non_vuln_code = """
+static void tls1_process_heartbeat(TLS1_STATE *s) {
+    unsigned char *p = &s->s3->rrec.data[0], *pl;
+    unsigned short hbtype;
+    unsigned int payload;
+
+    hbtype = *p++;
+    n2s(p, payload);
+    ...
+}
+"""
+
+prompt = f"""### Instruction:
+Insert vulnerability CVE-ID {cve_id} into the following function:
+{non_vuln_code}
+
+### Response:
+"""
+
+# Tokenize and generate
+inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+outputs = model.generate(
+    **inputs,
+    max_new_tokens=512,
+    temperature=0.7,
+    top_p=0.95,
+    do_sample=True,
+    eos_token_id=tokenizer.eos_token_id
+)
+response = tokenizer.decode(outputs[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True)
+print("--- Model Output ---\n", response)
+
+
+
+
+
+
+
+
+xxxxx
+
+
 Great — since you're using TRL v0.16.1 and want to fine-tune in instruction-response format only on `.c` code from the dataset, I’ll fix the dataset formatting bug and restrict training to C-language functions only.
 
 I'll provide a corrected version of:
