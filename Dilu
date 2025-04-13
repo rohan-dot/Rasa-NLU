@@ -1,3 +1,199 @@
+# Assuming we have a pre-loaded LLaMA 70B model and tokenizer accessible as `model` (pseudo-code).
+# For instance, model could be a HuggingFace pipeline or similar interface.
+
+def analyze_document(english_text: str) -> dict:
+    """
+    Analyze an English document to extract its style and content characteristics.
+    Returns a dictionary with keys like 'tone', 'formality', 'rhetorical_style',
+    'vocabulary_level', 'structure', and 'content_summary'.
+    """
+    # Construct an English prompt to instruct the model for analysis.
+    analysis_prompt = (
+        "You are a literary analyst. Analyze the following English text and describe its style and content characteristics.\n\n"
+        "Text:\n"
+        f"\"\"\"\n{english_text}\n\"\"\"\n\n"
+        "Please provide an analysis with the following details:\n"
+        "- Tone (e.g., optimistic, critical, scholarly, informal, etc.)\n"
+        "- Formality level (formal or informal)\n"
+        "- Rhetorical style and devices used (e.g., persuasive, uses analogies, rhetorical questions, humor)\n"
+        "- Vocabulary level (simple, conversational, or advanced/technical)\n"
+        "- Structure (how the text is organized, e.g., narrative, essay with introduction/body/conclusion, list, etc.)\n"
+        "- A brief content summary of the text\n\n"
+        "Format the analysis as follows:\n"
+        "Tone: <description>\n"
+        "Formality: <description>\n"
+        "Rhetorical style: <description>\n"
+        "Vocabulary level: <description>\n"
+        "Structure: <description>\n"
+        "Summary: <description>\n"
+    )
+    # Run a single inference to get the analysis.
+    analysis_output = model.generate(analysis_prompt)  # Pseudo-call to the LLaMA model
+    
+    # Parse the output into a dictionary.
+    analysis = {}
+    for line in analysis_output.splitlines():
+        if ": " in line:
+            key, value = line.split(": ", 1)
+            key = key.strip().lower().replace(" ", "_")  # e.g., "Tone" -> "tone"
+            analysis[key] = value.strip()
+    return analysis
+
+# Example usage of analysis:
+english_doc = "In an era of uncertainty, the only constant is change. The article explores how ... (etc.)"
+analysis_result = analyze_document(english_doc)
+print(analysis_result)
+# Example output (dictionary):
+# {
+#  'tone': 'Reflective and motivational',
+#  'formality': 'Semi-formal, conversational',
+#  'rhetorical_style': 'Uses metaphors and rhetorical questions to engage the reader',
+#  'vocabulary_level': 'Mix of common language with a few advanced terms',
+#  'structure': 'Starts with an anecdotal introduction, followed by argumentative body paragraphs, and ends with a call-to-action conclusion',
+#  'summary': 'The text discusses how change is a constant factor in times of uncertainty, encouraging adaptability and positive response to change.'
+# }
+
+def generate_in_chinese(analysis: dict) -> str:
+    """
+    Generate a Chinese version of the text using the style/content analysis.
+    The prompt is in English but instructs the model to write in Chinese.
+    Preserves the original text's style, tone, structure, and meaning,
+    producing fluent Simplified Chinese output.
+    """
+    # Extract details from analysis
+    tone = analysis.get('tone', '')
+    formality = analysis.get('formality', '')
+    rhet_style = analysis.get('rhetorical_style', '')
+    vocab = analysis.get('vocabulary_level', '')
+    structure = analysis.get('structure', '')
+    summary = analysis.get('summary', '')
+    # Construct the prompt
+    prompt = (
+        f"The original English text has the following characteristics:\n"
+        f"Tone: {tone}\n"
+        f"Formality: {formality}\n"
+        f"Rhetorical style: {rhet_style}\n"
+        f"Vocabulary level: {vocab}\n"
+        f"Structure: {structure}\n"
+        f"Summary of content: {summary}\n\n"
+        "Using the information above, write a **Chinese** version of the text. "
+        "The Chinese output should faithfully **preserve the tone, style, and structure** of the original. "
+        "Write in natural, fluent Chinese (use Simplified Chinese characters) so that it reads as if originally written in Chinese. "
+        "Maintain the same level of formality and include similar rhetorical devices (e.g., if the original posed a rhetorical question or used a metaphor, do the same in Chinese in an appropriate way). "
+        "Ensure all key points from the summary are covered in detail, expanding the summary back into a full Chinese text. "
+        "Output the final text in Chinese only, with no English explanation."
+    )
+    chinese_text = model.generate(prompt)  # Run the model to get Chinese text
+    return chinese_text
+
+def generate_in_arabic(analysis: dict) -> str:
+    """
+    Generate an Arabic version of the text using the style/content analysis.
+    The prompt is in English but instructs the model to write in Arabic.
+    Preserves the text's style and structure, producing fluent Modern Standard Arabic.
+    """
+    tone = analysis.get('tone', '')
+    formality = analysis.get('formality', '')
+    rhet_style = analysis.get('rhetorical_style', '')
+    vocab = analysis.get('vocabulary_level', '')
+    structure = analysis.get('structure', '')
+    summary = analysis.get('summary', '')
+    prompt = (
+        f"The original English text has the following characteristics:\n"
+        f"Tone: {tone}\n"
+        f"Formality: {formality}\n"
+        f"Rhetorical style: {rhet_style}\n"
+        f"Vocabulary level: {vocab}\n"
+        f"Structure: {structure}\n"
+        f"Summary of content: {summary}\n\n"
+        "Now write an **Arabic** version of the text, adhering to the above tone, formality, and style. "
+        "The output should be in **Modern Standard Arabic**, fluent and culturally appropriate for Arabic readers. "
+        "Preserve the original structure and rhetorical feel: for example, maintain any persuasive tone, emotional cues, or rhetorical questions in an Arabic context. "
+        "Use Arabic vocabulary that matches the complexity of the original. "
+        "Make sure the translation covers all the points from the summary with the same level of detail. "
+        "Provide the final answer in Arabic only."
+    )
+    arabic_text = model.generate(prompt)
+    return arabic_text
+
+def generate_in_persian(analysis: dict) -> str:
+    """
+    Generate a Persian (Farsi) version of the text using the style/content analysis.
+    The prompt is in English but instructs the model to write in Persian.
+    Preserves the text's style and tone, producing fluent Persian output.
+    """
+    tone = analysis.get('tone', '')
+    formality = analysis.get('formality', '')
+    rhet_style = analysis.get('rhetorical_style', '')
+    vocab = analysis.get('vocabulary_level', '')
+    structure = analysis.get('structure', '')
+    summary = analysis.get('summary', '')
+    prompt = (
+        f"Based on the following analysis of an English text:\n"
+        f"Tone: {tone}\n"
+        f"Formality: {formality}\n"
+        f"Rhetorical style: {rhet_style}\n"
+        f"Vocabulary level: {vocab}\n"
+        f"Structure: {structure}\n"
+        f"Summary: {summary}\n\n"
+        "Please write a **Persian** version of the text that follows the same style and content. "
+        "The output should be in Persian (Farsi) and should read naturally to a native speaker. "
+        "Maintain the same tone and formality – for instance, if the original is formal and technical, use formal Persian wording at a similar complexity. "
+        "Recreate any rhetorical devices in a way that makes sense in Persian (e.g. translate metaphors or analogies into culturally equivalent Persian expressions). "
+        "Follow the same structure: the Persian text should have the corresponding introduction, body, and conclusion (or equivalent) as described. "
+        "Ensure all key points from the summary are included. Output only the Persian text."
+    )
+    persian_text = model.generate(prompt)
+    return persian_text
+
+def generate_in_spanish(analysis: dict) -> str:
+    """
+    Generate a Spanish version of the text using the style/content analysis.
+    The prompt is in English but instructs the model to write in Spanish.
+    Preserves the text's style and tone, producing fluent Spanish output.
+    """
+    tone = analysis.get('tone', '')
+    formality = analysis.get('formality', '')
+    rhet_style = analysis.get('rhetorical_style', '')
+    vocab = analysis.get('vocabulary_level', '')
+    structure = analysis.get('structure', '')
+    summary = analysis.get('summary', '')
+    prompt = (
+        f"An English text was analyzed with these characteristics:\n"
+        f"Tone: {tone}\n"
+        f"Formality: {formality}\n"
+        f"Rhetorical style: {rhet_style}\n"
+        f"Vocabulary level: {vocab}\n"
+        f"Structure: {structure}\n"
+        f"Summary: {summary}\n\n"
+        "Now, rewrite the text in **Spanish**, preserving the above style and content. "
+        "The Spanish version should maintain the same tone, level of formality, and structure. "
+        "Ensure the language sounds natural in Spanish – use idiomatic expressions and phrasing that a native Spanish reader would expect. "
+        "If the original text uses specific rhetoric (like an anecdote or a motivational tone), convey that in Spanish in an equivalent way. "
+        "Use a Spanish vocabulary that matches the complexity of the original text. "
+        "Re-expand the summary into a full, detailed Spanish text covering all main points. "
+        "Provide only the Spanish translated text as output."
+    )
+    spanish_text = model.generate(prompt)
+    return spanish_text
+
+# Example usage of the pipeline:
+analysis = analyze_document(english_doc)             # Analyze style/content once
+chinese_output = generate_in_chinese(analysis)       # Generate Chinese translation
+arabic_output = generate_in_arabic(analysis)         # Generate Arabic translation
+persian_output = generate_in_persian(analysis)       # Generate Persian translation
+spanish_output = generate_in_spanish(analysis)       # Generate Spanish translation
+
+
+
+
+
+
+
+
+xxxxx
+
+
 from peft import PeftModel
 from transformers import AutoModelForCausalLM
 
