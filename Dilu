@@ -168,6 +168,26 @@ training_args = TrainingArguments(
     ddp_find_unused_parameters=False  # for multi-GPU, avoids checking unused params (all LoRA params are used)
 )
 
+# Initialize the Trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,
+    data_collator=data_collator,
+    compute_metrics=compute_metrics,
+    callbacks=None,
+    predict_with_generate=True,         # enable text generation for evaluation
+    generation_max_length=512,         # max tokens to generate for output
+    # generation_kwargs={"num_beams": 1}  # you can add more generate params if desired (e.g., beam search)
+)
+
+# Start training
+trainer.train()
+
+# Save the trained LoRA adapter (this saves only the LoRA weights, not the full 70B model)
+trainer.model.save_pretrained("output-llama3.3-qlora-cve")
+tokenizer.save_pretrained("output-llama3.3-qlora-cve")
 
 
 
