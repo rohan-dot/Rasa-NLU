@@ -1,3 +1,190 @@
+!pip install transformers datasets accelerate peft bitsandbytes  # Install required packages if not already installed
+
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
+import torch
+
+# Model and tokenizer identifiers
+model_name = "meta-llama/Llama-3.3-70B-Instruct"  # ensure you have access to this model
+
+# 4-bit quantization configuration for QLoRA
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16  # use BF16 for faster computation on A100
+)
+
+# Load tokenizer and model in 4-bit mode
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    quantization_config=bnb_config,
+    device_map="auto",              # automatically allocate model layers to GPU(s)
+    trust_remote_code=True
+)
+
+# Prepare model for training (necessary for 8-bit/4-bit fine-tuning)
+model = prepare_model_for_kbit_training(model)
+
+# Set pad token to eos to avoid warnings, and set padding strategy
+tokenizer.pad_token = tokenizer.eos_token  # use EOS token as PAD
+tokenizer.padding_side = "right"           # pad on the right for training
+
+# Enable gradient checkpointing for memory efficiency
+model.gradient_checkpointing_enable()
+model.config.use_cache = False  # must disable cache for gradient checkpointing
+
+from peft import TaskType
+
+# Configure LoRA/QLoRA parameters
+lora_config = LoraConfig(
+    r=16,             # LoRA rank (increase to 32 if memory allows for potentially better results)
+    lora_alpha=32,    # LoRA scaling (usually 2 * r)
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],  # target key linear layers&#8203;:contentReference[oaicite:7]{index=7}
+    lora_dropout=0.05,  # dropout for LoRA layers (0.0-0.1). Using a small value to regularize.
+    bias="none",
+    task_type=TaskType.CAUSAL_LM
+)
+
+# Wrap the base model with LoRA adapters
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()  # Log the number of trainable parameters (LoRA) vs total
+
+
+
+from datasets import load_dataset
+
+# Load the CVEFixes1 dataset, C code split
+dataset = load_dataset("euisuh15/cveFixes1", split="c")
+# Split into training and validation sets (90/10 split)
+dataset = dataset.train_test_split(test_size=0.1, seed=42)
+train_data = dataset["train"]
+eval_data  = dataset["test"]
+
+# Define the prompt template format
+def format_prompt(cwe_id, clean_code):
+    """Format the instruction, input, and output prompt without the vulnerable code."""
+    return f"Instruction: Inject CWE ID {cwe_id} in the clean code\nInput:\n{clean_code}\nOutput:\n"
+
+# Preprocessing function for training set: combine prompt + output, mask prompt tokens in labels
+def preprocess_train(example):
+    prompt = format_prompt(example["cwe_id"], example["func_after"])
+    vuln_code = example["func_before"]
+    # Combine prompt and vulnerable code for full input sequence
+    full_text = prompt + vuln_code
+    # Tokenize the combined sequence
+    tokenized = tokenizer(full_text, truncation=True, max_length=2048, add_special_tokens=False)
+    input_ids = tokenized["input_ids"]
+    # Append EOS token id at end of sequence if not already present
+    if input_ids and input_ids[-1] != tokenizer.eos_token_id:
+        input_ids.append(tokenizer.eos_token_id)
+    # Create labels: prompt part as -100, output part as actual tokens (including EOS)
+    # Determine boundary: prompt length (tokens for "Instruction...Output:\n")
+    prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
+    prompt_len = len(prompt_ids)
+    labels = [-100] * prompt_len + input_ids[prompt_len:]
+    return {"input_ids": input_ids, "labels": labels}
+
+# Preprocessing function for validation set: keep prompt and output separate
+def preprocess_eval(example):
+    prompt = format_prompt(example["cwe_id"], example["func_after"])
+    vuln_code = example["func_before"]
+    # Tokenize prompt alone
+    prompt_ids = tokenizer(prompt, truncation=True, max_length=2048, add_special_tokens=False)["input_ids"]
+    # Tokenize output (vulnerable code) alone
+    output_ids = tokenizer(vuln_code, truncation=True, max_length=2048, add_special_tokens=False)["input_ids"]
+    # Append EOS to output_ids
+    if output_ids and output_ids[-1] != tokenizer.eos_token_id:
+        output_ids.append(tokenizer.eos_token_id)
+    return {"input_ids": prompt_ids, "labels": output_ids}
+
+# Apply preprocessing
+train_dataset = train_data.map(preprocess_train, remove_columns=train_data.column_names)
+eval_dataset  = eval_data.map(preprocess_eval, remove_columns=eval_data.column_names)
+
+from transformers import DataCollatorForSeq2Seq
+
+# Create a data collator that pads inputs and labels, using -100 for padded labels
+data_collator = DataCollatorForSeq2Seq(
+    tokenizer=tokenizer, 
+    model=model, 
+    label_pad_token_id=-100, 
+    pad_to_multiple_of=8  # pad to multiple of 8 for efficiency (optional)
+)
+
+import numpy as np
+from transformers import TrainingArguments, Trainer
+try:
+    import evaluate
+    bleu_metric = evaluate.load("bleu")
+except ImportError:
+    bleu_metric = None
+
+def compute_metrics(eval_pred):
+    """Compute Exact Match and BLEU score for generated code vs reference."""
+    predictions, labels = eval_pred
+    # Decode predictions and references
+    decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+    # Replace -100 in labels as padding, then decode
+    decoded_labels = []
+    for label_seq in labels:
+        # Replace -100 with pad_token_id for decoding
+        label_seq = [tokenizer.pad_token_id if token == -100 else token for token in label_seq]
+        decoded_labels.append(tokenizer.decode(label_seq, skip_special_tokens=True))
+    # Compute Exact Match
+    exact_matches = [1 if pred.strip() == ref.strip() else 0 for pred, ref in zip(decoded_preds, decoded_labels)]
+    em_rate = np.mean(exact_matches)
+    # Compute BLEU (if evaluate library is available)
+    if bleu_metric is not None:
+        bleu_score = bleu_metric.compute(
+            predictions=[pred.split() for pred in decoded_preds],
+            references=[[ref.split()] for ref in decoded_labels]
+        )["bleu"]
+    else:
+        bleu_score = None
+    metrics = {"exact_match": em_rate}
+    if bleu_score is not None:
+        metrics["bleu"] = bleu_score
+    return metrics
+
+# Define training arguments
+training_args = TrainingArguments(
+    output_dir="output-llama3.3-qlora-cve",   # output directory for checkpoints and artifacts
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=8,
+    num_train_epochs=3,
+    learning_rate=3e-4,
+    warmup_steps=100,
+    bf16=True,                      # use bfloat16 precision if available
+    optim="adamw_bnb_8bit",         # 8-bit Adam optimizer for efficiency
+    logging_steps=10,
+    evaluation_strategy="steps",
+    eval_steps=100,
+    save_strategy="steps",
+    save_steps=100,
+    save_total_limit=2,
+    report_to=["none"],             # or ["wandb"] to use Weights & Biases
+    ddp_find_unused_parameters=False  # for multi-GPU, avoids checking unused params (all LoRA params are used)
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+xxxxxx
+
+
 import torch
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorForLanguageModeling
