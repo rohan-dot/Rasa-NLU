@@ -1,3 +1,29 @@
+def preprocess_eval(example):
+    prompt = format_prompt(example["cwe_id"], example["func_after"])
+    vuln_code = example["func_before"]
+
+    # Tokenize prompt (input only)
+    prompt_ids = tokenizer(prompt, truncation=True, max_length=2048, padding=False, add_special_tokens=False)["input_ids"]
+
+    # Tokenize vulnerable code (as label)
+    output_ids = tokenizer(vuln_code, truncation=True, max_length=2048, padding=False, add_special_tokens=False)["input_ids"]
+    if output_ids[-1] != tokenizer.eos_token_id:
+        output_ids.append(tokenizer.eos_token_id)
+
+    # Pad output_ids to match prompt_ids if needed (not strictly required here, but safe)
+    max_len = max(len(prompt_ids), len(output_ids))
+    prompt_ids += [tokenizer.pad_token_id] * (max_len - len(prompt_ids))
+    output_ids += [-100] * (max_len - len(output_ids))  # -100 for loss masking
+
+    return {"input_ids": prompt_ids, "labels": output_ids}
+
+
+
+
+
+
+
+
 def preprocess_train(example):
     prompt = format_prompt(example["cwe_id"], example["func_after"])
     vuln_code = example["func_before"]
