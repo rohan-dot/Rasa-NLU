@@ -1,3 +1,156 @@
+import torch
+from datasets import load_dataset
+from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorForLanguageModeling
+from peft import get_peft_model, LoraConfig, TaskType
+
+# Model and tokenizer setup
+model_name = "meta-llama/Llama-3.3-70B-Instruct"
+tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side='right', use_fast=True)
+tokenizer.pad_token = tokenizer.eos_token  # Ensure padding token is set
+
+# Load model efficiently
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    load_in_8bit=True,
+    torch_dtype=torch.float16,
+    device_map='auto'
+)
+
+# Apply LoRA with tuned parameters
+peft_config = LoraConfig(
+    task_type=TaskType.CAUSAL_LM,
+    inference_mode=False,
+    r=16,               # Slightly higher rank for better quality
+    lora_alpha=32,
+    lora_dropout=0.05,  # Reduced dropout for stability
+    target_modules=['q_proj', 'v_proj']  # standard modules for llama family
+)
+
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
+
+# Dataset loading
+dataset = load_dataset("euisuh15/cveFixes1", split="train")
+
+# Define preprocess function explicitly handling padding
+max_length = 2048  # Recommended to avoid token limit issues
+
+def preprocess(example):
+    prompt = (f"<|system|>\nYou are a code vulnerability injector.\n"
+              f"<|user|>\nCWE: {example['cwe']}\n"
+              f"Please inject the specified vulnerability into the following C code:\n\n```c\n{example['non_vulnerable_code']}\n```\n"
+              f"<|assistant|>\n```c\n{example['vulnerable_code']}\n```")
+
+    tokenized = tokenizer(
+        prompt,
+        truncation=True,
+        max_length=max_length,
+        padding='max_length'
+    )
+
+    labels = tokenized['input_ids'].copy()
+
+    return {
+        "input_ids": tokenized["input_ids"],
+        "attention_mask": tokenized["attention_mask"],
+        "labels": labels,
+    }
+
+tokenized_dataset = dataset.map(preprocess, remove_columns=dataset.column_names)
+
+# Data collator for padding
+data_collator = DataCollatorForLanguageModeling(
+    tokenizer=tokenizer, mlm=False
+)
+
+# Training arguments
+training_args = TrainingArguments(
+    output_dir="./llama3_cwe_finetuned",
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=16,  # Adjust based on GPU capacity
+    num_train_epochs=3,
+    learning_rate=1e-5,              # Lowered LR for stability
+    fp16=True,
+    logging_steps=10,
+    save_steps=200,
+    save_total_limit=3,
+    evaluation_strategy="no",
+    warmup_steps=50,
+    weight_decay=0.01,
+    gradient_checkpointing=True,     # Important for large models
+    optim="adamw_torch"
+)
+
+# Initialize Trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized_dataset,
+    data_collator=data_collator,
+    tokenizer=tokenizer
+)
+
+# Start fine-tuning
+trainer.train()
+
+# Save final LoRA fine-tuned model
+trainer.save_model("./llama3_cwe_finetuned_final")
+
+
+
+
+**Preprocessing Function:**
+
+```python
+from datasets import load_dataset
+from transformers import AutoTokenizer
+
+# Load the 'c' split of the dataset
+dataset = load_dataset("euisuh15/cveFixes1", split="c")
+
+# Initialize tokenizer
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.3-70B-Instruct")
+tokenizer.pad_token = tokenizer.eos_token  # Ensure padding token is set
+
+def preprocess(example):
+    prompt = (
+        "<|system|>\nYou are a code vulnerability injector.\n"
+        f"<|user|>\nCWE: {example['cwe_id']}\n"
+        "Please inject the specified vulnerability into the following C code:\n\n"
+        f"```c\n{example['code_before']}\n```\n"
+        "<|assistant|>\n```c\n"
+    )
+    completion = f"{example['code_after']}\n```"
+
+    # Tokenize prompt and completion
+    prompt_tokens = tokenizer(prompt, truncation=True, max_length=2048, padding='max_length', return_tensors="pt")
+    completion_tokens = tokenizer(completion, truncation=True, max_length=2048, padding='max_length', return_tensors="pt")
+
+    # Combine input_ids and labels
+    input_ids = torch.cat([prompt_tokens['input_ids'], completion_tokens['input_ids']], dim=1)
+    attention_mask = torch.cat([prompt_tokens['attention_mask'], completion_tokens['attention_mask']], dim=1)
+    labels = input_ids.clone()
+    labels[:, :prompt_tokens['input_ids'].size(1)] = -100  # Mask prompt tokens in labels
+
+    return {
+        "input_ids": input_ids.squeeze(),
+        "attention_mask": attention_mask.squeeze(),
+        "labels": labels.squeeze(),
+    }
+
+# Apply preprocessing
+tokenized_dataset = dataset.map(preprocess, remove_columns=dataset.column_names)
+
+
+
+
+
+
+
+
+
+
+
 # Assuming we have a pre-loaded LLaMA 70B model and tokenizer accessible as `model` (pseudo-code).
 # For instance, model could be a HuggingFace pipeline or similar interface.
 
