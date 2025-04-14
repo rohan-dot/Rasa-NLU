@@ -1,3 +1,31 @@
+def preprocess_train(example):
+    prompt = format_prompt(example["cwe_id"], example["func_after"])
+    vuln_code = example["func_before"]
+    
+    full_text = prompt + vuln_code
+    tokenized = tokenizer(full_text, truncation=True, max_length=2048, padding=False, add_special_tokens=False)
+    
+    input_ids = tokenized["input_ids"]
+    if input_ids[-1] != tokenizer.eos_token_id:
+        input_ids.append(tokenizer.eos_token_id)
+    
+    # Compute prompt length
+    prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
+    prompt_len = len(prompt_ids)
+    
+    # Make sure labels are same length as input_ids
+    labels = [-100] * prompt_len + input_ids[prompt_len:]
+    labels = labels[:len(input_ids)]  # clip in case label is longer
+    input_ids = input_ids[:len(labels)]  # clip input to label length
+
+    return {"input_ids": input_ids, "labels": labels}
+
+
+
+
+
+xxx
+
 !pip install transformers datasets accelerate peft bitsandbytes  # Install required packages if not already installed
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
