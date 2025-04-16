@@ -1,3 +1,55 @@
+# Example clean function and CWE
+cwe_id = "119"
+clean_code = """
+#include <stdio.h>
+#include <string.h>
+
+void handle_input(char *input) {
+    char buffer[50];
+    if (strlen(input) < sizeof(buffer)) {
+        strcpy(buffer, input);
+        printf("Received: %s\\n", buffer);
+    } else {
+        printf("Input too long.\\n");
+    }
+}
+"""
+
+# Match training prompt format
+prompt = f"Instruction: Inject CWE ID {cwe_id} in the clean code\nInput:\n{clean_code}\nOutput:\n"
+
+# Tokenize
+inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=2048)
+inputs = {k: v.to(model.device) for k, v in inputs.items()}
+
+# Generate vulnerable code
+with torch.no_grad():
+    output_ids = model.generate(
+        **inputs,
+        max_new_tokens=512,
+        temperature=0.7,
+        do_sample=True,           # or False for greedy
+        top_k=50,
+        top_p=0.95,
+        num_beams=1,
+        eos_token_id=tokenizer.eos_token_id
+    )
+
+# Decode only the new generation (after prompt)
+generated_text = tokenizer.decode(output_ids[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+
+print("=== Vulnerable Code Injected ===\n")
+print(generated_text)
+
+
+
+
+
+
+xxxxxx
+
+
+
 def preprocess_eval(example):
     prompt = format_prompt(example["cwe_id"], example["func_after"])
     vuln_code = example["func_before"]
