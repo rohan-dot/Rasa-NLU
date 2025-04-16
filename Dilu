@@ -1,3 +1,37 @@
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel
+import torch
+
+# Load 70B base + QLoRA adapter
+base_model = "meta-llama/Llama-3.3-70B-Instruct"  # must be the same as you trained on
+adapter_path = "output-llama3.3-qlora-cve"        # your trained adapter path
+
+# BitsAndBytes config for 4-bit inference
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+
+# Load tokenizer and base model
+tokenizer = AutoTokenizer.from_pretrained(base_model, use_fast=False, trust_remote_code=True)
+tokenizer.pad_token = tokenizer.eos_token  # for left-padding during generation
+tokenizer.padding_side = "left"
+
+model = AutoModelForCausalLM.from_pretrained(
+    base_model,
+    quantization_config=bnb_config,
+    device_map="auto",
+    trust_remote_code=True
+)
+
+# Load QLoRA adapter on top of base model
+model = PeftModel.from_pretrained(model, adapter_path)
+model.eval()
+
+
+
 # Example clean function and CWE
 cwe_id = "119"
 clean_code = """
