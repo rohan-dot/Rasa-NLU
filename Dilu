@@ -1,3 +1,25 @@
+def format_prompt(cwe_id, clean_code, vulnerable_code=None):
+    system_msg = "You are a helpful assistant trained to inject vulnerabilities based on CWE IDs."
+    user_msg = f"Instruction: Inject CWE ID {cwe_id} in the clean code\nInput:\n{clean_code}\nOutput:"
+    assistant_msg = vulnerable_code or ""
+
+    prompt = (
+        "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n"
+        f"{system_msg}<|eot_id|>\n"
+        "<|start_header_id|>user<|end_header_id|>\n"
+        f"{user_msg}<|eot_id|>\n"
+        "<|start_header_id|>assistant<|end_header_id|>\n"
+        f"{assistant_msg}<|eot_id|>"
+    )
+    return prompt
+
+
+
+
+
+
+
+xxx
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments, Trainer
 from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model, TaskType
 from datasets import load_dataset
