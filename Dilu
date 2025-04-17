@@ -1,3 +1,168 @@
+# llama_cwe_train.py
+# Fine‑tune LLaMA‑3‑70B‑Instruct with QLoRA on CVEFixes1 (CWE‑119 + CWE‑125)
+
+# ---------- 1. pip installs (skip if environment already prepared) ----------
+# !pip install -q transformers==4.40.1 peft==0.10.0 bitsandbytes==0.43.0 \
+#               datasets==2.19.0 accelerate==0.28.0
+
+import torch, random, os
+from datasets import load_dataset
+from transformers import (AutoTokenizer, AutoModelForCausalLM,
+                          BitsAndBytesConfig, TrainingArguments, Trainer)
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+
+# ---------- 2. Model / tokenizer ----------
+BASE_MODEL = "meta-llama/Llama-3-70B-Instruct"    # HF repo (needs access)
+BNB_CFG = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+
+tokenizer = AutoTokenizer.from_pretrained(
+    BASE_MODEL, use_fast=False, trust_remote_code=True
+)
+tokenizer.pad_token = tokenizer.eos_token  # LLaMA has no dedicated PAD
+tokenizer.padding_side = "right"           # right‑pad for training
+
+model = AutoModelForCausalLM.from_pretrained(
+    BASE_MODEL, quantization_config=BNB_CFG,
+    device_map="auto", trust_remote_code=True
+)
+model = prepare_model_for_kbit_training(model)
+
+lora_cfg = LoraConfig(
+    r=16, lora_alpha=32, lora_dropout=0.05, bias="none",
+    target_modules=["q_proj", "k_proj", "v_proj",
+                    "o_proj", "gate_proj", "up_proj", "down_proj"],
+    task_type="CAUSAL_LM"
+)
+model = get_peft_model(model, lora_cfg)
+model.gradient_checkpointing_enable()
+model.config.use_cache = False
+
+# ---------- 3. Data ------------------------------------------------------------------
+ds = load_dataset("euisuh15/cveFixes1", split="c")   # C‑code slice
+TARGET_CWES = {"119", "125"}
+ds = ds.filter(lambda x: str(x["cwe_id"]) in TARGET_CWES)
+print("Samples kept:", len(ds))
+
+# 80 / 20 split (adjust as desired)
+ds = ds.shuffle(seed=42)
+split = ds.train_test_split(test_size=0.2, seed=42)
+train_ds, val_ds = split["train"], split["test"]
+
+# ---------- 4. Prompt template helpers -----------------------------------------------
+def chat_wrap(role, text):
+    return f"<|start_header_id|>{role}<|end_header_id|>\n{text}<|eot_id|>\n"
+
+SYSTEM_MSG = (
+    "You are a helpful assistant trained to inject C‑language "
+    "vulnerabilities based on CWE IDs. When asked, you output ONLY the "
+    "modified (vulnerable) C code."
+)
+
+def build_sample(example, add_labels: bool):
+    """Return dict with input_ids & labels (labels masked before assistant)."""
+    prompt_user = (
+        f"Instruction: Inject CWE ID {example['cwe_id']} in the clean code\n"
+        f"Input:\n{example['func_after']}\n"
+        f"Output:"
+    )
+    assistant_answer = example["func_before"] if add_labels else ""
+    
+    chat = (
+        "<|begin_of_text|>\n"
+        + chat_wrap("system", SYSTEM_MSG)
+        + chat_wrap("user", prompt_user)
+        + chat_wrap("assistant", assistant_answer)
+    )   # note: trailing <|end_of_text|> not required – eos token covers it
+    
+    tokens = tokenizer(
+        chat, truncation=True, max_length=4096, add_special_tokens=False
+    )["input_ids"]
+    
+    if tokens[-1] != tokenizer.eos_token_id:
+        tokens.append(tokenizer.eos_token_id)
+    
+    # label masking: everything BEFORE assistant_answer is -100
+    if add_labels:
+        # find index where assistant content starts
+        split_idx = tokenizer(
+            "<|begin_of_text|>\n"
+            + chat_wrap("system", SYSTEM_MSG)
+            + chat_wrap("user", prompt_user),
+            add_special_tokens=False
+        )["input_ids"]
+        prv_len = len(split_idx)
+        labels = [-100]*prv_len + tokens[prv_len:]
+    else:
+        labels = [-100]*len(tokens)   # val set: will be replaced during Trainer eval
+    
+    return {"input_ids": tokens, "labels": labels}
+
+train_ds = train_ds.map(lambda ex: build_sample(ex, True),
+                        remove_columns=train_ds.column_names,
+                        num_proc=4)
+val_ds   = val_ds.map(lambda ex: build_sample(ex, True),
+                      remove_columns=val_ds.column_names,
+                      num_proc=4)
+
+# ---------- 5. Data collator (pads BOTH inputs & labels) -----------------------------
+def collator(batch):
+    max_len = max(len(x["input_ids"]) for x in batch)
+    for x in batch:
+        pad_amt = max_len - len(x["input_ids"])
+        x["input_ids"].extend([tokenizer.pad_token_id]*pad_amt)
+        x["labels"].extend([-100]*pad_amt)
+    return {
+        "input_ids": torch.tensor([x["input_ids"] for x in batch], dtype=torch.long),
+        "labels": torch.tensor([x["labels"] for x in batch], dtype=torch.long),
+        "attention_mask": torch.tensor(
+            [[1 if id!=tokenizer.pad_token_id else 0 for id in x["input_ids"]]
+             for x in batch], dtype=torch.long)
+    }
+
+# ---------- 6. Training configuration ------------------------------------------------
+args = TrainingArguments(
+    output_dir="llama3-qlora-cwe119-125",
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=16,      # effective batch 16
+    num_train_epochs=3,
+    learning_rate=3e-4,
+    warmup_steps=100,
+    bf16=True,
+    logging_steps=10,
+    save_strategy="epoch",
+    evaluation_strategy="no",            # turn to "epoch" if you want eval
+    label_names=["labels"],              # required with PEFT
+)
+
+trainer = Trainer(
+    model=model,
+    args=args,
+    train_dataset=train_ds,
+    # eval_dataset=val_ds,               # uncomment if you enable eval
+    data_collator=collator,
+)
+
+trainer.train()
+
+# ---------- 7. Save LoRA adapter -----------------------------------------------------
+trainer.model.save_pretrained("llama3-qlora-cwe119-125")
+tokenizer.save_pretrained("llama3-qlora-cwe119-125")
+print("Training done. Adapter saved to ./llama3-qlora-cwe119-125")
+
+
+
+
+
+
+
+xxxxxx
+
+
 def format_prompt(cwe_id, clean_code, vulnerable_code=None):
     system_msg = "You are a helpful assistant trained to inject vulnerabilities based on CWE IDs."
     user_msg = f"Instruction: Inject CWE ID {cwe_id} in the clean code\nInput:\n{clean_code}\nOutput:"
