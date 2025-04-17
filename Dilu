@@ -1,4 +1,134 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments, Trainer
+from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model, TaskType
+from datasets import load_dataset
+import torch
+import random
+
+# Load dataset and filter to only CWE-125
+full_dataset = load_dataset("euisuh15/cveFixes1", split="c")
+dataset = full_dataset.filter(lambda x: x["cwe_id"] == "125")
+
+# Shuffle and sample if needed (optional)
+random.seed(42)
+dataset = dataset.shuffle().select(range(min(len(dataset), 2000)))
+
+# Split train/eval
+dataset = dataset.train_test_split(test_size=0.1, seed=42)
+train_data = dataset["train"]
+eval_data = dataset["test"]
+
+# Prompt format
+prompt_template = """Instruction: Inject CWE ID {cwe_id} in the clean code
+Input:
+{clean}
+Output:
+"""
+
+def format_prompt(cwe_id, clean_code):
+    return prompt_template.format(cwe_id=cwe_id, clean=clean_code)
+
+def preprocess(example):
+    prompt = format_prompt(example["cwe_id"], example["func_after"])
+    target = example["func_before"]
+    full = prompt + target
+
+    tokenized = tokenizer(full, truncation=True, max_length=2048, padding=False, add_special_tokens=False)
+    input_ids = tokenized["input_ids"]
+    if input_ids[-1] != tokenizer.eos_token_id:
+        input_ids.append(tokenizer.eos_token_id)
+
+    prompt_len = len(tokenizer(prompt, add_special_tokens=False)["input_ids"])
+    labels = [-100] * prompt_len + input_ids[prompt_len:]
+    labels = labels[:len(input_ids)]
+    input_ids = input_ids[:len(labels)]
+    return {"input_ids": input_ids, "labels": labels}
+
+train_dataset = train_data.map(preprocess, remove_columns=train_data.column_names)
+eval_dataset = eval_data.map(preprocess, remove_columns=eval_data.column_names)
+
+# Tokenizer & Model
+model_name = "meta-llama/Llama-3.3-70B-Instruct"
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False, trust_remote_code=True)
+tokenizer.pad_token = tokenizer.eos_token
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    quantization_config=bnb_config,
+    device_map="auto",
+    trust_remote_code=True
+)
+model = prepare_model_for_kbit_training(model)
+
+# LoRA config
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0.05,
+    bias="none",
+    task_type=TaskType.CAUSAL_LM
+)
+model = get_peft_model(model, lora_config)
+
+# Data collator
+from transformers import DataCollatorForSeq2Seq
+collator = DataCollatorForSeq2Seq(
+    tokenizer=tokenizer,
+    model=model,
+    label_pad_token_id=-100,
+    pad_to_multiple_of=8
+)
+
+# Training args (eval optional)
+training_args = TrainingArguments(
+    output_dir="llama3-qlora-cwe125",
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=8,
+    num_train_epochs=3,
+    learning_rate=3e-4,
+    warmup_steps=100,
+    bf16=True,
+    logging_steps=10,
+    save_strategy="steps",
+    save_steps=100,
+    save_total_limit=2,
+    report_to="none",
+    label_names=["labels"],
+    ddp_find_unused_parameters=False
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,  # comment this line if you want to skip evaluation
+    data_collator=collator,
+)
+
+trainer.train()
+
+# Save adapter
+model.save_pretrained("llama3-qlora-cwe125")
+tokenizer.save_pretrained("llama3-qlora-cwe125")
+
+
+
+
+
+
+
+
+
+xxxxxx
+
+
+.from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
 import torch
 
