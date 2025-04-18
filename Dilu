@@ -1,3 +1,61 @@
+# helpers already defined earlier
+#   – SYSTEM_MSG  (string)
+#   – chat_wrap(role, text)  ⇒  "<|start_header_id|>role<|end_header_id|>\ntext<|eot_id|>\n"
+
+def build_sample(example, add_labels: bool):
+    """
+    Build a single training / eval sample.
+      • input_ids  : system + user + (assistant if training) + <eos>
+      • labels     : identical length; prefix masked with -100
+    """
+    # 1) compose chat transcript ---------------------------------------------
+    user_block = (
+        f"Instruction: Inject CWE ID {example['cwe_id']} in the clean code\n"
+        f"Input:\n{example['func_after']}\n"
+        f"Output:"                               # assistant must continue here
+    )
+    assistant_block = example["func_before"] if add_labels else ""
+
+    chat = (
+        "<|begin_of_text|>\n"
+        + chat_wrap("system",   SYSTEM_MSG)
+        + chat_wrap("user",     user_block)
+        + chat_wrap("assistant", assistant_block)
+    )
+
+    # 2) tokenize -------------------------------------------------------------
+    tokens = tokenizer(
+        chat, truncation=True, max_length=4096, add_special_tokens=False
+    )["input_ids"]
+
+    if tokens[-1] != tokenizer.eos_token_id:
+        tokens.append(tokenizer.eos_token_id)
+
+    # 3) build labels w/ safe masking ----------------------------------------
+    if add_labels:
+        labels = tokens.copy()  # same length
+        # mask everything **before** assistant answer
+        prefix = (
+            "<|begin_of_text|>\n"
+            + chat_wrap("system", SYSTEM_MSG)
+            + chat_wrap("user",   user_block)
+        )
+        prefix_len = len(
+            tokenizer(prefix, add_special_tokens=False)["input_ids"]
+        )
+        labels[:prefix_len] = [-100] * prefix_len
+    else:
+        labels = [-100] * len(tokens)
+
+    return {"input_ids": tokens, "labels": labels}
+
+
+
+
+
+
+xxxx
+
 ## BEND Counter‑Narrative Prompt Templates (No‑Emoji Version)
 
 Below are four ready‑to‑paste templates—**EXPLAIN, ENHANCE, DISMISS, EXCITE**—refined to meet Dr. Kathleen Carley’s BEND objectives *without* using emojis or decorative symbols.
