@@ -1,4 +1,32 @@
-If your final output from the chain-of-thought prompt is “too short” or missing important details, there are a few adjustments you can make to encourage the model to reference more information from the context. Here are some practical tips:
+def build_sample(example, add_labels: bool):
+    # …  (same code that builds `chat` and gets `tokens`)
+    tokens = tokenizer(chat,
+                       truncation=True,
+                       max_length=4096,
+                       add_special_tokens=False)["input_ids"]
+
+    if tokens[-1] != tokenizer.eos_token_id:
+        tokens.append(tokenizer.eos_token_id)
+
+    if add_labels:
+        # length of everything before the assistant’s answer
+        pre_len = len(
+            tokenizer(
+                "<|begin_of_text|>\n"
+                + chat_wrap("system", SYSTEM_MSG)
+                + chat_wrap("user",
+                            f"Instruction: Inject CWE ID {example['cwe_id']} in the clean code\n"
+                            f"Input:\n{example['func_after']}\nOutput:")
+            , add_special_tokens=False)["input_ids"]
+        )
+
+        # build labels ***the safe way***: copy then mask
+        labels = tokens.copy()              # same length by construction
+        labels[:pre_len] = [-100] * pre_len # ignore system+user part
+    else:
+        labels = [-100] * len(tokens)
+
+    return {"input_ids": tokens, "labels": labels}
 
 ---
 
