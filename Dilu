@@ -1,3 +1,58 @@
+# ---------------- CUSTOM COLLATOR: keeps shapes in sync ------------------
+from typing import Dict, List, Any
+import torch
+
+class SameLengthCollator:
+    def __init__(self, tokenizer, pad_to_multiple_of: int | None = 8):
+        self.tok = tokenizer
+        self.mul = pad_to_multiple_of
+
+    def _pad(self, seq: List[int], tgt_len: int, pad_id: int):
+        return seq + [pad_id] * (tgt_len - len(seq))
+
+    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
+        # longest length among BOTH input_ids and labels
+        tgt_len = max(
+            max(len(f["input_ids"]), len(f["labels"])) for f in features
+        )
+        if self.mul:
+            # round up to tensor‑core multiple
+            tgt_len = (tgt_len + self.mul - 1) // self.mul * self.mul
+
+        input_ids  = [self._pad(f["input_ids"], tgt_len, self.tok.pad_token_id)
+                      for f in features]
+        labels     = [self._pad(f["labels"],    tgt_len, -100)
+                      for f in features]
+
+        return {
+            "input_ids":      torch.tensor(input_ids, dtype=torch.long),
+            "labels":         torch.tensor(labels,    dtype=torch.long),
+            "attention_mask": torch.tensor([[1 if t != self.tok.pad_token_id else 0
+                                             for t in seq] for seq in input_ids],
+                                            dtype=torch.long),
+        }
+
+
+data_collator = SameLengthCollator(tokenizer, pad_to_multiple_of=8)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_ds,
+    # eval_dataset=val_ds,
+    data_collator=data_collator,
+    # make sure remove_unused_columns=False is still in training_args
+)
+
+
+
+
+
+
+
+
+
+xxxxx
 def build_sample(example, train_mode: bool):
     """
     • Produces token lists where len(input_ids) == len(labels).
