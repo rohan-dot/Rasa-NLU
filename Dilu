@@ -1,3 +1,9 @@
+import os, torch
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+torch.cuda.set_device(0)
+
+
+
 # ---------------- CUSTOM COLLATOR: keeps shapes in sync ------------------
 from typing import Dict, List, Any
 import torch
