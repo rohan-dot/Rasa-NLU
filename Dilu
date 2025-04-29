@@ -1,3 +1,118 @@
+Here's a prompt tailored for an LLM to act as a **hate speech moderator**, following **Twitter’s guidelines**, with clear definitions and classification instructions:
+
+---
+
+**Prompt Template:**
+
+You are a content moderation assistant trained to classify tweets as **Hateful** or **Non-Hateful** in accordance with Twitter's hateful conduct policy.
+
+**Twitter’s Definition of Hate Speech (Hateful Conduct):**  
+Content that promotes violence against, threatens, or harasses people on the basis of their identity, including (but not limited to): race, ethnicity, national origin, caste, sexual orientation, gender, gender identity, religious affiliation, age, disability, or serious disease.
+
+**Hateful speech includes:**
+- Dehumanizing language or imagery targeting a group (e.g., comparing to animals, viruses, etc.)
+- Slurs, tropes, or coded language used to insult or incite hatred
+- Direct threats or calls to harm a group or individual based on protected attributes
+- Mocking victims of hate crimes, genocide, or historical trauma
+
+**Non-Hateful speech includes:**
+- Criticism of institutions, ideologies, or policies, even if harshly worded
+- Personal opinions not targeting identity groups
+- Reposts or discussions of hateful content intended to condemn or educate
+- Use of humor or sarcasm that is not directed at marginalized groups
+
+**Task:**  
+Read the following tweet. Based on the above definitions, classify it as either **Hateful** or **Non-Hateful**. Provide a brief justification using references to the guidelines.
+
+**Tweet:**  
+"{tweet_text}"
+
+**Output format:**  
+Label: Hateful / Non-Hateful  
+Explanation: {your reasoning based on Twitter's guidelines}
+
+---
+
+Would you like a few example tweet-label pairs to include in few-shot prompting?
+
+Great — here are **3 example tweet-label pairs** to help guide the LLM with few-shot prompting. These examples span a range of borderline and clear-cut cases:
+
+---
+
+**Example 1**  
+**Tweet:**  
+*"These immigrants are a disease ruining our country. Deport them all."*
+
+**Label:** Hateful  
+**Explanation:** This tweet uses dehumanizing language ("disease") targeting immigrants, which falls under hate speech as per Twitter's policy against promoting violence or hate based on national origin or ethnicity.
+
+---
+
+**Example 2**  
+**Tweet:**  
+*"I think government policies on gender identity in schools are misguided and confusing."*
+
+**Label:** Non-Hateful  
+**Explanation:** Although this expresses disagreement with a policy related to gender identity, it does not target or harass individuals. Criticism of policies or institutions is allowed under Twitter's guidelines.
+
+---
+
+**Example 3**  
+**Tweet:**  
+*"Lol, another one of those [slur] got what he deserved. One less of them on the streets."*
+
+**Label:** Hateful  
+**Explanation:** This tweet includes a slur and expresses approval of harm toward a person from a marginalized group. It clearly promotes hateful conduct and violates Twitter’s rules on targeting individuals by identity.
+
+---
+
+Would you like more edge-case examples (sarcasm, memes, coded language), or should I format this for batch classification in a dataset?
+
+
+Here are **3 more edge-case examples** including **sarcasm**, **memes**, and **coded language** — these help train the LLM to catch subtle or context-dependent hate speech:
+
+---
+
+**Example 4**  
+**Tweet:**  
+*"Oh sure, let's just let all the 'chosen ones' run Hollywood and the banks. Totally normal."*
+
+**Label:** Hateful  
+**Explanation:** This tweet uses coded antisemitic tropes (“chosen ones,” control of media/banks) to target Jewish people. Such veiled language is considered hate speech under Twitter’s guidelines prohibiting stereotypes and coded attacks.
+
+---
+
+**Example 5**  
+**Tweet:**  
+*"Can’t believe they’re canceling people just for saying there are only two genders. What a joke."*
+
+**Label:** Non-Hateful  
+**Explanation:** While this expresses a controversial opinion, it does not promote violence, threaten, or directly harass individuals. Twitter allows speech that challenges identity narratives as long as it doesn’t cross into targeted hate or harassment.
+
+---
+
+**Example 6**  
+**Tweet:**  
+*Image of a gorilla next to a Black public figure with the caption: "Evolution hits different."*
+
+**Label:** Hateful  
+**Explanation:** This meme dehumanizes a Black person using imagery and context that has historically been used in racist attacks. Twitter policy treats such dehumanizing comparisons as hate speech, even when communicated via image + caption.
+
+---
+
+Would you like this wrapped into a complete JSONL or CSV formatting example for training or moderation?
+
+
+
+
+
+
+
+
+
+
+xxxxx
+
 import os, torch
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 torch.cuda.set_device(0)
