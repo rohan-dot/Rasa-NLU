@@ -1,3 +1,53 @@
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel
+import torch, textwrap
+
+base = "meta-llama/Llama-3-70B-Instruct"
+adapter = "llama3-qlora-cwe119_125"
+
+bnb = BitsAndBytesConfig(load_in_4bit=True,
+                         bnb_4bit_use_double_quant=True,
+                         bnb_4bit_quant_type="nf4",
+                         bnb_4bit_compute_dtype=torch.bfloat16)
+
+tok = AutoTokenizer.from_pretrained(base, use_fast=False, trust_remote_code=True)
+tok.pad_token = tok.eos_token; tok.padding_side = "left"
+
+model = AutoModelForCausalLM.from_pretrained(
+    base, quantization_config=bnb, device_map="auto", trust_remote_code=True
+)
+model = PeftModel.from_pretrained(model, adapter)
+model.eval()
+
+def inject(cwe, code):
+    user = f"Instruction: Inject CWE ID {cwe} in the clean code\nInput:\n{code}\nOutput:"
+    chat = ("<|begin_of_text|>\n"
+            "<|start_header_id|>system<|end_header_id|>\n"
+            "You are a helpful assistant trained to inject vulnerabilities based on CWE IDs.<|eot_id|>\n"
+            "<|start_header_id|>user<|end_header_id|>\n"
+            f"{user}<|eot_id|>\n"
+            "<|start_header_id|>assistant<|end_header_id|>\n")
+    ids = tok(chat, return_tensors="pt").to(model.device)["input_ids"]
+    out = model.generate(ids, max_new_tokens=400, temperature=0.9, top_p=0.95)
+    return tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True).strip()
+
+clean = textwrap.dedent("""
+    #include <stdio.h>
+    void foo(int idx){
+        int arr[5]={0};
+        if(idx>=0 && idx<5){ printf("%d\\n",arr[idx]); }
+    }
+""")
+print(inject("125", clean))
+
+
+
+
+
+
+
+xxxxx
+
 Here's an improved and more academically polished version of your "LLM-Based Persuasiveness Evaluation" section, keeping all original content intact but enhancing clarity, sentence flow, and cohesion for a research paper:
 
 ---
