@@ -1,3 +1,36 @@
+## Methodology
+
+### 1. Hate‑Speech Dataset & Pre‑processing
+
+We sampled **100 Ukraine “biolab” hate‑speech posts** (tweets, forum messages, etc.) from a larger misinformation corpus. All content was English‑language and geopolitically themed to minimize topical variance. After stripping user identifiers, we only applied basic text‑cleaning—our language model (LM) natively handles informal spelling and emojis.
+
+### 2. Counter‑Speech Generation Pipeline
+
+Our two‑stage pipeline combines **Retrieval‑Augmented Generation (RAG)** with **BEND‑style prompting**.
+
+1. **Evidence retrieval.** Each post is embedded (mxbai‑embed, 1024‑d) and queried against a domain‑specific vector database containing government archives, RAND reports, and other vetted sources. We re‑rank the top candidates via **Maximal Marginal Relevance (MMR)** to maximize relevance and diversity, then pass the selected passages to the LM as context.
+2. **Response generation.** A 70‑B‑parameter **LLaMA‑70B‑Instruct** model receives the hate post, retrieved evidence, and a prompt template specifying one of six **BEND persuasion personas**—*Excite, Enhance, Distort, Dismay, Explain,* or *Engage.* Chain‑of‑thought instructions guide the model to ground its argument in the evidence and follow the requested persuasive style.
+
+### 3. Evaluation
+
+#### 3.1 LLM‑Based Persuasiveness Scoring
+
+The same LLaMA‑70B model is repurposed as a **“judge LLM.”** Prompted to act as three independent reviewers, it rates each counter on **five criteria**: (1) *Trustworthiness,* (2) *Attitude‑Change Potential,* (3) *Clarity & Depth,* (4) *Knowledge‑Gap Fulfilment,* and (5) *BEND‑Specific Effectiveness.* Scores range 1‑5 with short justifications. We average the three virtual judges’ ratings for analysis.
+
+#### 3.2 Human Crowd‑Sourced Evaluation
+
+To validate automated scores, we run a small Amazon Mechanical Turk study (IRB details pending). Fluent English adults (N=\*) independently rate a randomly selected subset of counters using the same five‑factor, 5‑point Likert scale; each item is evaluated by 3 workers for reliability. Exact sample size and compensation will be finalized (placeholders marked).
+
+All model outputs and evidence passages are stored for reproducibility.
+
+
+
+
+
+
+xxxxx
+
+
 Great, I’ll draft a detailed methodology section for your paper. It will explain your use of LLaMA 70B to generate and evaluate persuasive BEND maneuver-based counters to hate speech, detail your prompting strategy, RAG pipeline, and include placeholders for the hate speech data and MTurk setup.
 I'll share the draft with you shortly for review.
 
