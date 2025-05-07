@@ -1,4 +1,65 @@
+Here's a refined and slightly shortened version of your methodology section that improves coherence, academic flow, and structure while preserving the full context:
 
+---
+
+### Methodology
+
+#### Dataset and Preprocessing
+
+We used a curated set of 100 hate speech instances drawn from the Ukraine Biolab Dataset, comprising social media posts associated with "Ukraine biolab" misinformation. Each instance included short hateful or propagandistic content targeting specific groups. We normalized text encoding and removed identifiers or metadata, focusing on English-language posts. Minimal preprocessing was done beyond basic cleaning, as the language model could handle informal syntax and spelling.
+
+#### Counter-Speech Generation Pipeline
+
+We used a multi-step generation pipeline built around a 70B parameter instruction-tuned LLaMA-70B model. The pipeline combined:
+
+1. **Retrieval-Augmented Generation (RAG):** to ground responses in factual evidence.
+2. **BEND Prompting Strategies:** to shape the style and persuasive intent of the counter-speech.
+
+For RAG, we constructed a domain-specific knowledge base from government archives, policy reports, and research from sources like the RAND Corporation. These documents were chunked, embedded using the `mxbai-embed` model, and indexed in a vector database. For each hate speech instance, the system retrieved relevant background using Maximal Marginal Relevance (MMR) to ensure diverse and non-redundant evidence. These passages were distilled into key factual bullet points which the LLaMA model then used as context for response generation.
+
+To guide counter-narrative style, we prompted the LLM to adopt one of six BEND maneuver personas: **Excite**, **Enhance**, **Distort**, **Dismay**, **Explain**, and **Engage**. Each persona reflects a distinct persuasive strategy, and chain-of-thought prompting helped align model behavior with the intended maneuver:
+
+* **Excite:** Inspires hope using enthusiastic, emotional appeals.
+* **Dismay:** Raises alarm or fear by emphasizing negative consequences.
+* **Enhance:** Strengthens arguments with enriched facts and credibility.
+* **Explain:** Uses calm, logical explanations to correct misinformation.
+* **Distort:** Reframes truth through irony or twisted logic.
+* **Engage:** Promotes reflection via dialogic or relatable statements.
+
+This approach allowed the LLM to incorporate relevant external knowledge, minimizing hallucinations and improving response accuracy. The full generation process was orchestrated with a Python pipeline (built on LangChain), iterating over the hate speech dataset to produce outputs and store associated source documents.
+
+#### Evaluation
+
+We assessed counter-speech quality using both automated and human evaluations.
+
+##### LLM-Based Evaluation
+
+We repurposed LLaMA-70B as a "judge LLM" to evaluate persuasiveness across five criteria:
+
+1. **Trustworthiness** – Credibility and factual accuracy.
+2. **Attitude Change Potential** – Ability to shift audience beliefs.
+3. **Clarity and Depth** – Coherence and information richness.
+4. **Knowledge Gap Fulfillment** – Correction of misconceptions.
+5. **BEND Effectiveness** – Maneuver-specific impact (e.g., emotional tone in Excite).
+
+Each criterion was rated from 1 (poor) to 5 (excellent) with justifications. We aggregated these scores to analyze the effectiveness of different BEND strategies. Bias was mitigated by isolating the judge prompt from the generation context.
+
+##### Human Evaluation (Crowdsourced)
+
+We conducted a human study via Amazon Mechanical Turk (**\[placeholder: IRB details]**) with **\[N]** fluent English-speaking participants. Each participant rated a randomized subset of counter-speech responses on the same five criteria using a 5-point Likert scale, with optional open-ended feedback. Each item was rated by **\[2–3]** unique workers, covering **\[X]** total responses across all BEND types (**\[placeholder: sample size and worker assignment details]**).
+
+---
+
+Would you like a version formatted for LaTeX or Word doc export?
+
+
+
+
+
+
+
+
+xxx
 Here's a refined and slightly shortened version of your methodology section that improves coherence, academic flow, and structure while preserving the full context:
 
 ---
