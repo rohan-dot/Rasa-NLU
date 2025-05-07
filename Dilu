@@ -1,3 +1,34 @@
+Here's an improved and more academically polished version of your "LLM-Based Persuasiveness Evaluation" section, keeping all original content intact but enhancing clarity, sentence flow, and cohesion for a research paper:
+
+---
+
+### LLM-Based Persuasiveness Evaluation
+
+To evaluate the generated counter-speech automatically, we repurposed the same LLaMA-70B model as a **judge LLM**, simulating the role of three independent human judges. The model was prompted with carefully crafted instructions, asking it to assess a given hate speech instance and its counter-response across multiple dimensions of persuasiveness and effectiveness.
+
+We defined five evaluation criteria to capture the essential qualities of a persuasive counter-hate response:
+
+1. **Trustworthiness**: Does the counter-speech appear credible, factual, and reliable? This includes source citation quality and the tone of honesty.
+2. **Attitude Change Potential**: How effectively does the counter-speech influence the audience’s attitude or beliefs? This measures its ability to reduce acceptance of the hate speech.
+3. **Clarity and Depth**: Is the response well-explained, logically coherent, and rich in content? Higher scores reflect clarity and substantive reasoning rather than shallow assertions.
+4. **Knowledge Gap Fulfillment**: Does the response address missing information or correct misconceptions in the hate speech? This evaluates how well the counter fills informational voids.
+5. **BEND-Specific Effectiveness**: This criterion assesses how well the counter-speech aligns with its intended BEND maneuver (e.g., emotional resonance for *Excite*, severity of alarm for *Dismay*, or engagement level for *Engage*). Other maneuvers have similarly tailored sub-metrics.
+
+The judge LLM scored each response on an ordinal scale from 1 (very poor) to 5 (excellent), providing brief justifications in natural language for each rating. After generating these ratings, we aggregated the results to analyze average performance across the six BEND strategies. This allowed us to identify which strategies were most persuasive and to interpret the model's justifications for further qualitative insights.
+
+To reduce bias, the evaluation prompt was designed independently of the generation prompt. The judge LLM was not made aware that it was evaluating outputs produced by itself or a similar model. This separation, along with a generic phrasing of instructions and a chain-of-thought evaluation format, ensured that evaluations remained objective and consistent.
+
+---
+
+Would you like me to refine the MTurk evaluation section next?
+
+
+
+
+
+
+xxxxx
+
 Here's a refined and slightly shortened version of your methodology section that improves coherence, academic flow, and structure while preserving the full context:
 
 ---
