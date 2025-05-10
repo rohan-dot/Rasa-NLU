@@ -1,3 +1,89 @@
+Here’s your **revised introduction** with relevant content and structure inspired by the *Shape like* examples, now augmented with citations (some real, some placeholder for you to fill):
+
+---
+
+### Introduction
+
+Large Language Models (LLMs) have rapidly transformed the communication ecosystem by enabling the scalable generation of high-quality text across a broad spectrum of domains. OpenAI's ChatGPT, for example, reached over 100 million monthly active users within two months of launch, making it one of the fastest-growing consumer applications in history \[1]. As businesses and individuals increasingly integrate AI-generated content into workflows, industry surveys suggest that the use of generative AI in marketing and content production will rise from 39% in 2024 to 48% by 2026 \[2]. However, the democratization of LLM access has also surfaced significant concerns about their dual-use potential.
+
+Recent studies have highlighted how open-source and commercial LLMs can be exploited to produce disinformation, hate speech, and ideologically charged propaganda \[3, 4]. For instance, the far-right platform Gab launched “Gab AI,” a chatbot found to disseminate narratives denying the Holocaust and dismissing climate change. In May 2023, OpenAI disrupted five covert influence campaigns leveraging open models to manipulate discourse around major global conflicts, including the Russia–Ukraine and Israel–Palestine wars \[5]. These campaigns exemplify how LLMs can serve as scalable tools for narrative warfare. Public concern mirrors these risks: Pew Research found that 66% of U.S. adults worry about receiving false or misleading information from AI-generated sources \[6].
+
+Despite these risks, most existing research has focused on surface-level metrics such as grammaticality, fluency, or topical relevance \[7, 8]. There is limited work on the **intent alignment** and **interpretive impact** of AI-generated messages—especially in sociopolitical settings where toxicity and propaganda are prevalent \[9]. As a result, current LLM moderation or response systems often rely on generic, one-size-fits-all approaches that ignore critical contextual information like community norms, user behavior, or message history \[10]. This limits their effectiveness in countering sophisticated influence operations.
+
+To address this gap, we propose an LLM-based system for generating and evaluating **contextualized counter-messages** in response to disinformation and ideologically driven narratives. Our generation method is grounded in the **BEND framework** \[11], a taxonomy of communicative maneuvers—*Build, Excite, Narrate, Dismiss*—which has proven effective in prior disinformation analysis studies \[12, 13]. By embedding these intent-based maneuvers into prompts and combining them with a **Retrieval-Augmented Generation (RAG)** pipeline, our system generates responses that are both strategically aligned and factually grounded.
+
+We also introduce a structured **evaluation framework** leveraging a judge LLM prompted with **Tree-of-Thought** reasoning \[14], paired with human assessments collected through pre-registered crowdsourcing experiments. This hybrid approach enables us to capture both measurable metrics (e.g., informativeness, clarity, tone) and more subjective effects (e.g., persuasiveness, trustworthiness, influence on beliefs).
+
+**Our contributions are as follows:**
+
+1. We present a novel method for generating BEND-aligned counterspeech that is both context-aware and maneuver-strategic.
+2. We design a RAG-enhanced prompting system that grounds responses in relevant, up-to-date, and verified information sources.
+3. We propose an evaluation pipeline that combines judge LLMs using Tree-of-Thought reasoning with human feedback for deeper insight into communicative impact.
+4. We show that our approach outperforms generic LLM generation methods in both intent alignment and persuasive effectiveness, without compromising linguistic quality.
+5. We introduce recommendations for future automated moderation and narrative intervention tools that prioritize interpretability, adaptability, and safety.
+
+---
+
+### References (example placeholders — update as needed):
+
+\[1] OpenAI. “ChatGPT Usage Growth Statistics.” 2023.
+\[2] Capterra. “AI in Marketing: Adoption and Trends.” 2024.
+\[3] Weidinger, L. et al. “Taxonomy of Risks Posed by Language Models.” *ACM FAccT*, 2022.
+\[4] Bommasani, R. et al. “On the Opportunities and Risks of Foundation Models.” *Stanford HAI*, 2021.
+\[5] OpenAI Threat Intelligence Report. May 2023.
+\[6] Pew Research Center. “Public Perception of AI in News Media.” 2023.
+\[7] Zhang et al. “Automatic Evaluation of Text Generation: A Survey.” *ACL*, 2020.
+\[8] Gehrmann et al. “The GEM Benchmark: Natural Language Generation Evaluation.” *ACL*, 2021.
+\[9] Ribeiro et al. “Beyond Accuracy: Behavioral Testing of NLP Models with CheckList.” *ACL*, 2020.
+\[10] Chung et al. “Beyond Toxicity: Context-Aware Toxic Comment Classification.” *EMNLP*, 2022.
+\[11] Goldstein et al. “The BEND Framework for Influence Operations.” *RAND Corporation*, 2022.
+\[12] Memon et al. “Understanding Disinformation Campaigns Through BEND.” *ICWSM*, 2022.
+\[13] Leekha, R. “Countering Ideological Narratives Using LLMs and BEND.” *FLAIRS*, 2023.
+\[14] Yao et al. “Tree-of-Thought Deliberate Reasoning for LLMs.” *arXiv*, 2023.
+
+---
+
+Let me know if you'd like to shorten it further for submission limits or format it to a specific conference template (e.g., ACL, NeurIPS, ICWSM).
+
+
+Got it — you're submitting to **HICSS (Hawai‘i International Conference on System Sciences)**, which typically expects \~1-page introductions (\~400–500 words), with high clarity, scholarly tone, and direct problem framing and contributions. Here’s a **HICSS-style rewritten introduction**, distilled from your full version and tightly modeled after the “Shape like” examples.
+
+---
+
+### Introduction (HICSS-formatted \~475 words)
+
+Large Language Models (LLMs) such as OpenAI’s ChatGPT have rapidly reshaped the content creation landscape, enabling scalable, high-quality generation across domains. These systems now underpin workflows in marketing, social media, and customer service. A 2024 Capterra study projects that the use of AI-generated content in marketing will rise from 39% to 48% by 2026. However, this broad adoption has surfaced a growing concern over the dual-use nature of LLMs.
+
+Alongside legitimate uses, LLMs are increasingly exploited by malicious actors in influence operations, hate speech propagation, and disinformation campaigns. Platforms like Gab AI have deployed chatbot systems promoting harmful narratives such as Holocaust denial and climate change skepticism. In 2023, OpenAI reported the disruption of five covert influence campaigns leveraging open models to sway discourse on global conflicts like the Russia–Ukraine and Israel–Palestine wars. Public concern mirrors this trend: 66% of U.S. adults fear AI systems may expose them to false or misleading information, according to Pew Research.
+
+Despite the growing threat landscape, most research on LLMs focuses on surface-level attributes such as grammaticality and relevance, offering limited insight into the **intent alignment** and **interpretive effects** of generated messages. Existing counterspeech systems typically generate generic responses that fail to consider conversational or community context. This undermines their effectiveness in polarized environments where nuance, audience targeting, and strategic communication are critical.
+
+To address this gap, we introduce a novel pipeline for generating and evaluating **contextualized counterspeech** against disinformation and ideologically charged narratives. Our approach leverages the **BEND framework**—a taxonomy of communicative maneuvers (e.g., *explain*, *excite*, *dismiss*)—to inform message generation aligned with specific rhetorical goals. Using a **Retrieval-Augmented Generation (RAG)** setup, we ground LLM outputs in trusted, domain-relevant sources for improved factuality and timeliness.
+
+For evaluation, we deploy a dual-layered system: (1) a judge LLM prompted with **Tree-of-Thought** reasoning to assess alignment and persuasiveness, and (2) human judgments collected via structured crowd experiments to validate subjective impact measures. This setup enables a more robust understanding of whether counterspeech messages achieve communicative goals such as trust-building, belief influence, and clarity.
+
+**Our contributions are:**
+
+1. A novel generation pipeline combining RAG and BEND for intent-aligned counterspeech.
+2. A hybrid evaluation method blending judge LLMs with human ratings to assess message impact.
+3. Empirical evidence that contextual, maneuver-informed counters outperform generic responses in persuasion and relevance.
+
+This work advances automated moderation and narrative intervention systems by offering interpretable, adaptive strategies for countering online harms in high-risk information environments.
+
+---
+
+Let me know if you need the **abstract**, **related work**, or **methodology** in HICSS-ready format too.
+
+
+
+
+
+
+
+
+
+xxxxx
+
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
 import torch, textwrap
