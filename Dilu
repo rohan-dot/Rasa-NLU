@@ -1,3 +1,43 @@
+[![Edge 315: Tree-of-Thought Reasoning - by Jesus Rodriguez](https://tse1.mm.bing.net/th?id=OIP.hNqwRLVsH1i2JvsW50grKgHaGI\&pid=Api)](https://thesequence.substack.com/p/edge-315-tree-of-thought-reasoning)
+
+Certainly! Here's a revised version of your **HICSS-style introduction**, incorporating insights and citations from recent scholarly articles and reputable sources to enhance its academic rigor:
+
+---
+
+### Introduction
+
+Large Language Models (LLMs) have revolutionized digital communication by enabling the scalable generation of high-quality text across various domains. Their widespread adoption in industries such as marketing, customer service, and content creation underscores their transformative potential. However, this rapid integration has also raised concerns about their dual-use nature, particularly regarding the dissemination of misinformation and disinformation.
+
+Recent studies have highlighted the susceptibility of LLMs to exploitation by malicious actors aiming to conduct influence operations. For instance, the Pravda network, a Russian disinformation campaign, has been documented to flood the internet with misleading content designed to manipulate AI outputs, thereby seeding false narratives into AI-generated responses . Such tactics exemplify the emerging threat of "LLM grooming," where adversaries systematically introduce deceptive information into the training data of AI models to bias their outputs.
+
+Despite these challenges, existing research predominantly focuses on surface-level attributes of LLM outputs, such as grammaticality and relevance, offering limited insight into the alignment of generated content with intended communicative goals. This gap underscores the need for methodologies that assess and enhance the intent alignment of AI-generated messages, particularly in contexts susceptible to misinformation.
+
+To address this, we propose a novel pipeline for generating and evaluating contextualized counter-messages aimed at mitigating disinformation. Our approach leverages the BEND framework—a taxonomy of communicative maneuvers encompassing strategies like "Build," "Excite," "Narrate," and "Dismiss"—to inform the generation of responses aligned with specific rhetorical objectives . By integrating Retrieval-Augmented Generation (RAG), our system grounds LLM outputs in verified, domain-relevant sources, enhancing factual accuracy and contextual relevance.
+
+For evaluation, we employ a dual-layered system: (1) a judge LLM utilizing Tree-of-Thought reasoning to assess alignment and persuasiveness , and (2) human evaluations collected through structured crowd-sourcing experiments to validate subjective impact measures. This comprehensive evaluation framework facilitates a nuanced understanding of the effectiveness of generated counter-messages in achieving desired communicative outcomes.
+
+**Our contributions are:**
+
+1. Development of a generation pipeline combining RAG and the BEND framework for intent-aligned counter-messaging.
+2. Implementation of a hybrid evaluation methodology integrating judge LLM assessments with human evaluations to measure message impact.
+3. Empirical evidence demonstrating that contextual, maneuver-informed counter-messages outperform generic responses in terms of persuasion and relevance.
+
+This work advances the field of automated moderation and narrative intervention by providing interpretable, adaptive strategies for countering online harms in high-risk information environments.
+
+---
+
+Let me know if you need assistance with other sections of your paper or further refinements.
+
+
+
+
+
+
+
+
+
+xxxxx
+
 Here’s your **revised introduction** with relevant content and structure inspired by the *Shape like* examples, now augmented with citations (some real, some placeholder for you to fill):
 
 ---
