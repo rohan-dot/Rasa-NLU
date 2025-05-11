@@ -1,3 +1,44 @@
+Here’s a complete **Abstract**, **Conclusion**, and **Future Work** section for your HICSS paper, written in a coherent and polished style aligned with your contributions on BEND-guided counterspeech and LLM-as-judge evaluation:
+
+---
+
+### Abstract
+
+As Large Language Models (LLMs) become increasingly embedded in content moderation and public communication, their potential to both generate and evaluate strategic counterspeech demands close study. This work introduces a pipeline for producing contextualized counterspeech aligned with the BEND maneuver taxonomy—Build, Excite, Narrate, Dismiss, and Engage—and evaluates its communicative quality using a judge LLM guided by Tree-of-Thought prompting. We compare automated judgments against human annotations collected via Mechanical Turk and analyze their alignment across five evaluative dimensions, including truthfulness and empathy. Results show moderate agreement, particularly in clarity and logical framing, but highlight persistent gaps in emotional tone recognition. Our findings underscore the promise of LLM-based evaluation in scaling moderation and counter-messaging efforts, while emphasizing the need for trust calibration, bias mitigation, and context-sensitive deployment. This study contributes to ethical, explainable, and computationally grounded frameworks for AI-supported counterspeech in sociotechnical environments.
+
+---
+
+### 6. Conclusion
+
+This paper presents a novel approach for generating and evaluating counterspeech using BEND-aligned prompting and a Tree-of-Thought-based judge LLM. Our framework addresses the limitations of generic responses by tailoring outputs to the rhetorical strategy best suited to a given instance of hate speech. Through a multi-layered evaluation, we demonstrate that LLM-based judges can approximate human judgments in some areas (e.g., clarity, truthfulness), but diverge in emotionally nuanced dimensions. These findings reinforce the role of calibrated trust and human oversight in integrating LLMs into content moderation pipelines. Overall, our research advances scalable and strategic approaches to counterspeech generation while contributing to discussions in computational social science and ethical AI.
+
+---
+
+### 7. Future Work
+
+While this study lays the groundwork for automated generation and evaluation of strategic counterspeech, several avenues remain for exploration:
+
+* **Emotional Calibration**: Improving the judge LLM’s sensitivity to emotional tone through fine-tuning, multi-perspective prompting, or ensemble judgment approaches.
+* **Cross-Cultural Evaluation**: Testing the system in multilingual or cross-cultural contexts to ensure alignment with varied communication norms.
+* **Causal Impact Analysis**: Running controlled A/B tests on live platforms to measure the actual influence of BEND-aligned counterspeech on user behavior and belief change.
+* **Explainable Judgment Output**: Extending the Tree-of-Thought prompts to output not only a final score but a rationale for each judgment dimension, enhancing transparency.
+* **Adaptive Feedback Loop**: Exploring reinforcement learning mechanisms where judge LLM evaluations feed back into the generator to iteratively improve response quality over time.
+
+By extending evaluation and generation into real-world, dynamic contexts, future research can bridge the gap between controlled experiments and platform-scale interventions, paving the way for ethically grounded, AI-driven moderation in digital public spheres.
+
+---
+
+Let me know if you'd like help fitting this into your Overleaf template or generating citations for these sections.
+
+
+
+
+
+
+
+xxxxx
+
+
 import torch, random
 from datasets import load_dataset
 from transformers import (AutoModelForCausalLM, AutoTokenizer,
