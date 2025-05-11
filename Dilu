@@ -1,3 +1,73 @@
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel
+import torch, re, textwrap
+
+BASE    = "meta-llama/Llama-3-70B-Instruct"
+ADAPTER = "llama3-qlora-cwe119_125"
+
+bnb = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+)
+
+tok = AutoTokenizer.from_pretrained(BASE, use_fast=False, trust_remote_code=True)
+tok.pad_token = tok.eos_token; tok.padding_side = "left"
+
+model = AutoModelForCausalLM.from_pretrained(
+    BASE, quantization_config=bnb, device_map="auto", trust_remote_code=True,
+    low_cpu_mem_usage=True, torch_dtype=torch.bfloat16
+)
+model = PeftModel.from_pretrained(model, ADAPTER)
+model.eval()
+
+SYSTEM = ("You are a helpful assistant trained to inject vulnerabilities "
+          "based on CWE IDs. First give the diff, then the full vulnerable code.")
+
+def inject_vuln(cwe_id: str, clean_code: str, temp=0.9) -> str:
+    user = (f"Instruction: Inject CWE ID {cwe_id} in the clean code\n"
+            f"Input:\n{clean_code}\nOutput:")
+
+    prompt = ("<|begin_of_text|>\n"
+              "<|start_header_id|>system<|end_header_id|>\n"
+              f"{SYSTEM}<|eot_id|>\n"
+              "<|start_header_id|>user<|end_header_id|>\n"
+              f"{user}<|eot_id|>\n"
+              # empty diff turn (model will fill)
+              "<|start_header_id|>assistant<|end_header_id|>\n"
+              "<|eot_id|>\n"
+              # empty vulnerable-code turn (model must produce)
+              "<|start_header_id|>assistant<|end_header_id|>\n")
+
+    in_ids = tok(prompt, return_tensors="pt").to(model.device)["input_ids"]
+    out    = model.generate(
+        in_ids, max_new_tokens=600, temperature=temp, top_p=0.95
+    )
+    gen = tok.decode(out[0][in_ids.shape[1]:], skip_special_tokens=False)
+
+    # --- parse: last assistant block is vulnerable code -------------------
+    parts = re.split(r"<\|start_header_id\|>assistant<\|end_header_id\|>\n", gen)
+    vuln_code = parts[-1].split("<|eot_id|>")[0]
+    return vuln_code.strip()
+
+if __name__ == "__main__":
+    clean = textwrap.dedent("""
+        #include <stdio.h>
+        void foo(int idx){
+            int arr[5]={0};
+            if(idx>=0 && idx<5){ printf("%d\\n",arr[idx]); }
+        }
+    """)
+    print(inject_vuln("125", clean))
+
+
+
+
+
+
+
+xxxx
 Here’s a complete **Abstract**, **Conclusion**, and **Future Work** section for your HICSS paper, written in a coherent and polished style aligned with your contributions on BEND-guided counterspeech and LLM-as-judge evaluation:
 
 ---
