@@ -1,3 +1,153 @@
+import torch, random
+from datasets import load_dataset
+from transformers import (AutoModelForCausalLM, AutoTokenizer,
+                          BitsAndBytesConfig, TrainingArguments)
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
+from trl import SFTTrainer
+
+# --------- model + tokenizer ----------
+BASE = "meta-llama/Llama-3-70B-Instruct"   # needs HF access
+
+bnb_cfg = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+)
+
+tok = AutoTokenizer.from_pretrained(BASE, trust_remote_code=True, use_fast=False)
+tok.pad_token = tok.eos_token
+tok.padding_side = "right"
+
+model = AutoModelForCausalLM.from_pretrained(
+    BASE,
+    quantization_config=bnb_cfg,
+    device_map="auto",
+    low_cpu_mem_usage=True,
+    torch_dtype=torch.bfloat16,
+    trust_remote_code=True,
+)
+model = prepare_model_for_kbit_training(model)
+
+lora_cfg = LoraConfig(
+    r=32, lora_alpha=64, lora_dropout=0.05, bias="none",
+    target_modules=["q_proj","k_proj","v_proj","o_proj",
+                    "gate_proj","up_proj","down_proj"],
+    task_type="CAUSAL_LM"
+)
+model = get_peft_model(model, lora_cfg)
+model.gradient_checkpointing_enable()
+model.config.use_cache = False
+
+# --------- dataset ----------
+raw = load_dataset("euisuh15/cveFixes1", split="c")
+
+def keep_useful(ex):
+    return (str(ex["cwe_id"]) in {"119","125"} and
+            ex["func_before"].strip() != ex["func_after"].strip() and
+            ex["diff"].strip() != "")
+ds = raw.filter(keep_useful)
+print("Remaining samples:", len(ds))    # ≈ 900
+
+train_raw, val_raw = ds.shuffle(42).train_test_split(test_size=0.1, seed=42).values()
+
+SYSTEM = ("You are a helpful assistant trained to inject C vulnerabilities "
+          "based on CWE IDs. When asked, output first the diff and then the "
+          "full vulnerable code.")
+
+def wrap(role, txt):
+    return f"<|start_header_id|>{role}<|end_header_id|>\n{txt}<|eot_id|>\n"
+
+MAX = 2048
+
+def build(ex, train=True):
+    user = (f"Instruction: Inject CWE ID {ex['cwe_id']} in the clean code\n"
+            f"Input:\n{ex['func_after']}\nOutput:")
+    diff_block = ex["diff"].strip()
+    vuln_block = ex["func_before"] if train else ""
+
+    chat = ("<|begin_of_text|>\n"
+            + wrap("system", SYSTEM)
+            + wrap("user", user)
+            + wrap("assistant", diff_block)
+            + wrap("assistant", vuln_block))
+
+    ids = tok(chat, add_special_tokens=False,
+              truncation=True, max_length=MAX)["input_ids"]
+    ids.append(tok.eos_token_id)
+
+    labels = ids.copy()
+    # mask until start of 2nd assistant content
+    prefix = ("<|begin_of_text|>\n"
+              + wrap("system", SYSTEM)
+              + wrap("user", user)
+              + wrap("assistant", diff_block))
+    pref_len = len(tok(prefix, add_special_tokens=False)["input_ids"]) + 1
+    labels[:pref_len] = [-100] * pref_len
+    return {"input_ids": ids, "labels": labels}
+
+train_ds = train_raw.map(lambda x: build(x, True), num_proc=4,
+                         remove_columns=train_raw.column_names, desc="token-train")
+val_ds   = val_raw.map(lambda x: build(x, True), num_proc=4,
+                       remove_columns=val_raw.column_names, desc="token-val")
+
+# --------- same-length collator ----------
+class SameLenCollator:
+    def __init__(self, tok, mult=8):
+        self.tok, self.m = tok, mult
+    def pad(self, seq, tgt, pad): return seq + [pad]*(tgt-len(seq))
+    def __call__(self, batch):
+        tgt = max(max(len(b["input_ids"]), len(b["labels"])) for b in batch)
+        if self.m: tgt = (tgt+self.m-1)//self.m*self.m
+        ids  = [self.pad(b["input_ids"], tgt, self.tok.pad_token_id) for b in batch]
+        labs = [self.pad(b["labels"],    tgt, -100)                 for b in batch]
+        mask = [[1 if t!=self.tok.pad_token_id else 0 for t in seq] for seq in ids]
+        return {"input_ids":torch.tensor(ids), "labels":torch.tensor(labs),
+                "attention_mask":torch.tensor(mask)}
+
+collator = SameLenCollator(tok)
+
+# --------- training args ----------
+args = TrainingArguments(
+    output_dir="llama3-qlora-cwe119_125",
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=16,
+    num_train_epochs=6,
+    learning_rate=5e-4,
+    warmup_steps=100,
+    bf16=True,
+    logging_steps=10,
+    evaluation_strategy="no",
+    save_strategy="epoch",
+    optim="adamw_bnb_8bit",
+    remove_unused_columns=False,
+    label_names=["labels"],
+)
+
+trainer = SFTTrainer(
+    model=model,
+    args=args,
+    train_dataset=train_ds,
+    data_collator=collator,
+    max_seq_length=MAX,
+    packing=False,
+)
+trainer.train()
+
+trainer.model.save_pretrained("llama3-qlora-cwe119_125")
+tok.save_pretrained("llama3-qlora-cwe119_125")
+print("✅ LoRA adapter saved.")
+
+
+
+
+
+
+
+
+xxxxx
+
+
 Here’s a complete **Abstract**, **Conclusion**, and **Future Work** section for your HICSS paper, written in a coherent and polished style aligned with your contributions on BEND-guided counterspeech and LLM-as-judge evaluation:
 
 ---
