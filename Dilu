@@ -1,4 +1,34 @@
 import re
+import ast
+
+cumulative_dict = {}
+
+strings = [
+    "some text {abc: 'w', kfl: 4} more text",
+    "another line {abc: 'z', new_key: 5}",
+    "no dict here",
+    "again {kfl: 9}"
+]
+
+for line in strings:
+    match = re.search(r'\{.*?\}', line)
+    if match:
+        try:
+            # Fix to ensure it's valid Python syntax for `ast.literal_eval`
+            fixed = re.sub(r'(\w+):', r'"\1":', match.group())
+            parsed = ast.literal_eval(fixed)
+            cumulative_dict.update(parsed)
+        except Exception as e:
+            print(f"Failed to parse line: {line} | Error: {e}")
+
+print(cumulative_dict)
+
+
+
+
+
+xxxx
+import re
 
 text = """Your input string here with lots of lines
 and somewhere it says calculate average ratings
