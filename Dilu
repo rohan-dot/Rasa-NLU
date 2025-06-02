@@ -1,5 +1,27 @@
 import re
 
+arr1 = []
+
+for i in range(len(df)):
+    target_word = "Calculate Average Ratings"
+    text = df['expert'][i]
+    index = text.find(target_word)
+    
+    if index != -1:
+        result = text[index + len(target_word):]
+        
+        # Generic pattern: grab text ending with ? or ?: followed by anything, then = number
+        pattern = r'\d+\.\s*(.*?)\?:?.*?=\s*([\d.]+)'
+        
+        results = {q.strip(): float(score) for q, score in re.findall(pattern, result, re.DOTALL)}
+        arr1.append(results)
+
+
+
+
+
+import re
+
 text = """
 'Is the response factually sound and free of misinformation?': (6 + 5 + 7) / 3 = 18 / 3 = 6
 'Does the response have the potential to change the user's attitude?': (5 + 6 + 7) / 3 = 18 / 3 = 6
