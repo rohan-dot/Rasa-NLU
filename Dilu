@@ -1,4 +1,31 @@
 import re
+import pandas as pd
+
+# Your list of 30 strings (replace with your actual list)
+your_array = [...]  # e.g., array of 30 strings
+
+# List to hold dictionaries from each row
+rows_as_dicts = []
+
+for entry in your_array:
+    # Extract "question": score pairs
+    matches = re.findall(r'"(?:\d+\.\s*)?(.+?)"\s*:\s*([\d.]+)', entry)
+    row_dict = {question.strip(): float(score) for question, score in matches}
+    rows_as_dicts.append(row_dict)
+
+# Convert list of dicts to DataFrame
+df = pd.DataFrame(rows_as_dicts)
+
+# Optionally fill NaN with some value (like 0) or leave as is
+# df.fillna(0, inplace=True)
+
+print(df.head())
+
+
+
+
+
+xximport re
 import ast
 
 cumulative_dict = {}
