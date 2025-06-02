@@ -2,6 +2,45 @@ arr1 = []
 
 for i in range(len(df)):
     text = df['expert'][i]
+    
+    if "Calculate Average Ratings" in text:
+        ratings_text = text.split("Calculate Average Ratings", 1)[-1]
+        lines = ratings_text.strip().splitlines()
+        results = {}
+
+        for line in lines:
+            line = line.strip()
+            if not line or not re.match(r'^\d+\.', line):
+                continue
+
+            try:
+                # Extract question: from after the number up to the first (
+                q_match = re.match(r'^\d+\.\s*(.+?)\s*\(', line)
+                if not q_match:
+                    continue
+                question = q_match.group(1).strip().rstrip("?:")
+
+                # Find all numeric values
+                numbers = re.findall(r'[\d.]+', line.replace("≈", ""))
+                if numbers:
+                    score = float(numbers[-1])
+                    results[question] = score
+            except Exception as e:
+                print(f"Error on line: {line}\n{e}")
+                continue
+
+        arr1.append(results)
+
+
+
+
+
+
+xxxx
+arr1 = []
+
+for i in range(len(df)):
+    text = df['expert'][i]
 
     if "Calculate Average Ratings" in text:
         ratings_text = text.split("Calculate Average Ratings", 1)[-1]
