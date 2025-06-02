@@ -1,23 +1,43 @@
-import re
-
 arr1 = []
 
 for i in range(len(df)):
-    target_word = "Calculate Average Ratings"
     text = df['expert'][i]
-    index = text.find(target_word)
     
-    if index != -1:
-        result = text[index + len(target_word):]
+    # Split once we find the ratings section
+    if "Calculate Average Ratings" in text:
+        ratings_text = text.split("Calculate Average Ratings", 1)[-1]
+        lines = ratings_text.strip().splitlines()
         
-        # Generic pattern: grab text ending with ? or ?: followed by anything, then = number
-        pattern = r'\d+\.\s*(.*?)\?:?.*?=\s*([\d.]+)'
+        results = {}
         
-        results = {q.strip(): float(score) for q, score in re.findall(pattern, result, re.DOTALL)}
+        for line in lines:
+            line = line.strip()
+            if not line or not line[0].isdigit():
+                continue  # skip empty or malformed lines
+
+            # Split at the first colon to isolate question from the rest
+            try:
+                q_part, remainder = line.split(":", 1)
+                question = q_part.split(".", 1)[-1].strip()
+                
+                # Find the final score: last float or int after "="
+                if "=" in remainder:
+                    parts = remainder.split("=")
+                    score_str = parts[-1].strip().replace("≈", "")  # clean approx symbol
+                    score = float(score_str)
+                    results[question] = score
+            except Exception as e:
+                print(f"Skipping line due to error: {line}\nError: {e}")
+                continue
+        
         arr1.append(results)
 
 
 
+
+
+
+xxxxxxx
 
 
 import re
