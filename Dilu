@@ -1,5 +1,27 @@
 import re
 
+text = """Your input string here with lots of lines
+and somewhere it says calculate average ratings
+this is the part you want
+with math and questions etc
+##
+then other content starts here"""
+
+match = re.search(r'calculate average ratings(.*?)##', text, re.DOTALL | re.IGNORECASE)
+if match:
+    extracted = match.group(1).strip()
+    print(extracted)
+else:
+    print("No match found.")
+
+
+
+
+
+
+xxxx
+import re
+
 # 🔧 Define your list of known questions (full or partial match strings)
 question_patterns = [
     "factually sound",
