@@ -1,5 +1,61 @@
 import re
 
+# 🔧 Define your list of known questions (full or partial match strings)
+question_patterns = [
+    "factually sound",
+    "change the user's attitude",
+    "change the user's behavior",
+    "provide important information",
+    "provide relevant information",
+    "provide clear and detailed information",
+    "response consistent",
+    "missing important information",
+    "multiple holes",
+    "address gaps in knowledge or context",
+    "diminish the relevance",
+    "undermine the urgency",
+    # Add more as needed...
+]
+
+arr1 = []
+
+for i in range(len(df)):
+    text = df['expert'][i]
+
+    if "Calculate Average Ratings" in text:
+        ratings_text = text.split("Calculate Average Ratings", 1)[-1]
+        lines = ratings_text.strip().splitlines()
+        results = {}
+
+        for pattern in question_patterns:
+            for line in lines:
+                if pattern.lower() in line.lower():
+                    try:
+                        # Get full question (everything up to first '?')
+                        q_match = re.search(r'([^?]+\?)', line)
+                        if q_match:
+                            question = q_match.group(1).strip()
+
+                            # Get last float/int from the line
+                            numbers = re.findall(r'[\d.]+', line.replace("≈", ""))
+                            if numbers:
+                                score = float(numbers[-1])
+                                results[question] = score
+                    except Exception as e:
+                        print(f"Error on line:\n{line}\n{e}")
+                    break  # stop after first match per pattern
+
+        arr1.append(results)
+
+
+
+
+
+
+
+xxxxx
+import re
+
 arr1 = []
 
 for i in range(len(df)):
