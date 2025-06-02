@@ -1,3 +1,42 @@
+import ast
+import pandas as pd
+
+# Your list of 30 strings (replace with your actual data)
+your_array = [...]  # e.g., list of strings, each containing {...}
+
+# Extract and convert each {...} to dictionary
+rows_as_dicts = []
+
+for entry in your_array:
+    try:
+        # Find the start and end of the dictionary
+        start = entry.find("{")
+        end = entry.rfind("}") + 1
+
+        # Slice out the dictionary portion
+        dict_str = entry[start:end]
+
+        # Convert to real Python dict
+        row_dict = ast.literal_eval(dict_str)
+        rows_as_dicts.append(row_dict)
+    except Exception as e:
+        print(f"Error parsing entry:\n{entry}\nError: {e}")
+        rows_as_dicts.append({})  # fallback to empty row if failed
+
+# Convert to DataFrame
+df = pd.DataFrame(rows_as_dicts)
+
+# Optionally: reset column names, fill NaNs, etc.
+# df.fillna(0, inplace=True)
+
+print(df.head())
+
+
+
+
+
+
+xxxxx
 import re
 import pandas as pd
 
