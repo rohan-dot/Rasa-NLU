@@ -1,5 +1,47 @@
 import ast
 import pandas as pd
+import re
+
+# Example: list of strings (each with a {...} block)
+your_array = [...]  # replace this with your list
+
+# Holds the parsed rows
+all_dicts = []
+
+for s in your_array:
+    try:
+        # Extract the part between the first `{` and last `}`
+        start = s.find('{')
+        end = s.rfind('}') + 1
+        dict_str = s[start:end]
+
+        # Use ast to safely convert to a Python dict
+        raw_dict = ast.literal_eval(dict_str)
+
+        # Strip numeric prefixes like "1. ", "12. ", etc.
+        clean_dict = {
+            re.sub(r"^\d+\.\s*", "", k).strip(): float(v)
+            for k, v in raw_dict.items()
+        }
+
+        all_dicts.append(clean_dict)
+
+    except Exception as e:
+        print(f"Error parsing: {e}")
+        all_dicts.append({})
+
+# Create DataFrame
+df = pd.DataFrame(all_dicts)
+
+print(df.head())
+
+
+
+
+
+xxx
+import ast
+import pandas as pd
 
 # Your list of 30 strings (replace with your actual data)
 your_array = [...]  # e.g., list of strings, each containing {...}
