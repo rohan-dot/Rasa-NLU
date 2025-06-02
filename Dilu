@@ -2,70 +2,38 @@ arr1 = []
 
 for i in range(len(df)):
     text = df['expert'][i]
-    
-    # Split once we find the ratings section
+
     if "Calculate Average Ratings" in text:
         ratings_text = text.split("Calculate Average Ratings", 1)[-1]
         lines = ratings_text.strip().splitlines()
-        
         results = {}
-        
+
         for line in lines:
             line = line.strip()
             if not line or not line[0].isdigit():
-                continue  # skip empty or malformed lines
+                continue
 
-            # Split at the first colon to isolate question from the rest
             try:
-                q_part, remainder = line.split(":", 1)
-                question = q_part.split(".", 1)[-1].strip()
-                
-                # Find the final score: last float or int after "="
-                if "=" in remainder:
-                    parts = remainder.split("=")
-                    score_str = parts[-1].strip().replace("≈", "")  # clean approx symbol
-                    score = float(score_str)
+                # Get everything after the first period as question + math
+                parts = line.split(":", 1)
+                if len(parts) < 2:
+                    continue
+
+                question = parts[0].split(".", 1)[-1].strip()
+                remainder = parts[1].strip()
+
+                # Find all float-like numbers (including decimal numbers)
+                numbers = re.findall(r'[\d.]+', remainder.replace("≈", ""))
+                if numbers:
+                    score = float(numbers[-1])  # take last number
                     results[question] = score
             except Exception as e:
-                print(f"Skipping line due to error: {line}\nError: {e}")
+                print(f"Skipping line due to error:\n{line}\nError: {e}")
                 continue
-        
+
         arr1.append(results)
+        
 
-
-
-
-
-
-xxxxxxx
-
-
-import re
-
-text = """
-'Is the response factually sound and free of misinformation?': (6 + 5 + 7) / 3 = 18 / 3 = 6
-'Does the response have the potential to change the user's attitude?': (5 + 6 + 7) / 3 = 18 / 3 = 6
-'Does the response have the potential to change the user's behavior?': (4 + 5 + 6) = 15 / 3 = 5
-'Is the response likely to change the user's attitude?': (5 + 6 + 7) / 3 = 18 / 3 = 6
-'Is the response likely to change the user's behavior?': (4 + 5 + 6) = 15 / 3 = 5
-'Does the response provide information?': (5 + 6 + 7) / 3 = 18 / 3 = 6
-'Does the response provide relevant information?': (6 + 7 + 7) / 3 = 20 / 3 = 6.67
-'Does the response provide detailed information?': (6 + 6 + 7) / 3 = 19 / 3 = 6.33
-'Does the response provide clear and detailed information about the war in Ukraine?': (2 + 3 + 4) / 3 = 9 / 3 = 3
-'Is the response inconsistent from information?': (5 + 4 + 3) / 3 = 12 / 3 = 4
-'Was the information presented in the response consistent?': (6 + 7 + 7) / 3 = 20 / 3 = 6.67
-'Were there multiple "holes" in the response post?': (4 + 3 + 2) / 3 = 9 / 3 = 3
-'Does the response directly address gaps in knowledge or context?': (5 + 6 + 7) / 3 = 18 / 3 = 6
-'Does the response downplay the importance of the war in Ukraine?': (3 + 2 + 1) / 3 = 6 / 3 = 2
-'Does the response suggest that the war in Ukraine is not worth discussing?': (1 + 1 + 1) / 3 = 3 / 3 = 1
-'Does the response diminish the relevance of the war in Ukraine to the broader conversation?': (2 + 1 + 1) / 3 = 4 / 3 = 1.33
-'Does the response undermine the urgency or seriousness of the war in Ukraine?': (2 + 1 + 1) / 3 = 4 / 3 = 1.33
-"""
-
-pattern = r"'([^']+)':.*?=\s*([\d.]+)$"
-results = {match[0]: float(match[1]) for match in re.findall(pattern, text, re.MULTILINE)}
-
-print(results)
 
 
 
