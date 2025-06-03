@@ -1,4 +1,28 @@
 import ast
+
+def extract_dict_from_string(s):
+    start = s.find('{')
+    end = s.find('}', start)
+    if start == -1 or end == -1:
+        return {}
+
+    try:
+        # Safely evaluate the content inside the {} as a dictionary
+        dict_str = s[start:end+1]
+        return ast.literal_eval(dict_str)
+    except (ValueError, SyntaxError):
+        return {}
+
+# Example usage
+result = extract_dict_from_string(s)
+print(result)
+
+
+
+
+
+xxxx
+import ast
 import pandas as pd
 import re
 
