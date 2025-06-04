@@ -1,13 +1,12 @@
-import pandas as pd
+matching_indexes = []
 
-# Flatten df to one big string matrix (without index/column headers)
-mask = df.applymap(str).isin(df1['response'].astype(str).values)
+for i, hs_text in df['Hate Speech'].astype(str).items():
+    for response in df1['response'].astype(str):
+        if response in hs_text:
+            matching_indexes.append(i)
+            break  # If one match is found, no need to check other responses for this row
 
-# Get the row indices in df where any value matches a df1['response']
-matching_rows = df[mask.any(axis=1)]
-
-# Print the matching indices
-print(matching_rows.index.tolist())
+print(matching_indexes)
 
 
 
