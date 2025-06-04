@@ -1,3 +1,19 @@
+import pandas as pd
+
+# Flatten df to one big string matrix (without index/column headers)
+mask = df.applymap(str).isin(df1['response'].astype(str).values)
+
+# Get the row indices in df where any value matches a df1['response']
+matching_rows = df[mask.any(axis=1)]
+
+# Print the matching indices
+print(matching_rows.index.tolist())
+
+
+
+
+
+xxxx
 import ast
 
 def extract_dict_from_string(s):
