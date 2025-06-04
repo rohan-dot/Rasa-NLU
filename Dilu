@@ -1,4 +1,43 @@
 import re
+
+arr1 = []
+
+for i in range(len(df)):
+    text = df['expert'][i]
+
+    if "Calculate Average Ratings" in text:
+        ratings_text = text.split("Calculate Average Ratings", 1)[-1]
+        lines = ratings_text.strip().splitlines()
+        results = {}
+
+        for line in lines:
+            line = line.strip()
+            if "?" not in line:
+                continue
+
+            try:
+                # Extract the question (everything up to the first '?')
+                q_end = line.index("?") + 1
+                question = line[:q_end].strip()
+
+                # Extract all float or int numbers; final one is the score
+                numbers = re.findall(r'\d+(?:\.\d+)?', line[q_end:])
+                if numbers:
+                    score = float(numbers[-1])
+                    results[question] = score
+            except Exception as e:
+                print(f"Skipping due to error:\n{line}\nError: {e}")
+                continue
+
+        arr1.append(results)
+
+
+
+
+
+
+
+import re
 import pandas as pd
 
 def extract_ratings(text):
