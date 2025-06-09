@@ -1,3 +1,33 @@
+\begin{table}[htbp]
+\footnotesize
+\centering
+\begin{tabular}{|p{5.2cm}|c|c|c|}
+\hline
+\textbf{BEND Question} & \textbf{Mean} & \textbf{Median} & \textbf{S.D.} \\
+\hline
+Does the response directly address gaps in knowledge or context? & 5.6 & 5.8 & 0.95 \\
+\hline
+Does the response suggest that the war in Ukraine is not worth discussing? & 2.5 & 1.3 & 1.89 \\
+\hline
+Does the response diminish the relevance of the war in Ukraine to the broader conversation? & 2.8 & 2.9 & 1.85 \\
+\hline
+Does the response undermine the urgency or seriousness of the war in Ukraine? & 2.5 & 1.3 & 1.9 \\
+\hline
+Does the response post create enthusiasm about the war in Ukraine? & 3.6 & 3.2 & 1.5 \\
+\hline
+Does the response use positive language to inspire interest? & 5.8 & 5.3 & 1.29 \\
+\hline
+Does the response encourage others to feel optimistic about the war in Ukraine? & 3.84 & 4.6 & 1.2 \\
+\hline
+Does the response alter the main message of the post? & 4.7 & 5.6 & 1.89 \\
+\hline
+\end{tabular}
+\caption{LLM as a Judge Evaluation: BEND Maneuver Scores}
+\label{tab:llm-eval}
+\end{table}
+
+
+
 Here’s an improved, better-flowing version of your **qualitative assessment paragraph**, preserving all key points but with smoother structure and more polished transitions:
 
 ---
