@@ -1,3 +1,24 @@
+Here’s a polished, story-driven version of your **subsection: CounterSpeech Evaluation using LLM as a Judge**, integrating your chart and scores (Excite: 4.2, Explain: 5.3, Dismiss: 2.8, Distort: 4.7):
+
+---
+
+### \subsection{CounterSpeech Evaluation using LLM as a Judge}
+
+In this section, we analyze how the LLM—roleplaying as a judge—evaluated the counterspeech responses across the four BEND maneuvers, as shown in Figure\~\ref{fig\:bendjudges}. The model scored each strategy based on its effectiveness in countering hateful or harmful narratives, with a focus on factuality, influence, and tone alignment.
+
+We observed that **Explain** scored the highest (5.3), indicating that responses grounded in clarification and factual correction were consistently rated as most persuasive. **Distort** (4.7) and **Excite** (4.2) followed, suggesting that emotionally charged or creatively reframed responses also resonated, albeit slightly less consistently. In contrast, **Dismiss** received the lowest average score (2.8), implying that strategies relying on rejection or belittlement of the original message were viewed as less effective or potentially polarizing.
+
+Interestingly, while factuality, influence, and relevance remained stable across maneuvers, variability emerged in how the model judged tone and narrative strategy. This highlights the LLM’s tendency to favor responses that combine both factual grounding and emotional salience—offering insight into which rhetorical styles align best with model-driven judgments. This suggests the LLM may be implicitly modeling persuasive resonance similar to human judges, particularly when presented with varied tone-based strategies.
+
+---
+
+Let me know if you want to integrate human judge comparisons or emphasize any other findings.
+
+
+
+
+
+
 The Excite, Explain, and Dismiss strategies countered the original post by using facts, positivity, and direct refutation. With Distort, we used LLMs to twist the benign message into one that felt urgent, misleading, or exaggerated.
 
 
