@@ -8,6 +8,52 @@
 
 \begin{table}[htbp]
 \centering
+\setlength{\tabcolsep}{1.5pt} % Narrower columns
+\renewcommand{\arraystretch}{1.2} % Slightly taller rows
+\caption{Judge Scores by BEND Maneuver and Question}
+\begin{tabular}{|c|
+                *{4}{p{0.8cm}|}% Dismiss Q1–Q4
+                *{3}{p{0.8cm}|}% Excite Q1–Q3
+                *{2}{p{0.8cm}|}% Explain Q1–Q2
+                *{2}{p{0.8cm}|}% Distort Q1–Q2
+               }
+\hline
+\multirow{2}{*}{\textbf{Sys}} & 
+\multicolumn{4}{c|}{\textbf{Dismiss}} &
+\multicolumn{3}{c|}{\textbf{Excite}} &
+\multicolumn{2}{c|}{\textbf{Explain}} &
+\multicolumn{2}{c|}{\textbf{Distort}} \\
+\cline{2-12}
+ & Q1 & Q2 & Q3 & Q4 & Q1 & Q2 & Q3 & Q1 & Q2 & Q1 & Q2 \\
+\hline
+mt  &  &  &  &  &  &  &  &  &  &  &  \\
+\hline
+pe  &  &  &  &  &  &  &  &  &  &  &  \\
+\hline
+sys &  &  &  &  &  &  &  &  &  &  &  \\
+\hline
+\end{tabular}
+\end{table}
+
+\end{document}
+
+
+
+
+
+
+xxxxx
+
+\documentclass[10pt,conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{booktabs}
+
+\begin{document}
+
+\begin{table}[htbp]
+\centering
 \setlength{\tabcolsep}{3pt} % Tighten column spacing
 \renewcommand{\arraystretch}{1.2} % Row height
 \caption{Judge Scores by BEND Maneuver and Question}
