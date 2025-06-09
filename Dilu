@@ -1,3 +1,18 @@
+@online{axios2025pravda,
+  author       = {Sara Fischer},
+  title        = {Exclusive: Russian disinfo floods AI chatbots, study finds},
+  year         = {2025},
+  url          = {https://www.axios.com/2025/03/06/exclusive-russian-disinfo-floods-ai-chatbots-study-finds},
+  note         = {Accessed: 2025-06-09},
+  organization = {Axios}
+}
+
+
+
+
+
+
+
 \documentclass[twocolumn]{article}
 \usepackage{graphicx}
 \usepackage{array}
