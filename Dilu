@@ -1,3 +1,28 @@
+Absolutely. Here’s the revised subsection incorporating your direction: emphasizing broader criteria, justifying the focus on BEND maneuvers due to variance, and framing **Distort** as distinct in intent.
+
+---
+
+### \subsection{CounterSpeech Evaluation using LLM as a Judge}
+
+In this section, we analyze how the LLM—roleplaying as a judge—evaluated counterspeech responses. Although the model assessed responses on multiple dimensions including **truthfulness**, **factual grounding**, **depth**, and **clarity**, we focus here on the BEND-based maneuvers (Excite, Explain, Dismiss, Distort), as these exhibited the **greatest variation** in scoring and revealed the model’s nuanced sensitivity to rhetorical style. Moreover, these maneuvers reflect deliberate strategies intended to shift perception—offering a more targeted lens into how persuasive techniques are judged by an LLM.
+
+As shown in Figure\~\ref{fig\:bendjudges}, **Explain** achieved the highest average score (5.3), suggesting the model strongly favors fact-based clarification in counterspeech. **Excite** (4.2) and **Distort** (4.7) also scored well, indicating that emotionally engaging or creatively altered narratives can resonate with the judge model—though for different reasons. Notably, **Distort** is conceptually distinct: it aims to **reframe or destabilize** the original narrative rather than confront it directly. Its relatively high score suggests the LLM can reward strategic narrative redirection when done persuasively. On the other hand, **Dismiss** received the lowest score (2.8), signaling that responses that simply reject or ridicule the original message may be viewed as less constructive or less effective at engagement.
+
+While factuality, influence, and clarity remained fairly stable across maneuvers, this scoring variability illustrates the LLM’s preference for counterspeech that either explains or reimagines the discourse rather than shuts it down. These insights help highlight the model’s implicit alignment with persuasive, reframing-oriented strategies.
+
+---
+
+Let me know if you’d like to add a contrast to human judges or highlight specific qualitative examples.
+
+
+
+
+
+
+
+
+xxxxx
+
 Here’s a polished, story-driven version of your **subsection: CounterSpeech Evaluation using LLM as a Judge**, integrating your chart and scores (Excite: 4.2, Explain: 5.3, Dismiss: 2.8, Distort: 4.7):
 
 ---
