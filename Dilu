@@ -1,3 +1,22 @@
+Here’s a tightened and more polished version of your **future work** paragraph:
+
+---
+
+For future work, we plan to replace the current prompt-engineered judge with a **fine-tuned LLM** explicitly aligned with human values and grounded in annotations collected through large-scale human evaluations, including Mechanical Turk surveys. This alignment will enable the judge model to more accurately assess **persuasion-relevant metrics** such as tone, clarity, emotional resonance, and narrative impact. Additionally, we aim to integrate these human-aligned scores into the **content generation pipeline** by fine-tuning generation models on responses that have been rated as effective by human judges. This dual fine-tuning strategy—of both the judge and the generator—will allow for more robust, persuasive, and human-aligned counterspeech generation.
+
+---
+
+Let me know if you'd like to mention specific BEND maneuvers or include how inter-annotator agreement or survey stats feed into alignment.
+
+
+
+
+
+
+
+xxxxx
+
+
 \documentclass[10pt,conference]{IEEEtran}
 \usepackage{graphicx}
 \usepackage{array}
