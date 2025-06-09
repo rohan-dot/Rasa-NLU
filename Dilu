@@ -1,3 +1,31 @@
+\documentclass[twocolumn]{article}
+\usepackage{graphicx}
+\usepackage{array}
+
+\begin{document}
+
+\begin{table}[h]
+\centering
+\setlength{\tabcolsep}{3pt} % reduce horizontal padding
+\renewcommand{\arraystretch}{1.2} % spacing between rows
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\begin{tabular}{@{}c@{}}A\\ \\ \\ \end{tabular} & B & C & D & E \\
+\hline
+F &   &   &   &   \\
+\hline
+\end{tabular}
+\caption{Sketch-style table in narrow format}
+\end{table}
+
+\end{document}
+
+
+
+
+
+
+xxxxx
 Absolutely. Here’s the revised subsection incorporating your direction: emphasizing broader criteria, justifying the focus on BEND maneuvers due to variance, and framing **Distort** as distinct in intent.
 
 ---
