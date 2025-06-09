@@ -1,3 +1,20 @@
+Got it — here’s the refined version reflecting that: the new dataset is separate, and audience targeting/population modeling will be built into the judge.
+
+---
+
+In future work, we aim to replace the prompt-based judge with a **fine-tuned LLM** aligned to human annotations gathered via MTurk. This will allow for more accurate assessment of persuasion metrics such as tone, clarity, and narrative impact. We also plan to integrate **audience targeting and population modeling** into the judge itself, enabling it to evaluate counterspeech not just in general, but in terms of its effectiveness for specific demographic groups. A separate dataset will also be introduced to support more robust training and evaluation of both the judge and generation models.
+
+---
+
+Let me know if you'd like to specify what kind of demographics or audience signals you're using.
+
+
+
+
+
+
+xxxxx
+
 Here’s a tightened and more polished version of your **future work** paragraph:
 
 ---
