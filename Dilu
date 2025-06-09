@@ -1,3 +1,27 @@
+Here is a rewritten and polished version of **Section 4.2.2: Counterspeech Evaluation using LLM as a Judge**, integrating the chart and table with a coherent narrative and significance:
+
+---
+
+#### 4.2.2. Counterspeech Evaluation using LLM as a Judge
+
+In this section, we analyze how our judge LLM evaluated counterspeech responses across the four BEND maneuvers: **Excite**, **Explain**, **Dismiss**, and **Distort**. Although the judge assessed responses along multiple criteria—such as factual accuracy, clarity, relevance, and depth—we focus here on BEND-aligned questions due to the **higher variance in scores** and their direct link to rhetorical strategy.
+
+As seen in **Table 1** and **Figure 2**, the **Explain** maneuver received the highest mean score (5.3), reflecting the LLM’s strong preference for counterspeech that offers factual clarification and directly addresses misleading claims. **Excite** (4.2) and **Distort** (4.7) also scored well, though for different reasons. Excite responses used motivational or emotionally charged language to shift tone and encourage engagement, while Distort was conceptually distinct—it **reframed or altered** the main narrative to create urgency or reinterpret the post, rather than counter it directly. The high score for Distort suggests that the LLM was sensitive to **strategic narrative redirection**, even when the truth value remained ambiguous.
+
+On the other hand, **Dismiss** scored lowest (2.8), indicating that responses that rejected or minimized the original post without offering new perspective were seen as less effective or less persuasive.
+
+The spread in scores also mirrors the **judge model's implicit alignment with persuasion dynamics**: strategies that engage with the narrative (Explain, Distort, Excite) were scored higher than those that simply dismiss it. This pattern highlights the potential of LLMs to not only mimic but evaluate the nuanced rhetorical effectiveness of counterspeech, depending on how it reframes or reorients discourse.
+
+Together, these findings emphasize the importance of rhetorical framing in automated judgment and lay the groundwork for future fine-tuning of judge models that are sensitive to both factual and stylistic dimensions of influence.
+
+---
+
+Let me know if you want to fold this into a longer narrative or introduce any comparison with human ratings.
+
+
+
+
+xx
 \begin{table}[htbp]
 \footnotesize
 \centering
