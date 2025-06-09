@@ -1,3 +1,34 @@
+Here’s a **CSCW-style qualitative analysis paragraph** suitable for your figure caption or Results section write-up:
+
+> To qualitatively assess strategic shifts across BEND maneuvers, we present four counter-responses to a hate-laden original post. The *Explain* response foregrounds factual correction, citing authoritative sources and systematically debunking misinformation. The *Excite* response leverages agentic framing and positive emotional valence to reorient attention toward Ukraine’s democratic trajectory. The *Dismiss* response directly rejects the core claim, emphasizing electoral legitimacy and calling out misinformation. Finally, the *Distort* response mimics disinformation tactics—e.g., sensationalism and manipulated framing—to illustrate how benign narratives can be twisted. Together, these exemplars demonstrate how each maneuver enacts a distinct communicative function, shifting the tone, intent, and rhetorical stance of the generated response.
+
+Let me know if you'd like this condensed for a figure caption or broken into bullets for presentation.
+
+
+
+Got it — here’s the refined version reflecting that: the new dataset is separate, and audience targeting/population modeling will be built into the judge.
+
+---
+
+In future work, we aim to replace the prompt-based judge with a **fine-tuned LLM** aligned to human annotations gathered via MTurk. This will allow for more accurate assessment of persuasion metrics such as tone, clarity, and narrative impact. We also plan to integrate **audience targeting and population modeling** into the judge itself, enabling it to evaluate counterspeech not just in general, but in terms of its effectiveness for specific demographic groups. A separate dataset will also be introduced to support more robust training and evaluation of both the judge and generation models.
+
+---
+
+Let me know if you'd like to specify what kind of demographics or audience signals you're using.
+Got it — here’s the refined version reflecting that: the new dataset is separate, and audience targeting/population modeling will be built into the judge.
+
+---
+
+In future work, we aim to replace the prompt-based judge with a **fine-tuned LLM** aligned to human annotations gathered via MTurk. This will allow for more accurate assessment of persuasion metrics such as tone, clarity, and narrative impact. We also plan to integrate **audience targeting and population modeling** into the judge itself, enabling it to evaluate counterspeech not just in general, but in terms of its effectiveness for specific demographic groups. A separate dataset will also be introduced to support more robust training and evaluation of both the judge and generation models.
+
+---
+
+Let me know if you'd like to specify what kind of demographics or audience signals you're using
+
+
+
+
+xxxx
 Got it — here’s the refined version reflecting that: the new dataset is separate, and audience targeting/population modeling will be built into the judge.
 
 ---
