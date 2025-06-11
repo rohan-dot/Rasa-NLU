@@ -1,1 +1,43 @@
+\subsubsection{Measures}
 
+\textbf{BEND Maneuvers.} Messages were classified into four narrative strategies: \textit{Explain, Excite, Dismiss}, and \textit{Distort}. Participants saw two message pairs (four messages total), followed by comprehension checks.
+
+\textbf{Trait Measures.} Participants (n = 1092) completed:
+
+\begin{itemize}
+    \item \textit{Perceived Knowledge:} Three items designed to assess subjective confidence in understanding political topics related to Ukraine (e.g., “I think I know a lot about this topic.”).
+    \item \textit{Need for Cognition:} Measured using a short-form scale (Haugtvedt et al., 1992; e.g., “I enjoy tasks involving new solutions to problems.”).
+    \item \textit{Trait Reactance:} Measured using the Hong Psychological Reactance Scale (Hong and Page, 1989; e.g., “Regulations trigger a sense of resistance in me.”).
+\end{itemize}
+
+\textbf{Dependent Variables.} After reading each message, participants rated:
+
+\begin{itemize}
+    \item \textit{BEND Subscales:} 16 items (4 per maneuver), capturing narrative intent (e.g., “This message was meant to clarify something.”).
+    \item \textit{State Reactance:} Measured immediate reactance to persuasion (Dillard and Shen, 2005; e.g., “This message tried to pressure me.”).
+    \item \textit{Cultural Congruence:} Assessed match between message and participants' values (e.g., “The content of this message reflects my community values.”).
+    \item \textit{Perceived Persuasiveness:} Nine-item scale (Thomas et al., 2019), covering Effectiveness, Quality, and Capability (e.g., “This message is trustworthy.”).
+    \item \textit{Narrative Believability:} Measured using Yale’s scale (Yale, 2013; e.g., “The story made sense to me.”).
+    \item \textit{Counterarguing:} Five-item scale capturing resistance (Moyer-Gusé et al., 2011; e.g., “I actively thought of reasons why the message was wrong.”).
+\end{itemize}
+
+
+\subsection{Human Survey Results}
+
+\textbf{Scale Reliabilities and Descriptives.}
+
+Trait measures showed acceptable reliability: Perceived Knowledge ($\alpha = 0.841$), Need for Cognition ($\alpha = -0.064$), Trait Reactance ($\alpha = 0.951$) (n = 1092).
+
+For message-level outcomes (n = 2042 observations):
+
+\begin{itemize}
+    \item \textit{Explain:} $\alpha = 0.867$, $M = 5.12$, $SD = 1.18$ 
+    \item \textit{Excite:} $\alpha = 0.870$, $M = 5.10$, $SD = 1.22$ 
+    \item \textit{Dismiss:} $\alpha = 0.897$, $M = 5.00$, $SD = 1.34$ 
+    \item \textit{Distort:} $\alpha = 0.891$, $M = 5.02$, $SD = 1.32$
+    \item \textit{State Reactance:} $\alpha = 0.909$, $M = 4.78$, $SD = 1.44$
+    \item \textit{Cultural Congruence:} $\alpha = 0.431$, $M = 3.82$, $SD = 0.73$
+    \item \textit{Perceived Persuasiveness:} $\alpha = 0.857$, $M = 5.16$, $SD = 0.999$
+    \item \textit{Narrative Believability:} $\alpha = 0.927$, $M = 5.17$, $SD = 1.04$
+    \item \textit{Counterarguing:} $\alpha = 0.863$, $M = 5.15$, $SD = 1.14$
+\end{itemize}
