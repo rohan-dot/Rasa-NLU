@@ -1,48 +1,9 @@
-the observed alignment across constructs such as state reactance, counterarguing, and perceived manipulativeness demonstrates that LLM-as-a-judge can approximate complex socio-cognitive judgments that usually require costly human annotation. This finding positions LLM evaluators as scalable companions to crowd-sourced ratings, enabling rapid, high-fidelity assessment of persuasive quality in large-scale online discourse and collaborative moderation pipelines
-
-
-
-xxx
-Got it — let’s rewrite section **4.3 Human Survey Results** for better smoothness and academic tone while keeping the same meaning:
-
----
-
-### 4.3. Human Survey Results
-
-In this section, we present the results from AMT participants who assessed the generated responses based on the parameters defined in Sub-Section 3.3.2. To evaluate the consistency of the survey results, we computed Cronbach's alpha, a standard measure of internal reliability that reflects how consistently a set of items (e.g., survey questions) measure the same construct or trait. The trait measures demonstrated acceptable reliability: Perceived Knowledge (Cronbach’s α = 0.841), Need for Cognition (α = -0.064), and Trait Reactance (α = 0.951), with a total of 1092 responses.
-
----
-
-If you want, I can give a few variants depending on your target style:
-
-* **more compact (conference-style)**
-* **more academic journal-style**
-* **more Overleaf-ready clean text**
-
-Shall I prepare a few versions?
+The observed alignment across state reactance, counterarguing, and the BEND maneuvers shows that an LLM-as-a-judge can approximate complex socio-cognitive judgments that normally require costly human annotation. As a scalable complement to crowdsourced ratings, the model enables near-real-time diagnostics of message quality—flagging content likely to provoke audience backlash (high reactance, counterarguing) while distinguishing messages that follow constructive persuasive norms. This capability can inform interface design, content ranking, and automated feedback loops at platform scale.
 
 
 
 
-
-
-xxx
-
-\subsubsection{Measures}
-
-\textbf{BEND Maneuvers.} Messages were classified into four narrative strategies: \textit{Explain, Excite, Dismiss}, and \textit{Distort}. Participants saw two message pairs (four messages total), followed by comprehension checks.
-
-\textbf{Trait Measures.} Participants (n = 1092) completed:
-
-\begin{itemize}
-    \item \textit{Perceived Knowledge:} Three items designed to assess subjective confidence in understanding political topics related to Ukraine (e.g., “I think I know a lot about this topic.”).
-    \item \textit{Need for Cognition:} Measured using a short-form scale (Haugtvedt et al., 1992; e.g., “I enjoy tasks involving new solutions to problems.”).
-    \item \textit{Trait Reactance:} Measured using the Hong Psychological Reactance Scale (Hong and Page, 1989; e.g., “Regulations trigger a sense of resistance in me.”).
-\end{itemize}
-
-\textbf{Dependent Variables.} After reading each message, participants rated:
-
-\begin{itemize}
+xxitemize}
     \item \textit{BEND Subscales:} 16 items (4 per maneuver), capturing narrative intent (e.g., “This message was meant to clarify something.”).
     \item \textit{State Reactance:} Measured immediate reactance to persuasion (Dillard and Shen, 2005; e.g., “This message tried to pressure me.”).
     \item \textit{Cultural Congruence:} Assessed match between message and participants' values (e.g., “The content of this message reflects my community values.”).
