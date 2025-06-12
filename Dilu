@@ -1,3 +1,28 @@
+Got it — let’s rewrite section **4.3 Human Survey Results** for better smoothness and academic tone while keeping the same meaning:
+
+---
+
+### 4.3. Human Survey Results
+
+In this section, we present the results from AMT participants who assessed the generated responses based on the parameters defined in Sub-Section 3.3.2. To evaluate the consistency of the survey results, we computed Cronbach's alpha, a standard measure of internal reliability that reflects how consistently a set of items (e.g., survey questions) measure the same construct or trait. The trait measures demonstrated acceptable reliability: Perceived Knowledge (Cronbach’s α = 0.841), Need for Cognition (α = -0.064), and Trait Reactance (α = 0.951), with a total of 1092 responses.
+
+---
+
+If you want, I can give a few variants depending on your target style:
+
+* **more compact (conference-style)**
+* **more academic journal-style**
+* **more Overleaf-ready clean text**
+
+Shall I prepare a few versions?
+
+
+
+
+
+
+xxx
+
 \subsubsection{Measures}
 
 \textbf{BEND Maneuvers.} Messages were classified into four narrative strategies: \textit{Explain, Excite, Dismiss}, and \textit{Distort}. Participants saw two message pairs (four messages total), followed by comprehension checks.
