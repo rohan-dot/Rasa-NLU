@@ -1,6 +1,4 @@
-These results also underscore a practical implication for CSCW/CSS research: integrating LLM-based judges into socio-technical systems could support near-real-time diagnostics of message quality—identifying content likely to trigger audience backlash (high reactance, counterarguing) versus content aligned with constructive persuasive norms—thereby informing interface design, content ranking, and automated feedback loops at platform scale.
-
-
+the observed alignment across constructs such as state reactance, counterarguing, and perceived manipulativeness demonstrates that LLM-as-a-judge can approximate complex socio-cognitive judgments that usually require costly human annotation. This finding positions LLM evaluators as scalable companions to crowd-sourced ratings, enabling rapid, high-fidelity assessment of persuasive quality in large-scale online discourse and collaborative moderation pipelines
 
 
 
