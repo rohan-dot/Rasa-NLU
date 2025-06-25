@@ -1,34 +1,19 @@
-The observed alignment across state reactance, counterarguing, and the BEND maneuvers shows that an LLM-as-a-judge can approximate complex socio-cognitive judgments that normally require costly human annotation. As a scalable complement to crowdsourced ratings, the model enables near-real-time diagnostics of message quality—flagging content likely to provoke audience backlash (high reactance, counterarguing) while distinguishing messages that follow constructive persuasive norms. This capability can inform interface design, content ranking, and automated feedback loops at platform scale.
+Thanks for the clarification. Based on the INFOPAC session themes—especially *AI/ML assessment processes*, *OIE operationalization*, and *assessment of influence operations*—and your emphasis on **LLM-as-a-judge alignment with human evaluation**, here is a 500-word abstract optimized for this conference:
 
+---
 
+**Abstract**
 
+Adversaries are increasingly leveraging generative AI to scale influence operations and spread disinformation across digital environments, creating new challenges for operationalizing influence countermeasures in the Information Environment (IE). As the pace and scale of these operations outstrip traditional response capabilities, the U.S. and allied communities must adopt equally scalable and precise tools to assess and respond to malign narratives in near real-time. In this work, we present a novel AI-enabled framework that both generates and evaluates counternarratives using large language models (LLMs), with a specific focus on evaluating message alignment and persuasive effectiveness through an LLM-as-a-judge system. We place particular emphasis on validating these model-based judgments against human evaluations, offering a scalable solution for assessing operations in the IE.
 
-xxitemize}
-    \item \textit{BEND Subscales:} 16 items (4 per maneuver), capturing narrative intent (e.g., “This message was meant to clarify something.”).
-    \item \textit{State Reactance:} Measured immediate reactance to persuasion (Dillard and Shen, 2005; e.g., “This message tried to pressure me.”).
-    \item \textit{Cultural Congruence:} Assessed match between message and participants' values (e.g., “The content of this message reflects my community values.”).
-    \item \textit{Perceived Persuasiveness:} Nine-item scale (Thomas et al., 2019), covering Effectiveness, Quality, and Capability (e.g., “This message is trustworthy.”).
-    \item \textit{Narrative Believability:} Measured using Yale’s scale (Yale, 2013; e.g., “The story made sense to me.”).
-    \item \textit{Counterarguing:} Five-item scale capturing resistance (Moyer-Gusé et al., 2011; e.g., “I actively thought of reasons why the message was wrong.”).
-\end{itemize}
+Our framework centers on BEND, a taxonomy of strategic influence maneuvers commonly observed in adversarial messaging. Using a multi-step generation process that includes Retrieval-Augmented Generation (RAG), Chain-of-Thought prompting, and instruction-tuned LLaMA-70B models, we produce contextualized countermessages tailored to rhetorical goals such as explaining, dismissing, exciting, or distorting narratives. To assess these messages, we deploy a dual-layer evaluation system: (1) a Tree-of-Thought prompted LLM-as-a-judge to reason over narrative effectiveness across multiple dimensions (factuality, relevance, attitude-shifting potential, maneuver alignment), and (2) a structured human evaluation study conducted via Amazon Mechanical Turk, encompassing over 2,000 message-level responses and 1,000 participant profiles.
 
+The primary contribution of our work lies in validating the reliability of LLM-as-a-judge systems in replicating human judgment of persuasive message quality. Through detailed correlation analyses, we observe strong alignment between AI and human evaluators in identifying both high- and low-quality messages. For example, the LLM-as-a-judge showed high agreement with human raters on factuality (r = .63, *p* < .01) and persuasion (r = .45, *p* < .05) for explanatory responses. Similarly, both human raters and the AI system aligned in labeling distortive messages as factually weak, emotionally manipulative, and likely to provoke psychological resistance—key indicators of ineffective influence messaging. The model also correctly flagged content that elicited high state reactance and counterarguing in humans as lower in quality, demonstrating sensitivity to socio-cognitive backlash.
 
-\subsection{Human Survey Results}
+This research demonstrates that a properly guided LLM can approximate nuanced human assessments of narrative quality at scale, offering a viable tool for real-time diagnostics and operational evaluation of messaging in competition environments. Our findings provide critical insight into how AI/ML systems can be integrated into the assessment layer of OIE planning cycles, supporting decision-makers in identifying credible, context-appropriate messages and detecting manipulative or incoherent content—whether adversarial or domestic. As information operations become faster and more automated, such human-aligned evaluators can serve as force multipliers for commanders, analysts, and planners tasked with assessing effects in the information space.
 
-\textbf{Scale Reliabilities and Descriptives.}
+Ultimately, this work contributes toward operationalizing the assessment of influence operations, offering a scalable, dual-layered model for evaluating narrative alignment and audience impact. Future extensions will explore fine-tuning judges for specific demographics and integrating network-level simulation to assess narrative propagation across target audiences.
 
-Trait measures showed acceptable reliability: Perceived Knowledge ($\alpha = 0.841$), Need for Cognition ($\alpha = -0.064$), Trait Reactance ($\alpha = 0.951$) (n = 1092).
+---
 
-For message-level outcomes (n = 2042 observations):
-
-\begin{itemize}
-    \item \textit{Explain:} $\alpha = 0.867$, $M = 5.12$, $SD = 1.18$ 
-    \item \textit{Excite:} $\alpha = 0.870$, $M = 5.10$, $SD = 1.22$ 
-    \item \textit{Dismiss:} $\alpha = 0.897$, $M = 5.00$, $SD = 1.34$ 
-    \item \textit{Distort:} $\alpha = 0.891$, $M = 5.02$, $SD = 1.32$
-    \item \textit{State Reactance:} $\alpha = 0.909$, $M = 4.78$, $SD = 1.44$
-    \item \textit{Cultural Congruence:} $\alpha = 0.431$, $M = 3.82$, $SD = 0.73$
-    \item \textit{Perceived Persuasiveness:} $\alpha = 0.857$, $M = 5.16$, $SD = 0.999$
-    \item \textit{Narrative Believability:} $\alpha = 0.927$, $M = 5.17$, $SD = 1.04$
-    \item \textit{Counterarguing:} $\alpha = 0.863$, $M = 5.15$, $SD = 1.14$
-\end{itemize}
+Let me know if you’d like an emphasis shift—e.g., more on adversary strategies, spectrum-level integration, or government coordination angles.
