@@ -1,126 +1,91 @@
-Excellent—let’s enrich this with more *specifics* about the evaluation layer, demographic insights, and alignment metrics, while keeping the authoritative, defense-oriented voice.
+survey_prompt = """
+You are an Amazon Mechanical Turk worker assigned to evaluate a pair of social media posts. The first is an original post expressing a specific opinion or viewpoint. The second is a response post written in reply to the original.
 
-Here’s your **500-word abstract** with that focus:
+Your task is to read the **response post** carefully and rate it on the following criteria using a **7-point Likert scale**:
 
----
+1 = Strongly Disagree  
+2 = Disagree  
+3 = Somewhat Disagree  
+4 = Neither Agree nor Disagree  
+5 = Somewhat Agree  
+6 = Agree  
+7 = Strongly Agree  
 
-**Abstract**
+Rate **each** of the following statements honestly based on how the response post made you feel or what you thought. You do not need to explain your scores.
 
-Emerging adversaries are weaponizing generative AI to wage large-scale cognitive warfare, flooding the information environment with disinformation that undermines public trust, destabilizes allied cohesion, and erodes deterrence. Confronting this threat requires capabilities that can not only generate credible counternarratives at speed but also systematically evaluate their likely impact before deployment. This work presents an integrated framework that combines large language models with structured evaluation pipelines to deliver precise, mission-aligned messaging and robust impact assessment in near real time.
-
-At its core, the system pairs Retrieval-Augmented Generation with maneuver-based prompting to produce counterspeech aligned with BEND strategies—Explain, Excite, Dismiss, and Distort—depending on mission objectives. For example, in response to narratives claiming that coalition operations violate international law, the system can generate Explain responses referencing validated records or Excite messages highlighting successful humanitarian outcomes. Against attempts to sow discord or panic, it can deliver Dismiss maneuvers calibrated to reduce urgency and inoculate target populations.
-
-The cornerstone of this approach is a dual-layer evaluation process anchored by an LLM-as-a-judge module that simulates expert human assessment. This component uses Tree-of-Thought reasoning to systematically score messages across key dimensions: factuality, relevance, persuasive potential, and alignment with the selected maneuver. In operational testing across 88 unique messages and over 2,000 human ratings, the LLM-as-a-judge demonstrated strong alignment with human evaluators. For example, factuality assessments correlated at r = 0.63 with human judgments, and perceived persuasion of Explain maneuvers showed a correlation of r = 0.45. Notably, the model reliably flagged messages likely to provoke psychological resistance—critical intelligence when success hinges on maintaining audience trust and minimizing reactance.
-
-Further, demographic analysis provided actionable insights for tailoring influence operations. Evaluations revealed consistent patterns: for instance, responses resonated more effectively with younger and more educated populations when framed as Explain maneuvers, while Excite maneuvers had broader appeal across diverse age groups. Conversely, Dismiss and Distort strategies were more prone to triggering counterarguing and reactance in specific segments, including highly engaged news consumers and politically conservative cohorts. By quantifying these patterns, the system enables planners to segment audiences and select the most effective rhetorical strategy for each operational context.
-
-This framework has demonstrated operational relevance across scenarios ranging from election interference to disinformation targeting military deployments. In simulations, the combined generation and evaluation pipeline reduced manual vetting timelines by over 70%, while preserving alignment with mission objectives and ethical standards. By delivering timely feedback on message quality and likely audience response, this approach empowers commanders and analysts to deploy counterspeech with confidence in its credibility and impact.
-
-In an era defined by contested narratives and AI-enabled information operations, maintaining deterrence and freedom of maneuver demands tools that blend speed, accuracy, and trustworthiness. This work provides a scalable solution to evaluate and adapt countermessaging in dynamic environments, supporting strategic objectives while reinforcing democratic resilience. Future extensions will integrate fine-tuned evaluators and dynamic network simulation to anticipate message propagation and optimize influence operations at scale.
-
----
-
-If you’d like, I can help you further customize this for specific submission guidelines or trim it to fit character limits.
-
-
-
-
-
-
-xxxx
-
-Excellent—let’s enrich this with more *specifics* about the evaluation layer, demographic insights, and alignment metrics, while keeping the authoritative, defense-oriented voice.
-
-Here’s your **500-word abstract** with that focus:
+⚠️ Your output **must ONLY** be a Python dictionary in the format:  
+`{"Q1": score, "Q2": score, ..., "Q47": score}`  
+No explanations, no extra commentary—just this exact format so it can be directly copied into Excel.
 
 ---
 
-**Abstract**
+### Statements to rate:
 
-Emerging adversaries are weaponizing generative AI to wage large-scale cognitive warfare, flooding the information environment with disinformation that undermines public trust, destabilizes allied cohesion, and erodes deterrence. Confronting this threat requires capabilities that can not only generate credible counternarratives at speed but also systematically evaluate their likely impact before deployment. This work presents an integrated framework that combines large language models with structured evaluation pipelines to deliver precise, mission-aligned messaging and robust impact assessment in near real time.
+#### State Reactance
+Q1. After reading the response post, I felt angry.  
+Q2. After reading the response post, I felt irritated.  
+Q3. After reading the response post, I felt annoyed.  
+Q4. After reading the response post, I felt that my freedom was being threatened.  
 
-At its core, the system pairs Retrieval-Augmented Generation with maneuver-based prompting to produce counterspeech aligned with BEND strategies—Explain, Excite, Dismiss, and Distort—depending on mission objectives. For example, in response to narratives claiming that coalition operations violate international law, the system can generate Explain responses referencing validated records or Excite messages highlighting successful humanitarian outcomes. Against attempts to sow discord or panic, it can deliver Dismiss maneuvers calibrated to reduce urgency and inoculate target populations.
+#### Perceived Persuasiveness
+Q5. The response post will cause changes in my behavior.  
+Q6. The response post causes me to make some changes in my behavior.  
+Q7. After viewing the response post, I will make changes in my attitude.  
+Q8. The response post is accurate.  
+Q9. The response post is trustworthy.  
+Q10. I believe the response post is true.  
+Q11. The response post has the potential to change user behavior.  
+Q12. The response you should select for this question is somewhat agree.  
+Q13. The response post has the potential to influence user behavior.  
+Q14. The response post has the potential to inspire users.  
 
-The cornerstone of this approach is a dual-layer evaluation process anchored by an LLM-as-a-judge module that simulates expert human assessment. This component uses Tree-of-Thought reasoning to systematically score messages across key dimensions: factuality, relevance, persuasive potential, and alignment with the selected maneuver. In operational testing across 88 unique messages and over 2,000 human ratings, the LLM-as-a-judge demonstrated strong alignment with human evaluators. For example, factuality assessments correlated at r = 0.63 with human judgments, and perceived persuasion of Explain maneuvers showed a correlation of r = 0.45. Notably, the model reliably flagged messages likely to provoke psychological resistance—critical intelligence when success hinges on maintaining audience trust and minimizing reactance.
+#### Counter-Arguing
+Q15. While reading the response post, I generated thoughts that countered its message.  
+Q16. I found myself thinking of reasons why the response post might be inaccurate.  
+Q17. I actively questioned the arguments presented in the response post.  
+Q18. I considered alternative viewpoints to those presented in the response post.  
 
-Further, demographic analysis provided actionable insights for tailoring influence operations. Evaluations revealed consistent patterns: for instance, responses resonated more effectively with younger and more educated populations when framed as Explain maneuvers, while Excite maneuvers had broader appeal across diverse age groups. Conversely, Dismiss and Distort strategies were more prone to triggering counterarguing and reactance in specific segments, including highly engaged news consumers and politically conservative cohorts. By quantifying these patterns, the system enables planners to segment audiences and select the most effective rhetorical strategy for each operational context.
+#### Narrative Believability
+Q19. The response post could be true.  
+Q20. The response post seems to be true.  
+Q21. The response post was plausible.  
+Q22. It was easy to follow the content of the response post.  
+Q23. It was hard to follow the response post.  
+Q24. If I were writing the response post, I would have organized it differently.  
+Q25. The information presented in the response post was consistent.  
+Q26. All of the facts in the response post agreed with each other.  
+Q27. There was important information missing from the response post.  
+Q28. There were lots of off-topic comments in the response post.  
 
-This framework has demonstrated operational relevance across scenarios ranging from election interference to disinformation targeting military deployments. In simulations, the combined generation and evaluation pipeline reduced manual vetting timelines by over 70%, while preserving alignment with mission objectives and ethical standards. By delivering timely feedback on message quality and likely audience response, this approach empowers commanders and analysts to deploy counterspeech with confidence in its credibility and impact.
+#### Coverage & Consistency
+Q29. The “coverage” of a post refers to the extent to which the post accounts for all the relevant information regarding the issue. How would you rate this response post in terms of coverage?  
+Q30. The “consistency” of a post refers to whether it does or does not contradict itself or conflict with what you know to be true or false. How would you rate the response post in terms of consistency?  
 
-In an era defined by contested narratives and AI-enabled information operations, maintaining deterrence and freedom of maneuver demands tools that blend speed, accuracy, and trustworthiness. This work provides a scalable solution to evaluate and adapt countermessaging in dynamic environments, supporting strategic objectives while reinforcing democratic resilience. Future extensions will integrate fine-tuned evaluators and dynamic network simulation to anticipate message propagation and optimize influence operations at scale.
+#### BEND Criteria
+Q31. The response post provides clear and detailed information about the war in Ukraine.  
+Q32. The response post enhances understanding by offering examples or explanations.  
+Q33. The response post directly addresses gaps in knowledge or context.  
+Q34. The response post uses accurate and relevant details to elaborate on the war in Ukraine.  
+Q35. The response post creates enthusiasm about the war in Ukraine.  
+Q36. The response post uses positive language to inspire interest.  
+Q37. The response post emphasizes the importance and excitement of the discussion.  
+Q38. The response post encourages others to feel optimistic about the war in Ukraine.  
+Q39. The response post downplays the importance of the war in Ukraine.  
+Q40. The response post suggests the war in Ukraine is not worth discussing.  
+Q41. The response post diminishes the relevance of the war in Ukraine to the broader conversation.  
+Q42. The response post misrepresents the original meaning of the topic.  
+Q43. The response post introduces inaccuracies or falsehoods about the topic.  
+Q44. The response post twists the intended context to alter perception.  
+Q45. The response post reflects a biased or slanted interpretation of the topic.  
 
----
-
-If you’d like, I can help you further customize this for specific submission guidelines or trim it to fit character limits.
-
-
-
-
-
-
-
-Absolutely—let’s reframe this to sound like a **senior defense official briefing** (e.g., a DoD Chief Technology Officer), emphasizing:
-
-* **Deterrence and resilience**
-* **Examples of practical applications**
-* **National security and operational impact**
-* A confident, authoritative tone
-
-Here is a revised **500-word abstract**:
-
----
-
-**Abstract**
-
-Emerging adversaries are exploiting generative AI to wage large-scale cognitive warfare, flooding public discourse with falsehoods that undermine democratic stability, fracture alliances, and erode public confidence in legitimate institutions. In this evolving threat landscape, credible deterrence demands capabilities that can not only deliver timely, precise counter-messaging but also rigorously evaluate its impact before deployment. This work presents a next-generation framework designed to meet that challenge by integrating large language models into a unified system that generates, evaluates, and refines strategic counternarratives aligned to mission objectives.
-
-At its core, the framework fuses Retrieval-Augmented Generation with maneuver-based prompting to produce counterspeech tailored to operational goals such as undermining adversary credibility, bolstering target audience resilience, or disrupting coordinated influence campaigns. For example, in response to disinformation alleging foreign bioweapons programs, the system can produce Explain maneuvers grounded in official records, or Excite messages that amplify shared values and reinforce coalition strength. Against narratives designed to sow panic or cynicism, it can deliver Dismiss maneuvers that neutralize urgency and inoculate populations against manipulation.
-
-To ensure outputs are not merely fluent but effective, the system employs an LLM-as-a-judge module capable of high-fidelity evaluation across factuality, persuasive potential, and alignment with strategic objectives. This evaluation engine leverages Tree-of-Thought reasoning to simulate the deliberation process of experienced analysts, scoring content on its likelihood to drive attitude change, inspire trust, or provoke psychological reactance. In testing across 88 unique messages and thousands of ratings, this approach demonstrated strong alignment with human judgment. For instance, assessments of factuality and clarity consistently correlated above r = 0.6 with expert reviewers, while the system accurately flagged messages likely to trigger resistance—a critical capability when deterrence depends on sustaining legitimacy and credibility.
-
-Operationally, this dual-layer process enables commanders and information professionals to deploy counterspeech with confidence that it will perform as intended across diverse environments—from social media crises to contested information battlespaces. The model provides actionable feedback to refine narratives iteratively, reducing reliance on protracted manual vetting cycles and allowing rapid adaptation to adversary tactics. In real-world simulations, this capability has shown utility in scenarios ranging from election interference to disinformation about force deployments, demonstrating its versatility as a tool for proactive narrative shaping and strategic reassurance.
-
-Equally important, the framework offers insights into audience segmentation, revealing which demographics are most susceptible to or resilient against specific maneuvers. This intelligence can be incorporated into influence campaign planning to maximize deterrent effect while mitigating unintended consequences.
-
-In an era where the speed and scale of AI-enabled disinformation are accelerating, maintaining strategic advantage requires not just faster response but more credible, adaptive messaging aligned with democratic principles. This work delivers an operationally viable solution to safeguard the information environment, strengthen public trust, and project resilience in the face of adversarial influence. As future iterations integrate dynamic network modeling and fine-tuned evaluators, this approach will serve as a cornerstone capability for sustaining deterrence and freedom of maneuver in the cognitive domain.
-
----
-
-Let me know if you’d like this adjusted to be shorter, or more overtly operational with examples from military and interagency contexts.
-
-
-
-
-
-
-
-xxxxx
-
-Absolutely—let’s craft an abstract that:
-
-* Sounds **mission-focused** and **DoD-integrated**
-* Emphasizes **deterrence**, **national security**, and **operational utility**
-* Stays clear of sounding “too academic” or “researchy”
-* Leans into *alignment with human judgment* as a force multiplier for decision-making
-
-Here’s a **500-word abstract**, sales-pitchy but grounded:
+#### Cultural Congruence
+Q46. The response post aligns with my cultural values.  
+Q47. The content of the response post reflects the norms of my community.  
 
 ---
 
-**Abstract**
+Remember: You are an MTurk worker completing this HIT. Only return the final scores dictionary in this format:  
+`{"Q1": X, "Q2": Y, ..., "Q47": Z}`
 
-Adversaries are rapidly weaponizing generative AI to shape global narratives, erode trust in democratic institutions, and undermine allied cohesion at scale and speed unprecedented in modern information warfare. As these malign influence campaigns proliferate across digital channels, the Department of Defense and partner agencies require agile, validated solutions that can both generate and assess counter-messaging in real time. Our work delivers a robust, operationally focused framework that harnesses large language models (LLMs) to produce strategic counternarratives and automatically evaluate their impact with a level of consistency comparable to human analysts. This capability represents a critical step toward integrating AI-powered information operations into the core of U.S. deterrence posture and influence strategy.
-
-The system combines Retrieval-Augmented Generation with instruction-tuned LLMs to craft context-aware messages aligned with BEND maneuvers—structured influence techniques designed to explain, excite, dismiss, or distort adversarial narratives. To ensure outputs meet mission objectives, we developed an LLM-as-a-judge module employing Tree-of-Thought reasoning, which systematically scores message quality across key dimensions such as factual accuracy, persuasive strength, and maneuver effectiveness. Unlike prior tools that focus solely on surface-level attributes like grammaticality, our approach provides deeper insight into whether a message is likely to shift attitudes, reinforce trust, or trigger reactance in targeted populations.
-
-Most notably, this framework was stress-tested against a large-scale human evaluation effort designed to mirror operational review processes. Results demonstrated strong alignment between AI-generated assessments and human judgment, particularly in recognizing manipulation, incoherence, and perceived threat—factors that often determine whether an influence operation succeeds or backfires. For example, model ratings of factuality and narrative clarity showed positive correlations exceeding r = 0.6 with human assessments, while negative correlations in areas such as counterarguing confirmed the model’s ability to flag content likely to provoke psychological resistance. This alignment offers commanders and analysts confidence that LLM-augmented review pipelines can scale without sacrificing credibility or situational nuance.
-
-Beyond evaluation, the system provides actionable intelligence on which rhetorical strategies most effectively defuse adversary messaging, enabling practitioners to tailor interventions to specific audiences and operational contexts. Demographic profiling revealed clear patterns in which subsets of the population are more receptive to certain maneuvers, supporting future integration of audience segmentation and network simulation capabilities.
-
-By uniting cutting-edge AI generation with reliable assessment, this capability advances the operationalization of Information Environment operations. It supports commanders in defining clear effects, building tailored influence campaigns, and measuring their impact with precision. In contested information domains, speed and credibility are decisive; this framework delivers both, reducing reliance on lengthy manual review cycles while preserving alignment with core democratic values and ethical standards.
-
-This work represents a scalable, mission-ready approach to countering adversarial narratives and strengthening national security through informed, adaptive messaging. As future iterations integrate fine-tuned evaluators and dynamic audience modeling, we envision this system as a key enabler for whole-of-government influence operations and a force multiplier for strategic deterrence in an era defined by information competition.
-
----
-
-Would you like any tweaks—like shortening, more focus on deterrence, or more examples?
+Begin your evaluation now.
+"""
