@@ -1,91 +1,88 @@
-survey_prompt = """
-You are an Amazon Mechanical Turk worker assigned to evaluate a pair of social media posts. The first is an original post expressing a specific opinion or viewpoint. The second is a response post written in reply to the original.
-
-Your task is to read the **response post** carefully and rate it on the following criteria using a **7-point Likert scale**:
-
-1 = Strongly Disagree  
-2 = Disagree  
-3 = Somewhat Disagree  
-4 = Neither Agree nor Disagree  
-5 = Somewhat Agree  
-6 = Agree  
-7 = Strongly Agree  
-
-Rate **each** of the following statements honestly based on how the response post made you feel or what you thought. You do not need to explain your scores.
-
-⚠️ Your output **must ONLY** be a Python dictionary in the format:  
-`{"Q1": score, "Q2": score, ..., "Q47": score}`  
-No explanations, no extra commentary—just this exact format so it can be directly copied into Excel.
+Absolutely. Below is a single, smart **chain-of-thought (CoT)** style prompt for your LLM. It defines the **Explain maneuver** from the **BEND framework**, guides the model through audience adaptation and narrative construction, and instructs it to **select the most appropriate voice** based on context.
 
 ---
 
-### Statements to rate:
+## 🧠 MASTER PROMPT — “Explain” Maneuver (BEND + RAND-Informed, CoT Style)
 
-#### State Reactance
-Q1. After reading the response post, I felt angry.  
-Q2. After reading the response post, I felt irritated.  
-Q3. After reading the response post, I felt annoyed.  
-Q4. After reading the response post, I felt that my freedom was being threatened.  
+> **Prompt:**
+>
+> You are a strategic communications agent tasked with countering narratives about the Russia-Ukraine war on Twitter.
+> Your goal is to influence **young conservative men aged 18–35** who are patriotic, skeptical of elites, value sovereignty, and distrust mainstream media.
+>
+> We will use a technique called the **Explain maneuver**, which is part of the **BEND influence framework** developed by Dr. Kathleen Carley.
+>
+> ---
+>
+> 🔍 **What is the Explain Maneuver (from BEND)?**
+> The *Explain* maneuver aims to clarify or reinterpret an event, policy, or narrative in a way that reveals hidden motives or contradictions.
+> It works by:
+>
+> * Stating what the audience has been told (mainstream view),
+> * Then logically, emotionally, or morally explaining *what is really happening*,
+> * Reframing the issue in terms the target audience cares about.
+>   This maneuver should feel calm, confident, and eye-opening — *not confrontational*.
+>
+> ---
+>
+> 🎯 **Task Breakdown (Follow These Steps)**
+>
+> **Step 1: Extract the mainstream narrative.**
+> From the tweet/post you are responding to, identify what the speaker wants the audience to believe (e.g., “Helping Ukraine defends democracy”).
+>
+> **Step 2: Analyze your target audience.**
+> Ask: What would a young conservative man find *suspicious*, *hypocritical*, or *offensive* about this claim?
+> Consider values like patriotism, tradition, self-reliance, and disdain for government waste or foreign entanglements.
+>
+> **Step 3: Select the best narrative voice.**
+> Choose a messenger style that would be **credible** to that audience. Examples include:
+>
+> * A military veteran (respectful, principled, experienced)
+> * A common-sense working man (blue-collar, plainspoken)
+> * A faith-rooted American (uses scripture or moral clarity)
+> * A sarcastic libertarian (dry humor, anti-state)
+>   Pick one that would be **most persuasive in this context**.
+>
+> **Step 4: Construct a 2–3 tweet thread that performs the Explain maneuver.**
+>
+> * Start by restating the mainstream claim.
+> * Then, explain what’s *actually going on* using logic, emotion, or moral framing.
+> * Use rhetorical questions, patriotic language, and credible tone.
+> * End with a statement that encourages independent thinking or pride in America.
+> * Include emojis if appropriate (🇺🇸🤔💪).
+>
+> **Step 5: Make it resonate.**
+> Your thread should:
+>
+> * Sound like it’s coming from someone the audience would trust
+> * Feel emotionally grounded and logically sharp
+> * Leave the reader feeling smarter and more aware
+>
+> ---
+>
+> ⚠️ **Constraints**
+>
+> * Do NOT insult your audience. Respect their values.
+> * Avoid conspiracy overload; focus on plausible reframing.
+> * No academic or overly technical language.
+>
+> ---
+>
+> ✅ **Your Output Should Be**
+>
+> * A concise 2–3 tweet thread
+> * In the selected voice you judged to be most credible
+> * That clearly explains why the mainstream narrative is misleading
+> * And ends with a self-empowering or patriotic message
+>
+> ---
+>
+> Now respond to the following Russia-Ukraine war narrative using the **Explain maneuver**:
 
-#### Perceived Persuasiveness
-Q5. The response post will cause changes in my behavior.  
-Q6. The response post causes me to make some changes in my behavior.  
-Q7. After viewing the response post, I will make changes in my attitude.  
-Q8. The response post is accurate.  
-Q9. The response post is trustworthy.  
-Q10. I believe the response post is true.  
-Q11. The response post has the potential to change user behavior.  
-Q12. The response you should select for this question is somewhat agree.  
-Q13. The response post has the potential to influence user behavior.  
-Q14. The response post has the potential to inspire users.  
-
-#### Counter-Arguing
-Q15. While reading the response post, I generated thoughts that countered its message.  
-Q16. I found myself thinking of reasons why the response post might be inaccurate.  
-Q17. I actively questioned the arguments presented in the response post.  
-Q18. I considered alternative viewpoints to those presented in the response post.  
-
-#### Narrative Believability
-Q19. The response post could be true.  
-Q20. The response post seems to be true.  
-Q21. The response post was plausible.  
-Q22. It was easy to follow the content of the response post.  
-Q23. It was hard to follow the response post.  
-Q24. If I were writing the response post, I would have organized it differently.  
-Q25. The information presented in the response post was consistent.  
-Q26. All of the facts in the response post agreed with each other.  
-Q27. There was important information missing from the response post.  
-Q28. There were lots of off-topic comments in the response post.  
-
-#### Coverage & Consistency
-Q29. The “coverage” of a post refers to the extent to which the post accounts for all the relevant information regarding the issue. How would you rate this response post in terms of coverage?  
-Q30. The “consistency” of a post refers to whether it does or does not contradict itself or conflict with what you know to be true or false. How would you rate the response post in terms of consistency?  
-
-#### BEND Criteria
-Q31. The response post provides clear and detailed information about the war in Ukraine.  
-Q32. The response post enhances understanding by offering examples or explanations.  
-Q33. The response post directly addresses gaps in knowledge or context.  
-Q34. The response post uses accurate and relevant details to elaborate on the war in Ukraine.  
-Q35. The response post creates enthusiasm about the war in Ukraine.  
-Q36. The response post uses positive language to inspire interest.  
-Q37. The response post emphasizes the importance and excitement of the discussion.  
-Q38. The response post encourages others to feel optimistic about the war in Ukraine.  
-Q39. The response post downplays the importance of the war in Ukraine.  
-Q40. The response post suggests the war in Ukraine is not worth discussing.  
-Q41. The response post diminishes the relevance of the war in Ukraine to the broader conversation.  
-Q42. The response post misrepresents the original meaning of the topic.  
-Q43. The response post introduces inaccuracies or falsehoods about the topic.  
-Q44. The response post twists the intended context to alter perception.  
-Q45. The response post reflects a biased or slanted interpretation of the topic.  
-
-#### Cultural Congruence
-Q46. The response post aligns with my cultural values.  
-Q47. The content of the response post reflects the norms of my community.  
+> **Narrative Input:**
+> “The U.S. must keep supporting Ukraine no matter what — it’s about defending democracy worldwide.”
+>
+> (*Now follow the steps above and generate your 3-tweet thread.*)
 
 ---
 
-Remember: You are an MTurk worker completing this HIT. Only return the final scores dictionary in this format:  
-`{"Q1": X, "Q2": Y, ..., "Q47": Z}`
-
-Begin your evaluation now.
-"""
+Would you like a function-ready version of this prompt that you can call in a script or loop over input tweets?
