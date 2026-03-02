@@ -877,10 +877,11 @@ class AnswerReflection(BaseModel):
 #  SECTION 8 — Graph Node Functions
 # ══════════════════════════════════════════════
 
-def prepare_question(state: AgentState, config: dict) -> dict:
+def prepare_question(state: AgentState, config: Optional[dict] = None) -> dict:
     msgs = state.get("messages", [])
     q = _latest_user_question(msgs)
 
+    config = config or {}
     thread_id = (config.get("configurable", {}) or {}).get("thread_id", "default")
     history = _history_to_str(msgs)
 
@@ -1125,7 +1126,8 @@ def ask_user(state: AgentState) -> dict:
     return {"messages": [AIMessage(content=q)]}
 
 
-def write_memory_node(state: AgentState, config: dict) -> dict:
+def write_memory_node(state: AgentState, config: Optional[dict] = None) -> dict:
+    config = config or {}
     thread_id = (config.get("configurable", {}) or {}).get("thread_id", "default")
     write_longterm_memory(state.get("question") or "", state.get("draft_answer") or "", thread_id=thread_id)
     return {}
