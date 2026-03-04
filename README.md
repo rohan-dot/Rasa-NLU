@@ -1,110 +1,112 @@
-# BioASQ Agentic Retrieval System — Refactored
+# BioASQ 13b — Full Pipeline
 
-## What Changed (vs QA_2_Try.py)
+Hybrid retrieval + LLM answering pipeline for BioASQ Task 13b.
+No runtime paper fetching — everything is pre-indexed offline.
 
-### 1. Multi-Index Architecture (per-paper FAISS)
-- **Before**: Single unified FAISS index for all documents
-- **After**: Each BioASQ paper gets its own FAISS index, stored in `./bioasq_paper_indices/<paper_id>/`
-- A lightweight **master routing index** over paper abstracts enables fast paper selection before retrieval
-- Paper IDs are extracted from PubMed URLs (e.g. `pubmed/12345678` → `12345678`)
+## Architecture
 
-### 2. Intelligent Paper Router
-- Before retrieval, the system uses the master abstract index to find the top-K most relevant papers
-- Only those papers are queried, reducing noise and improving precision
-- Configurable via `ROUTER_TOP_K_PAPERS` (default: 5)
-
-### 3. Parallel Multi-Paper Retrieval
-- Selected papers are queried in parallel using `ThreadPoolExecutor`
-- Results are deduplicated and merged before reranking
-- Falls back to querying all papers if parallel retrieval fails
-
-### 4. Fixed Graph Traversal (no more stuck states)
-- **Hard loop caps** on every cycle:
-  - `MAX_RETRIEVAL_LOOPS = 4` — total retrieval attempts per turn
-  - `MAX_REWRITE_LOOPS = 2` — query rewriting attempts
-  - `MAX_DECOMPOSE_LOOPS = 2` — decomposition attempts
-  - `MAX_REFLECT_LOOPS = 2` — reflection/self-critique cycles
-- Loop counters are tracked in state and reset each new user turn
-- Every conditional edge has a guaranteed fallback to `generate_draft` or `finalize_answer`
-- The graph **cannot** cycle indefinitely
-
-### 5. Improved Prompts for Gemma-3-27b-it
-- `GENERATE_PROMPT` now has biomedical-specific grounding rules
-- Added `GENERATE_PROMPT_BIOASQ` for type-aware generation (factoid/list/yesno/summary)
-- `GRADE_PROMPT` explicitly handles code/ID questions and low-snippet scenarios
-- `REFLECT_PROMPT` produces structured JSON with clear action directives
-
-### 6. BioASQ Evaluation Harness
-- `evaluate_bioasq()` loads a dataset, builds indices, runs all questions through the pipeline
-- Results are saved as JSON with predicted vs ideal/exact answers
-- Run with: `python QA_BioASQ_Refactored.py dataset.json [max_questions]`
-
-### 7. Preserved Components
-- vLLM + Gemma-3-27b-it backend (unchanged)
-- LangChain StateGraph framework
-- Cross-encoder reranking
-- HyDE for short questions
-- Neighbor expansion for context completeness
-- Long-term memory (optional, flag-gated)
-
----
-
-## Requirements
-
-```bash
-pip install langchain langchain-community langchain-openai faiss-cpu \
-            sentence-transformers rank_bm25 pydantic langgraph
+```
+Training JSON
+     ↓
+01_fetch_corpus.py
+  - Extracts all PMIDs
+  - Fetches PubMed abstracts in bulk (batch=200, rate-limited)
+  - Attempts PMC full-text for ~50-60% of papers (BioC JSON API)
+  - Saves gold training snippets as separate corpus
+     ↓
+data/
+  papers.jsonl              (one paper per line, abstract + optional full text)
+  training_snippets.jsonl   (gold evidence spans from training QA pairs)
+  training_questions.json   (for few-shot retrieval at test time)
+     ↓
+02_build_index.py
+  - Section-aware chunking (Results/Discussion prioritised)
+  - MedCPT Article Encoder embeddings (768-dim, normalised)
+  - FAISS HNSW index (cosine similarity via inner product)
+  - BM25 index (keyword matching for rare terms, gene names etc.)
+  - Two separate indexes: papers + training snippets
+     ↓
+index/
+  papers_hnsw.faiss
+  papers_chunks.pkl
+  papers_bm25.pkl
+  snippets_hnsw.faiss
+  snippets_chunks.pkl
+  snippets_bm25.pkl
+     ↓
+03_retrieve_and_answer.py
+  - MedCPT Query Encoder (asymmetric: different model from article encoder)
+  - Parallel retrieval from papers + snippets indexes
+  - Hybrid reranking: 0.7*dense + 0.3*BM25 + section boost
+  - 3 few-shot examples from most similar training questions (by type)
+  - LLM answering with type-specific JSON prompts
+  - BioASQ submission JSON output
 ```
 
-vLLM must be serving `gemma-3-27b-it` on `http://127.0.0.1:8000/v1`.
+## Setup
 
----
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
-### Evaluate on BioASQ dataset
 ```bash
-python QA_BioASQ_Refactored.py /path/to/bioasq_dataset.json
-# or limit to first N questions:
-python QA_BioASQ_Refactored.py /path/to/bioasq_dataset.json 50
+# Step 1: Fetch corpus (one-time, ~30-60 min depending on corpus size)
+python 01_fetch_corpus.py \
+  --training BioASQ-training13b.json \
+  --out data/
+
+# Step 2: Build indexes (one-time, ~15-30 min)
+python 02_build_index.py \
+  --data data/ \
+  --out  index/
+
+# Step 3: Run on test set
+export OPENAI_API_KEY=sk-...
+python 03_retrieve_and_answer.py \
+  --test  BioASQ-13b-testset.json \
+  --index index/ \
+  --train_questions data/training_questions.json \
+  --out   submissions/submission.json \
+  --model gpt-4o
 ```
 
-### Interactive mode
-```bash
-python QA_BioASQ_Refactored.py
-```
+## Key Design Decisions
 
----
+### Why two indexes?
+- **Papers index**: full text (PMC) or abstract — the actual literature
+- **Snippets index**: gold evidence spans from training set — already validated by BioASQ annotators, thematically overlap with test questions year over year
 
-## Configuration
+### Why MedCPT asymmetric encoding?
+MedCPT uses different encoders for queries vs articles. Using the article encoder for queries
+(a common mistake) significantly degrades retrieval quality. Always:
+- Query → `ncats/MedCPT-Query-Encoder`
+- Chunks → `ncats/MedCPT-Article-Encoder`
 
-All tuneable parameters are at the top of the file:
+### Why hybrid BM25 + dense?
+Dense models miss exact matches for rare gene names (e.g. BRCA2, TP53 variants),
+drug names, and numeric values. BM25 catches these. 70/30 split is a good default.
 
-| Parameter | Default | Purpose |
-|-----------|---------|---------|
-| `ROUTER_TOP_K_PAPERS` | 5 | How many papers to select per question |
-| `DENSE_TOP_K` | 12 | Dense retrieval top-K per paper |
-| `FINAL_TOP_K` | 8 | Final snippets after reranking |
-| `MAX_RETRIEVAL_LOOPS` | 4 | Hard cap on retrieval cycles |
-| `MAX_REWRITE_LOOPS` | 2 | Hard cap on query rewrites |
-| `MAX_DECOMPOSE_LOOPS` | 2 | Hard cap on decomposition |
-| `MAX_REFLECT_LOOPS` | 2 | Hard cap on reflection cycles |
-| `CROSS_ENCODER_MODEL` | `ms-marco-MiniLM-L-6-v2` | Set to `None` to skip reranking |
-| `ENABLE_LONGTERM_MEMORY` | `False` | Toggle conversation memory |
+### Why section-aware chunking?
+BioASQ answers predominantly live in Results and Discussion sections, not abstracts.
+Boosting these at retrieval time meaningfully improves answer quality.
 
----
+### Few-shot by question type
+BioASQ has 4 question types with very different output formats:
+- `yesno`   → "yes"/"no" + explanation
+- `factoid` → exact entity + synonyms list
+- `list`    → list of entities
+- `summary` → paragraph answer
+Few-shots from same type significantly improve format compliance.
 
-## Graph Flow
+## Expected Index Sizes (15-30k papers)
 
-```
-START → prepare_question → [plan_question?] → call_retriever → retrieve (tool)
-      → capture_context → grade_retrieval
-                           ├── generate_draft → reflect
-                           │                    ├── finalize_answer → write_memory → END
-                           │                    ├── apply_reflection_queries → call_retriever (loop)
-                           │                    └── ask_user → END
-                           ├── rewrite_question → call_retriever (loop, max 2)
-                           └── decompose_question → call_retriever (loop, max 2)
-```
-
-Every loop path has a hard counter that forces termination after the cap is reached.
+| Asset                  | Size     |
+|------------------------|----------|
+| papers.jsonl           | ~200 MB  |
+| papers_hnsw.faiss      | ~350 MB  |
+| papers_chunks.pkl      | ~180 MB  |
+| snippets_hnsw.faiss    | ~80 MB   |
+| snippets_chunks.pkl    | ~50 MB   |
+| Total RAM at query time| ~1-2 GB  |
