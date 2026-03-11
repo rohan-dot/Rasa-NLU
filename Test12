@@ -1,0 +1,607 @@
+Yes, you can skip the fuzzer — but there's **one problem**: `main.py` line 51 does `from crs.fuzzer import try_fuzzing` at the top of the file. Even if fuzzing never runs, that import line executes on startup. Since `fuzzer.py` still has its broken imports from `crs.types`, it will **crash before your pipeline even starts**.
+
+The fix is a 5-second stub — replace the entire contents of `fuzzer.py` with this for now:
+
+```python
+"""
+crs/fuzzer.py — Stubbed out. Fuzzing not yet implemented.
+try_fuzzing() returns None gracefully so the rest of the pipeline runs fine.
+"""
+
+def check_fuzzer_availability():
+    return {"afl++": False, "libfuzzer": False, "available": False}
+
+def try_fuzzing(context, build_result, router, task):
+    print("[Fuzzer] Skipped — fuzzer module not yet implemented.")
+    return None
+```
+
+That's all you need. Now main.py imports it fine, the fuzzing block in `run_task` calls `try_fuzzing()`, gets `None` back, and moves on.
+
+---
+
+Now here's the full integration test for all 7 steps:
+
+```python
+"""
+CRS Full Integration Test — Steps 1–7 (fuzzer excluded)
+Run from project root: python test_integration_all.py
+
+Tests import chains, dataclass field access, and function signatures.
+No real LLM calls. No real repo needed for most tests.
+A temp directory with fake C files is used for Steps 2–4.
+"""
+
+import sys
+import json
+import tempfile
+import textwrap
+from pathlib import Path
+
+# ── helpers ────────────────────────────────────────────────────────────────
+
+_passes = 0
+_failures = 0
+
+def check(label, fn):
+    global _passes, _failures
+    try:
+        fn()
+        print(f"  PASS  {label}")
+        _passes += 1
+        return True
+    except Exception as e:
+        print(f"  FAIL  {label}")
+        print(f"        → {type(e).__name__}: {e}")
+        _failures += 1
+        return False
+
+def section(title):
+    print(f"\n{'─'*60}")
+    print(f"  {title}")
+    print(f"{'─'*60}")
+
+# ── shared fixtures ─────────────────────────────────────────────────────────
+
+# We'll create a temp dir with fake C source files to use as a fake repo
+_tmp = tempfile.mkdtemp(prefix="crs_test_")
+_repo = Path(_tmp) / "fakerepo"
+_repo.mkdir()
+
+(_repo / "CMakeLists.txt").write_text(
+    "cmake_minimum_required(VERSION 3.10)\nproject(testvuln)\n"
+)
+(_repo / "main.c").write_text(textwrap.dedent("""\
+    #include <string.h>
+    #include <stdlib.h>
+    void process(char *input) {
+        char buf[64];
+        strcpy(buf, input);  /* vulnerable */
+    }
+    int main(int argc, char **argv) {
+        if (argc < 2) return 1;
+        char *data = malloc(256);
+        process(data);
+        free(data);
+        return 0;
+    }
+"""))
+(_repo / "util.c").write_text("int add(int a, int b) { return a + b; }\n")
+(_repo / "description.txt").write_text(
+    "A heap-based buffer overflow exists in process() due to unchecked strcpy."
+)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 1 — config.py
+# ═══════════════════════════════════════════════════════════════════════════
+section("STEP 1 — config.py")
+
+def t_config_cfg():
+    from crs.config import cfg
+    assert cfg.LLM_MODEL
+    assert cfg.WORK_DIR.exists()
+    assert isinstance(cfg.BUILD_TIMEOUT, int)
+    assert isinstance(cfg.RUN_TIMEOUT, int)
+
+def t_config_aliases():
+    from crs.config import (
+        WORK_DIR, BUILD_TIMEOUT, RUN_TIMEOUT,
+        FUZZING_ENABLED, FUZZING_TIMEOUT,
+        LLM_MODEL, LLM_BASE_URL, LLM_API_KEY,
+        MAX_TOKENS, MAX_RETRIES,
+        DEFAULT_MODEL, DEFAULT_BASE_URL, DEFAULT_API_KEY,
+        POC_RUN_TIMEOUT,
+    )
+    assert WORK_DIR is not None
+    assert isinstance(BUILD_TIMEOUT, int)
+    assert isinstance(FUZZING_TIMEOUT, int)
+    assert isinstance(MAX_TOKENS, int)
+
+def t_config_task_workdir():
+    from crs.config import cfg
+    d = cfg.task_work_dir("integration-test-task")
+    assert d.exists()
+
+check("cfg singleton importable, fields present", t_config_cfg)
+check("all module-level aliases exported", t_config_aliases)
+check("cfg.task_work_dir() creates directory", t_config_task_workdir)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 1 — data_loader.py
+# ═══════════════════════════════════════════════════════════════════════════
+section("STEP 1 — data_loader.py")
+
+def t_dl_CyberGymTask_fields():
+    from crs.data_loader import CyberGymTask
+    task = CyberGymTask(
+        task_id="test:001",
+        project_name="testvuln",
+        project_language="c",
+        vulnerability_description="heap overflow in strcpy",
+        repo_path=_repo,
+        raw_tarball=Path("/tmp/fake.tar.gz"),
+    )
+    assert task.task_id == "test:001"
+    assert task.vulnerability_description == "heap overflow in strcpy"
+    assert task.project_language == "c"
+
+def t_dl_get_source_files():
+    from crs.data_loader import CyberGymTask, get_source_files
+    task = CyberGymTask(
+        task_id="test:001", project_name="testvuln", project_language="c",
+        vulnerability_description="test",
+        repo_path=_repo, raw_tarball=Path("/tmp/fake.tar.gz"),
+    )
+    files = get_source_files(task)
+    assert isinstance(files, list)
+    assert len(files) >= 1
+    assert all(isinstance(p, Path) for p in files)
+    names = [f.name for f in files]
+    assert "main.c" in names or "util.c" in names
+
+def t_dl_no_source_files_field():
+    # Confirm the old stub field does NOT exist
+    from crs.data_loader import CyberGymTask
+    task = CyberGymTask(
+        task_id="x", project_name="x", project_language="c",
+        vulnerability_description="x", repo_path=_repo,
+        raw_tarball=Path("/tmp/x.tar.gz"),
+    )
+    assert not hasattr(task, "source_files"), \
+        "CyberGymTask should NOT have source_files (that was the old stub)"
+    assert not hasattr(task, "description"), \
+        "CyberGymTask should NOT have .description — use .vulnerability_description"
+
+check("CyberGymTask dataclass fields correct", t_dl_CyberGymTask_fields)
+check("get_source_files() returns list of Paths", t_dl_get_source_files)
+check("old stub fields (.description, .source_files) absent", t_dl_no_source_files_field)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 2 — code_intelligence.py
+# ═══════════════════════════════════════════════════════════════════════════
+section("STEP 2 — code_intelligence.py")
+
+def _make_task():
+    from crs.data_loader import CyberGymTask
+    return CyberGymTask(
+        task_id="test:001", project_name="testvuln", project_language="c",
+        vulnerability_description="heap buffer overflow in strcpy inside process()",
+        repo_path=_repo, raw_tarball=Path("/tmp/fake.tar.gz"),
+    )
+
+def t_ci_classify():
+    from crs.code_intelligence import classify_vulnerability
+    assert classify_vulnerability("heap buffer overflow in memcpy") == "heap_overflow"
+    assert classify_vulnerability("use after free in parser") == "use_after_free"
+    assert classify_vulnerability("null pointer dereference") == "null_deref"
+    assert classify_vulnerability("something weird") == "other"
+
+def t_ci_detect_build():
+    from crs.code_intelligence import detect_build_system
+    info = detect_build_system(_repo)
+    assert isinstance(info, dict)
+    assert "type" in info
+    assert "build_cmd" in info
+    assert "configure_cmd" in info
+    assert "entry_points" in info
+    assert info["type"] == "cmake"
+
+def t_ci_rank_files():
+    from crs.code_intelligence import rank_files_by_relevance
+    from crs.data_loader import get_source_files
+    task = _make_task()
+    files = get_source_files(task)
+    ranked = rank_files_by_relevance(task, files, task.vulnerability_description)
+    assert isinstance(ranked, list)
+    assert all(isinstance(p, Path) and isinstance(s, float) for p, s in ranked)
+
+def t_ci_build_context():
+    from crs.code_intelligence import build_context, CodeContext
+    task = _make_task()
+    ctx = build_context(task)
+    assert isinstance(ctx, CodeContext)
+    assert ctx.vuln_type in ("heap_overflow", "buffer_overflow", "stack_overflow")
+    assert isinstance(ctx.top_snippets, str), \
+        "top_snippets must be a str, not a list"
+    assert isinstance(ctx.ranked_files, list)
+    assert isinstance(ctx.build_info, dict)
+    assert ctx.description == task.vulnerability_description
+
+def t_ci_context_no_ranked_snippets():
+    from crs.code_intelligence import build_context
+    ctx = build_context(_make_task())
+    assert not hasattr(ctx, "ranked_snippets"), \
+        "CodeContext must NOT have ranked_snippets — use ranked_files"
+
+check("classify_vulnerability() keyword matching", t_ci_classify)
+check("detect_build_system() returns correct dict shape", t_ci_detect_build)
+check("rank_files_by_relevance() returns (Path, float) tuples", t_ci_rank_files)
+check("build_context() returns well-formed CodeContext", t_ci_build_context)
+check("CodeContext has no .ranked_snippets (old stub field)", t_ci_context_no_ranked_snippets)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 3 — llm_router.py
+# ═══════════════════════════════════════════════════════════════════════════
+section("STEP 3 — llm_router.py")
+
+def t_lr_import():
+    from crs.llm_router import LLMRouter
+    assert LLMRouter is not None
+
+def t_lr_instantiate():
+    from crs.llm_router import LLMRouter
+    r = LLMRouter(
+        primary_model="test-model",
+        primary_base_url="http://localhost:9999/v1",
+        primary_api_key="EMPTY",
+    )
+    assert r.primary_model == "test-model"
+
+def t_lr_system_prompts():
+    from crs.llm_router import (
+        SYSTEM_PROMPT_POC_GENERATOR,
+        SYSTEM_PROMPT_POC_REFINER,
+        SYSTEM_PROMPT_ANALYST,
+    )
+    assert len(SYSTEM_PROMPT_POC_GENERATOR) > 50
+    assert len(SYSTEM_PROMPT_POC_REFINER) > 50
+    assert len(SYSTEM_PROMPT_ANALYST) > 50
+
+def t_lr_extract_code_block():
+    from crs.llm_router import LLMRouter
+    r = LLMRouter(primary_model="x", primary_base_url="http://x", primary_api_key="x")
+    assert "main" in r.extract_code_block("```c\nint main(){}\n```")
+    assert r.extract_code_block("no code here") is None
+
+def t_lr_extract_json():
+    from crs.llm_router import LLMRouter
+    r = LLMRouter(primary_model="x", primary_base_url="http://x", primary_api_key="x")
+    assert r.extract_json('{"a": 1}') == {"a": 1}
+    assert r.extract_json("```json\n{\"b\": 2}\n```") == {"b": 2}
+    assert r.extract_json("no json here") is None
+
+def t_lr_has_chat_not_query():
+    from crs.llm_router import LLMRouter
+    r = LLMRouter(primary_model="x", primary_base_url="http://x", primary_api_key="x")
+    assert hasattr(r, "chat"), "LLMRouter must have .chat() method"
+    assert not hasattr(r, "query"), \
+        "LLMRouter must NOT have .query() — poc_strategies must use .chat()"
+
+check("LLMRouter imports cleanly", t_lr_import)
+check("LLMRouter instantiates without network call", t_lr_instantiate)
+check("all SYSTEM_PROMPT_* constants exported", t_lr_system_prompts)
+check("extract_code_block() parses fenced blocks", t_lr_extract_code_block)
+check("extract_json() handles fences + bare JSON", t_lr_extract_json)
+check("has .chat(), does NOT have .query()", t_lr_has_chat_not_query)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 4 — poc_strategies.py
+# ═══════════════════════════════════════════════════════════════════════════
+section("STEP 4 — poc_strategies.py")
+
+def t_ps_import():
+    from crs.poc_strategies import (
+        PoCResult, PoCOrchestrator,
+        DirectDescriptionPoC, AnalyzeFirstPoC,
+        CallPathTargetedPoC, PatternReplayPoC,
+        IterativeRefinePoC,
+    )
+
+def t_ps_pocresult_fields():
+    from crs.poc_strategies import PoCResult
+    r = PoCResult(
+        strategy_name="direct_description",
+        poc_code="int main(){return 0;}",
+        poc_path=None,
+        confidence=0.6,
+        notes="test",
+    )
+    assert r.strategy_name == "direct_description"
+    assert r.poc_code == "int main(){return 0;}"
+    assert not hasattr(r, "strategy"), \
+        "PoCResult must use .strategy_name not .strategy"
+
+def t_ps_orchestrator_instantiates():
+    from crs.poc_strategies import PoCOrchestrator
+    from crs.llm_router import LLMRouter
+    router = LLMRouter(primary_model="x", primary_base_url="http://x", primary_api_key="x")
+    orch = PoCOrchestrator(router)
+    assert len(orch.strategies) == 5
+
+def t_ps_orchestrator_run_signature():
+    # run() must accept only context (no strategies= kwarg)
+    import inspect
+    from crs.poc_strategies import PoCOrchestrator
+    sig = inspect.signature(PoCOrchestrator.run)
+    params = list(sig.parameters.keys())
+    assert "context" in params
+    assert "strategies" not in params, \
+        "PoCOrchestrator.run() must NOT accept strategies= kwarg (main.py was fixed to not pass it)"
+
+def t_ps_no_router_query():
+    # Confirm poc_strategies.py does not call router.query anywhere
+    import ast
+    ps_path = Path("crs/poc_strategies.py")
+    if not ps_path.exists():
+        ps_path = Path("poc_strategies.py")
+    source = ps_path.read_text()
+    assert "router.query(" not in source, \
+        "poc_strategies.py still calls router.query() — must use router.chat()"
+
+check("all strategy classes importable", t_ps_import)
+check("PoCResult has .strategy_name not .strategy", t_ps_pocresult_fields)
+check("PoCOrchestrator instantiates with 5 strategies", t_ps_orchestrator_instantiates)
+check("PoCOrchestrator.run() takes only context arg", t_ps_orchestrator_run_signature)
+check("no router.query() calls remain in poc_strategies.py", t_ps_no_router_query)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 5 — build_executor.py
+# ═══════════════════════════════════════════════════════════════════════════
+section("STEP 5 — build_executor.py")
+
+def t_be_import():
+    from crs.build_executor import (
+        BuildResult, PoCBuildResult, RunResult,
+        build_project, compile_poc, run_poc,
+        execute_pipeline, is_triggered,
+    )
+
+def t_be_dataclass_fields():
+    from crs.build_executor import BuildResult, PoCBuildResult, RunResult
+    from crs.poc_strategies import PoCResult
+
+    poc_r = PoCResult(
+        strategy_name="test", poc_code="int main(){}", poc_path=None,
+        confidence=0.5, notes=""
+    )
+    poc_build = PoCBuildResult(poc_result=poc_r, compiled=False,
+                               poc_binary=None, compile_log="error")
+    run_r = RunResult(poc_build=poc_build, triggered=False,
+                      crash_type="", sanitizer_output="",
+                      return_code=-1, run_log="")
+
+    assert not run_r.triggered
+    assert run_r.poc_build.poc_result.strategy_name == "test"
+    # confirm old field names don't exist
+    assert not hasattr(run_r, "returncode"), \
+        "RunResult uses return_code not returncode"
+    assert not hasattr(run_r, "stdout")
+    assert not hasattr(run_r, "stderr")
+    assert not hasattr(run_r, "strategy")
+
+def t_be_is_triggered_asan():
+    from crs.build_executor import is_triggered
+    # Should detect ASAN output
+    output = "ERROR: AddressSanitizer: heap-buffer-overflow\nSUMMARY: AddressSanitizer"
+    triggered, crash_type = is_triggered(1, output)
+    assert triggered
+    assert crash_type != ""
+
+def t_be_is_triggered_clean():
+    from crs.build_executor import is_triggered
+    triggered, crash_type = is_triggered(0, "Hello world\n")
+    assert not triggered
+    assert crash_type == ""
+
+def t_be_no_source_path():
+    # Confirm compile_poc uses poc_result.poc_path, not .source_path
+    import ast
+    be_path = Path("crs/build_executor.py")
+    if not be_path.exists():
+        be_path = Path("build_executor.py")
+    source = be_path.read_text()
+    assert "source_path" not in source, \
+        "build_executor.py still references .source_path — must use .poc_path"
+
+check("all build_executor names importable", t_be_import)
+check("RunResult/PoCBuildResult field names correct", t_be_dataclass_fields)
+check("is_triggered() detects ASAN output", t_be_is_triggered_asan)
+check("is_triggered() ignores clean exit", t_be_is_triggered_clean)
+check("no .source_path reference in build_executor.py", t_be_no_source_path)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 6 — fuzzer.py (stub check only)
+# ═══════════════════════════════════════════════════════════════════════════
+section("STEP 6 — fuzzer.py (stub)")
+
+def t_fz_import():
+    from crs.fuzzer import try_fuzzing, check_fuzzer_availability
+
+def t_fz_try_fuzzing_returns_none():
+    from crs.fuzzer import try_fuzzing
+    # Stub should return None without crashing
+    result = try_fuzzing(None, None, None, None)
+    assert result is None
+
+def t_fz_no_types_import():
+    # Confirm fuzzer.py no longer imports from crs.types
+    fz_path = Path("crs/fuzzer.py")
+    if not fz_path.exists():
+        fz_path = Path("fuzzer.py")
+    source = fz_path.read_text()
+    assert "from crs.types" not in source, \
+        "fuzzer.py still imports from crs.types (deleted file)"
+
+check("fuzzer.py imports cleanly", t_fz_import)
+check("try_fuzzing() returns None gracefully", t_fz_try_fuzzing_returns_none)
+check("fuzzer.py does not import from crs.types", t_fz_no_types_import)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 7 — evaluator.py + main.py
+# ═══════════════════════════════════════════════════════════════════════════
+section("STEP 7 — evaluator.py")
+
+def t_ev_import():
+    from crs.evaluator import Evaluator, EvalRecord
+
+def t_ev_evalrecord_fields():
+    from crs.evaluator import EvalRecord
+    r = EvalRecord(
+        task_id="test:001", project_name="testvuln",
+        vuln_type="heap_overflow", strategy_used="direct_description",
+        triggered=True, crash_type="heap-buffer-overflow",
+        confidence=0.75, build_success=True,
+        time_elapsed=12.3, poc_code="int main(){}", notes="ok",
+    )
+    assert r.triggered
+    assert r.task_id == "test:001"
+
+def t_ev_record_method():
+    from crs.evaluator import Evaluator
+    from crs.build_executor import RunResult, PoCBuildResult
+    from crs.poc_strategies import PoCResult
+    from crs.data_loader import CyberGymTask
+    import tempfile
+
+    out = Path(tempfile.mkdtemp())
+    ev = Evaluator(out)
+
+    task = CyberGymTask(
+        task_id="test:001", project_name="testvuln", project_language="c",
+        vulnerability_description="heap overflow in strcpy",
+        repo_path=_repo, raw_tarball=Path("/tmp/fake.tar.gz"),
+    )
+    poc_r = PoCResult(strategy_name="direct_description",
+                      poc_code="int main(){}", poc_path=None,
+                      confidence=0.6, notes="")
+    poc_build = PoCBuildResult(poc_result=poc_r, compiled=True,
+                               poc_binary=Path("/tmp/poc"), compile_log="")
+    run_r = RunResult(poc_build=poc_build, triggered=True,
+                      crash_type="heap-buffer-overflow",
+                      sanitizer_output="AddressSanitizer",
+                      return_code=1, run_log="crashed")
+
+    rec = ev.record(task, [run_r], elapsed=5.0, build_success=True)
+    assert rec.triggered
+    assert rec.strategy_used == "direct_description"
+    assert rec.task_id == "test:001"
+
+def t_ev_save_report():
+    from crs.evaluator import Evaluator, EvalRecord
+    import tempfile
+    out = Path(tempfile.mkdtemp())
+    ev = Evaluator(out)
+    ev.records.append(EvalRecord(
+        task_id="test:001", project_name="testvuln",
+        vuln_type="heap_overflow", strategy_used="direct_description",
+        triggered=True, crash_type="heap-buffer-overflow",
+        confidence=0.75, build_success=True,
+        time_elapsed=5.0, poc_code="int main(){}", notes="",
+    ))
+    ev.save_report()
+    assert (out / "results.json").exists()
+    assert (out / "results.md").exists()
+    data = json.loads((out / "results.json").read_text())
+    assert data[0]["triggered"] is True
+
+check("evaluator.py imports cleanly", t_ev_import)
+check("EvalRecord fields correct", t_ev_evalrecord_fields)
+check("Evaluator.record() navigates RunResult correctly", t_ev_record_method)
+check("Evaluator.save_report() writes json + md", t_ev_save_report)
+
+section("STEP 7 — main.py")
+
+def t_main_import():
+    from crs.main import parse_args, run_task, main
+
+def t_main_parse_args_defaults():
+    from crs.main import parse_args
+    # Should parse with no args (all defaults)
+    args = parse_args(["--task-dir", "/tmp"])
+    assert args.task_dir == "/tmp"
+    assert args.no_fuzzing is False
+    assert args.max_tasks is None
+
+def t_main_execute_pipeline_build_info():
+    # Confirm execute_pipeline in main.py passes context.build_info not context
+    main_path = Path("crs/main.py")
+    if not main_path.exists():
+        main_path = Path("main.py")
+    source = main_path.read_text()
+    assert "build_project(task, context)" not in source, \
+        "main.py passes context directly to build_project — must pass context.build_info"
+
+def t_main_runresult_stub_fields():
+    # Confirm stub RunResult in main.py uses correct field names
+    main_path = Path("crs/main.py")
+    if not main_path.exists():
+        main_path = Path("main.py")
+    source = main_path.read_text()
+    assert "returncode=" not in source, \
+        "main.py RunResult stub uses 'returncode' — must use 'return_code'"
+    assert "result.returncode" not in source, \
+        "main.py accesses result.returncode — must use result.return_code"
+
+check("main.py imports cleanly", t_main_import)
+check("parse_args() handles defaults", t_main_parse_args_defaults)
+check("execute_pipeline passes context.build_info not context", t_main_execute_pipeline_build_info)
+check("RunResult stub uses return_code not returncode", t_main_runresult_stub_fields)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# FINAL RESULT
+# ═══════════════════════════════════════════════════════════════════════════
+print(f"\n{'═'*60}")
+print(f"  TOTAL: {_passes} passed, {_failures} failed")
+print(f"{'═'*60}\n")
+
+import shutil
+shutil.rmtree(_tmp, ignore_errors=True)
+
+sys.exit(0 if _failures == 0 else 1)
+```
+
+Run it with:
+```bash
+python test_integration_all.py
+```
+
+A fully clean run should look like:
+```
+── STEP 1 — config.py ──
+  PASS  cfg singleton importable, fields present
+  PASS  all module-level aliases exported
+  PASS  cfg.task_work_dir() creates directory
+
+── STEP 1 — data_loader.py ──
+  PASS  CyberGymTask dataclass fields correct
+  PASS  get_source_files() returns list of Paths
+  PASS  old stub fields (.description, .source_files) absent
+
+... (and so on through all 7 steps)
+
+══════════════════════════════════════════════════════════
+  TOTAL: 30 passed, 0 failed
+══════════════════════════════════════════════════════════
+```
+
+Two things to note before running. First, the test file should sit in your **project root** — same level as the `crs/` folder, not inside it. Second, any FAIL message tells you the exact field name or method that's still wrong — fix just that one thing and re-run. Don't try to fix multiple failures at once or you'll lose track of what changed what.
+
+Once this passes clean, you're ready for a real sample run with an actual task.
