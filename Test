@@ -1,137 +1,153 @@
-Good timing to ask — here's exactly what to do. After fixing bugs 1 and 2, you're testing that `config.py` exports correctly and `llm_router.py` imports without crashing. Create this file in your project root:
+Great, 38/38. Here's exactly what to do step by step.
 
-**`test_step1_2.py`**
-```python
-"""
-Integration test for Bug Fix 1 (config.py aliases) and Bug Fix 2 (llm_router.py imports).
-Run from your project root: python test_step1_2.py
-No real LLM connection needed — just tests imports and attribute access.
-"""
+---
 
-import sys
-
-def check(label, fn):
-    try:
-        fn()
-        print(f"  PASS  {label}")
-        return True
-    except Exception as e:
-        print(f"  FAIL  {label}")
-        print(f"        → {type(e).__name__}: {e}")
-        return False
-
-failures = 0
-
-print("\n── Bug Fix 1: config.py module-level aliases ──")
-
-def test_cfg_instance():
-    from crs.config import cfg
-    assert hasattr(cfg, "LLM_MODEL")
-    assert hasattr(cfg, "WORK_DIR")
-    assert hasattr(cfg, "BUILD_TIMEOUT")
-
-def test_module_aliases():
-    from crs.config import (
-        WORK_DIR, BUILD_TIMEOUT, RUN_TIMEOUT,
-        FUZZING_ENABLED, FUZZING_TIMEOUT,
-        LLM_MODEL, LLM_BASE_URL, LLM_API_KEY,
-        MAX_TOKENS, MAX_RETRIES,
-        DEFAULT_MODEL, DEFAULT_BASE_URL, DEFAULT_API_KEY,
-        POC_RUN_TIMEOUT
-    )
-    assert WORK_DIR is not None
-    assert isinstance(BUILD_TIMEOUT, int)
-    assert isinstance(MAX_TOKENS, int)
-
-def test_task_work_dir():
-    from crs.config import cfg
-    from pathlib import Path
-    d = cfg.task_work_dir("test-task-001")
-    assert isinstance(d, Path)
-
-if not check("cfg instance importable", test_cfg_instance): failures += 1
-if not check("all module-level aliases present", test_module_aliases): failures += 1
-if not check("cfg.task_work_dir() works", test_task_work_dir): failures += 1
-
-print("\n── Bug Fix 2: llm_router.py imports without crashing ──")
-
-def test_router_import():
-    # This was crashing on import because of config.LLM_MODEL as default arg
-    from crs.llm_router import LLMRouter
-    assert LLMRouter is not None
-
-def test_router_instantiation():
-    from crs.llm_router import LLMRouter
-    # Should not crash — does NOT make a real network call
-    router = LLMRouter(
-        primary_model="test-model",
-        primary_base_url="http://localhost:9999/v1",
-        primary_api_key="EMPTY",
-    )
-    assert router.primary_model == "test-model"
-
-def test_system_prompts_exported():
-    from crs.llm_router import (
-        SYSTEM_PROMPT_POC_GENERATOR,
-        SYSTEM_PROMPT_POC_REFINER,
-        SYSTEM_PROMPT_ANALYST,
-    )
-    assert len(SYSTEM_PROMPT_POC_GENERATOR) > 10
-    assert len(SYSTEM_PROMPT_POC_REFINER) > 10
-    assert len(SYSTEM_PROMPT_ANALYST) > 10
-
-def test_extract_code_block():
-    from crs.llm_router import LLMRouter
-    router = LLMRouter(primary_model="x", primary_base_url="http://x", primary_api_key="x")
-    sample = '```c\nint main() { return 0; }\n```'
-    result = router.extract_code_block(sample)
-    assert result is not None
-    assert "main" in result
-
-def test_extract_json():
-    from crs.llm_router import LLMRouter
-    router = LLMRouter(primary_model="x", primary_base_url="http://x", primary_api_key="x")
-    sample = '{"key": "value", "num": 42}'
-    result = router.extract_json(sample)
-    assert result == {"key": "value", "num": 42}
-
-if not check("llm_router imports cleanly", test_router_import): failures += 1
-if not check("LLMRouter instantiation (no network)", test_router_instantiation): failures += 1
-if not check("SYSTEM_PROMPT_* constants exported", test_system_prompts_exported): failures += 1
-if not check("extract_code_block() works", test_extract_code_block): failures += 1
-if not check("extract_json() works", test_extract_json): failures += 1
-
-print(f"\n── Result: {failures} failure(s) ──\n")
-sys.exit(0 if failures == 0 else 1)
-```
-
-Run it from your **project root** (the folder that contains the `crs/` package folder):
+## Step 1 — Install dependencies
 
 ```bash
-python test_step1_2.py
+pip install openai datasets huggingface_hub
 ```
 
-Expected output when everything is working:
+---
+
+## Step 2 — Download one sample task locally
+
+Run this once to pull a single task to your machine:
+
+```python
+# save as: download_sample.py
+from huggingface_hub import hf_hub_download
+from pathlib import Path
+import tarfile
+
+TASK_ID = "arvo:1065"   # jq project — small, clean C codebase, good for testing
+
+out_dir = Path("data/arvo/1065")
+out_dir.mkdir(parents=True, exist_ok=True)
+
+print("Downloading tarball...")
+tarball = hf_hub_download(
+    repo_id="sunblaze-ucb/cybergym",
+    filename="data/arvo/1065/repo-vul.tar.gz",
+    repo_type="dataset",
+    local_dir=str(out_dir),
+)
+
+print("Downloading description...")
+desc = hf_hub_download(
+    repo_id="sunblaze-ucb/cybergym",
+    filename="data/arvo/1065/description.txt",
+    repo_type="dataset",
+    local_dir=str(out_dir),
+)
+
+print(f"Done. Files in {out_dir}:")
+for f in out_dir.rglob("*"):
+    print(f"  {f}")
 ```
-── Bug Fix 1: config.py module-level aliases ──
-  PASS  cfg instance importable
-  PASS  all module-level aliases present
-  PASS  cfg.task_work_dir() works
 
-── Bug Fix 2: llm_router.py imports without crashing ──
-  PASS  llm_router imports cleanly
-  PASS  LLMRouter instantiation (no network)
-  PASS  SYSTEM_PROMPT_* constants exported
-  PASS  extract_code_block() works
-  PASS  extract_json() works
-
-── Result: 0 failure(s) ──
+```bash
+python download_sample.py
 ```
 
-A few things to note:
+---
 
-**No LLM needed** — none of these tests make a real API call. `LLMRouter` only calls the network when you call `.chat()`, so instantiation is safe to test offline.
+## Step 3 — Start vLLM serving Gemma
 
-**If a test FAILs**, the error printed below it tells you exactly which attribute is missing or which import is broken — fix just that line and re-run before moving on.
+In a **separate terminal**, start your vLLM server. Pick whichever Gemma fits your GPU:
 
-**Once this passes**, do the same pattern for each subsequent bug fix — I can write you the test script for Bug Fix 3 (`code_intelligence.py`) whenever you're ready.
+```bash
+# If you have ~24GB VRAM (Gemma 27B):
+python -m vllm.entrypoints.openai.api_server \
+    --model google/gemma-3-27b-it \
+    --port 8000 \
+    --max-model-len 8192
+
+# If you have ~12GB VRAM (Gemma 12B):
+python -m vllm.entrypoints.openai.api_server \
+    --model google/gemma-3-12b-it \
+    --port 8000 \
+    --max-model-len 8192
+
+# If you have ~8GB VRAM (Gemma 4B):
+python -m vllm.entrypoints.openai.api_server \
+    --model google/gemma-3-4b-it \
+    --port 8000 \
+    --max-model-len 8192
+```
+
+Wait until you see `Uvicorn running on http://0.0.0.0:8000` before continuing.
+
+**Verify it's alive in another terminal:**
+```bash
+curl http://localhost:8000/v1/models
+```
+You should see your model name in the JSON response.
+
+---
+
+## Step 4 — Run the CRS on your sample
+
+```bash
+python -m crs.main \
+    --task-dir ./data/arvo/1065 \
+    --output-dir ./crs_results \
+    --model google/gemma-3-27b-it \
+    --base-url http://localhost:8000/v1 \
+    --api-key EMPTY \
+    --no-fuzzing
+```
+
+Change `--model` to match whichever Gemma you started in Step 3.
+
+---
+
+## What you'll see
+
+The output will walk through each stage:
+```
+════════════════════════════════════════════
+  TASK : arvo:1065 | jq | c
+  DESC : The decNumberToString function requires a buffer...
+════════════════════════════════════════════
+  [Context] vuln_type=buffer_overflow, build=autotools, top_files=[...]
+  
+  Orchestrator → strategy 'analyze_then_generate'
+  Orchestrator → strategy 'call_path_targeted'
+  ...
+  
+  [pipeline] Starting for task arvo:1065
+  [build] Result: OK  binary=...  lib=...
+  [compile] PoC 'analyze_then_generate': OK
+  [run] Result: TRIGGERED  rc=1  crash_type=heap-buffer-overflow
+  
+  [pipeline] SUCCESS — PoC 1 triggered
+```
+
+Results land in `./crs_results/results.json` and `./crs_results/results.md`.
+
+---
+
+## If it crashes on build
+
+Some CyberGym projects need `autoconf` or `automake`. If you see a build failure, install them first:
+
+```bash
+conda install -c conda-forge autoconf automake libtool
+```
+
+Then rerun the same command — the CRS will retry the build automatically.
+
+---
+
+## Picking a different task to test
+
+If `arvo:1065` gives you trouble, these are good beginner-friendly tasks with simple C codebases:
+
+| Task ID | Project | Vuln type |
+|---|---|---|
+| `arvo:1065` | jq | buffer overflow |
+| `arvo:781` | pcre2 | oob read |
+| `arvo:65212` | libssh2 | oob read |
+
+Just change the folder name and `--task-dir` path and rerun `download_sample.py` with the new paths.        
