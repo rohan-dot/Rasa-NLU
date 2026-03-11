@@ -1,3 +1,20 @@
+"""
+crs/fuzzer.py — Stubbed out. Fuzzing not yet implemented.
+try_fuzzing() returns None gracefully so the rest of the pipeline runs fine.
+"""
+
+def check_fuzzer_availability():
+    return {"afl++": False, "libfuzzer": False, "available": False}
+
+def try_fuzzing(context, build_result, router, task):
+    print("[Fuzzer] Skipped — fuzzer module not yet implemented.")
+    return None
+
+
+
+
+xxx
+
 Good — I now have everything I need. Let me write this properly.
 CyberGym CRS: Step-by-Step AI Coder Prompt
 Here is the full blueprint, broken into 7 sequential prompts. Give each one to your AI coder in order. Each step produces a concrete module that the next step can import. This prevents context overflow and keeps each generation focused.
