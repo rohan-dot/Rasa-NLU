@@ -1,0 +1,18 @@
+# CRS — Cyber Reasoning System dependencies
+# Install: pip install -r requirements.txt
+
+# LLM backend (OpenAI-compatible SDK)
+openai>=1.0.0
+
+# HuggingFace dataset / model loading
+datasets>=2.14.0
+huggingface_hub>=0.20.0
+
+# Code analysis
+tree-sitter>=0.20.0
+tree-sitter-c>=0.20.0
+tree-sitter-cpp>=0.20.0
+
+# General utilities
+pyyaml>=6.0
+rich>=13.0.0            # optional: richer console output
