@@ -505,3 +505,141 @@ STRATEGY 5: IterativeRefinePoC
        using subprocess — just a syntax/include check
     3. If compilation succeeds → return the result
     4. If compilation fails → send error + code back to LLM using SYSTEM_PROMPT_POC_REFIN
+
+
+
+STEP 5 PROMPT — Build & Execution Harness
+You are implementing Step 5 of a CRS.
+Assume Steps 1-4 exist.
+
+Implement `crs/build_executor.py`.
+
+PURPOSE:
+  Compile the vulnerable project from source, then compile and run each PoC against it.
+  Detect crashes, sanitizer errors, and hangs. This is the ground truth validation layer.
+
+--- Project Builder ---
+
+  @dataclass
+  class BuildResult:
+      success: bool
+      binary_path: Path | None     # path to the built project library or binary
+      include_dirs: list[Path]     # discovered -I paths for PoC compilation
+      lib_path: Path | None        # .a or .so built, if any
+      build_log: str               # stdout+stderr of build
+
+  def build_project(task: CyberGymTask, build_info: dict) -> BuildResult:
+      """
+      Build the vulnerable project in-place.
+      
+      Strategy:
+        1. Change working dir to task.repo_path
+        2. Run configure_cmd (if any) with CFLAGS="-fsanitize=address,undefined -g -O1"
+           and CXXFLAGS same. Set CC=gcc CXX=g++ in env.
+           If configure fails, retry WITHOUT sanitizer flags (bare build).
+        3. Run build_cmd (make -j4 or cmake --build)
+        4. Search for built artifacts: *.a, *.so, binaries in src/ or build/ or .libs/
+        5. Collect all directories containing .h files as include_dirs
+        6. Return BuildResult
+      
+      Timeout: config.BUILD_TIMEOUT seconds
+      If build fails entirely: return BuildResult(success=False, ...)
+      Do NOT raise exceptions — always return a BuildResult.
+      """
+
+--- PoC Compiler ---
+
+  @dataclass
+  class PoCBuildResult:
+      poc_result: PoCResult        # the original PoC
+      compiled: bool
+      poc_binary: Path | None
+      compile_log: str
+
+  def compile_poc(poc_result: PoCResult, 
+                  build_result: BuildResult,
+                  task: CyberGymTask) -> PoCBuildResult:
+      """
+      Compile the PoC source file against the built project.
+      
+      Compilation command construction:
+        compiler = "g++" if task.project_language == "c++" else "gcc"
+        flags = ["-fsanitize=address,undefined", "-g", "-O1", "-o", poc_binary_path]
+        flags += [f"-I{d}" for d in build_result.include_dirs]
+        if build_result.lib_path:
+            flags += [str(build_result.lib_path)]
+        elif build_result.binary_path:
+            # try linking against the binary's object files if lib not found
+            pass
+        flags += ["-lm", "-lpthread"]
+        
+      Output binary: WORK_DIR / task_id / "poc_{strategy_name}_bin"
+      Return PoCBuildResult.
+      If compilation fails: set compiled=False, log the error.
+      """
+
+--- PoC Runner ---
+
+  @dataclass 
+  class RunResult:
+      poc_build: PoCBuildResult
+      triggered: bool              # True if vulnerability was triggered
+      crash_type: str              # e.g. "heap-buffer-overflow", "SIGABRT", "timeout"
+      sanitizer_output: str        # ASAN/UBSAN output if any
+      return_code: int
+      run_log: str
+
+  def run_poc(poc_build: PoCBuildResult, task: CyberGymTask) -> RunResult:
+      """
+      Execute the compiled PoC binary.
+      
+      Execution:
+        - Run the poc_binary with no arguments first.
+        - Capture stdout+stderr.
+        - Timeout: config.RUN_TIMEOUT seconds.
+        - Check for vulnerability trigger using is_triggered():
+      
+      def is_triggered(return_code: int, output: str) -> tuple[bool, str]:
+          """
+          Returns (triggered: bool, crash_type: str)
+          A vulnerability is triggered if ANY of:
+            1. return_code in {1, 2, 3, -6, -11} (SIGABRT, SIGSEGV, etc.)
+               AND output contains any of: 
+               "ERROR: AddressSanitizer", "runtime error:", "ERROR: LeakSanitizer",
+               "heap-buffer-overflow", "stack-buffer-overflow", "use-after-free",
+               "SEGFAULT", "Segmentation fault", "Aborted"
+            2. Output contains "SUMMARY: AddressSanitizer"
+            3. Output contains "UndefinedBehaviorSanitizer"
+          Parse crash_type from the first matching ASAN line.
+          A clean exit (return_code=0) with no sanitizer output → NOT triggered.
+          """
+        
+        - Run 3 times to check determinism (only if first run triggered).
+          triggered = True only if 2/3 runs trigger.
+        - Return RunResult.
+      """
+
+--- Pipeline ---
+
+  def execute_pipeline(
+      task: CyberGymTask, 
+      context: CodeContext,
+      poc_results: list[PoCResult]
+  ) -> list[RunResult]:
+      """
+      Full pipeline:
+        1. build_project(task, context.build_info) → BuildResult
+        2. If build fails: log warning but still attempt to compile PoCs 
+           (some PoCs may be standalone)
+        3. For each poc_result in poc_results:
+             a. compile_poc(poc_result, build_result, task)
+             b. if compiled: run_poc(poc_build, task)
+             c. if triggered: print success, return early with that RunResult in list
+        4. Return all RunResults (empty list if all failed)
+      """
+
+Requirements:
+  - subprocess.run() with timeout, capture_output=True everywhere
+  - Always restore original working directory after builds (use os.chdir carefully or use cwd= param)
+  - Print progress: building project, compiling PoC N, running PoC N, result
+  - No LLM calls
