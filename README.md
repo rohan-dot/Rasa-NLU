@@ -1,65 +1,57 @@
-CyberGym Task (repo-vul.tar.gz + description.txt)
-         │
-         ▼
-┌─────────────────┐
-│  data_loader.py  │  Extract codebase, read description
-└────────┬────────┘
-         │ CyberGymTask
-         ▼
-┌──────────────────────┐
-│ code_intelligence.py │  Rank files, extract snippets,
-│                      │  detect build system, classify vuln
-└────────┬─────────────┘
-         │ CodeContext
-         ▼
-┌────────────────────────────────────────────────────┐
-│                poc_strategies.py                    │
-│  Strategy 1: AnalyzeFirst    (2-shot LLM)          │
-│  Strategy 2: CallPathTargeted (function-focused)    │
-│  Strategy 3: PatternReplay   (template-seeded)     │
-│  Strategy 4: IterativeRefine (compile-loop)        │
-│  Strategy 5: Direct          (fallback)            │
-│                 ↓ via llm_router.py                │
-│              vLLM/Gemma or GPT                     │
-└────────────────┬───────────────────────────────────┘
-                 │ list[PoCResult]
-                 ▼
-┌───────────────────────────┐
-│    build_executor.py       │  Build project → compile PoC
-│                            │  → run under ASAN/UBSAN
-│    crash detected? ──YES──►│  triggered=True
-│                            │
-│    crash detected? ──NO───►│  try fuzzer.py (optional)
-└────────────────────────────┘
-                 │ list[RunResult]
-                 ▼
-┌──────────────────┐
-│  evaluator.py    │  Score, record, save JSON + Markdown
+Good choice. Let's pick a task with a straightforward heap overflow that ASAN will catch directly.
 
+First download a new task:
 
-
-
-
-
-Totally understandable. Here's everything you need:
-
-**Start vLLM with Gemma:**
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 python -m vllm.entrypoints.openai.api_server --model /panfs/g52-panfs/exp/FY25/models/gemma-3-27b-it --served-model-name gemma-3-27b-it --dtype bfloat16 --tensor-parallel-size 2 --gpu-memory-utilization 0.85 --max-model-len 8192 --host 0.0.0.0 --port 8000
+python - <<'EOF'
+from huggingface_hub import hf_hub_download
+from pathlib import Path
+
+# arvo:2903 — libpng heap buffer overflow, simple C, well-known bug class
+out_dir = Path("data/arvo/2903")
+out_dir.mkdir(parents=True, exist_ok=True)
+
+hf_hub_download(
+    repo_id="sunblaze-ucb/cybergym",
+    filename="data/arvo/2903/repo-vul.tar.gz",
+    repo_type="dataset",
+    local_dir=str(out_dir),
+)
+hf_hub_download(
+    repo_id="sunblaze-ucb/cybergym",
+    filename="data/arvo/2903/description.txt",
+    repo_type="dataset",
+    local_dir=str(out_dir),
+)
+print("Done")
+EOF
 ```
 
-**Wait for "Application startup complete", then run CRS:**
+Once downloaded, check what the vulnerability description says:
 ```bash
-python -m crs.main --task-dir ./data/arvo/1065 --output-dir ./crs_results --model gemma-3-27b-it --base-url http://g52lambda02.llan.ll.mit.edu:8000/v1 --api-key EMPTY --no-fuzzing
+cat data/arvo/2903/description.txt
 ```
 
-**Also update config.py so defaults match:**
-```python
-# Line 43:
-default_factory=lambda: os.environ.get("LLM_MODEL", "gemma-3-27b-it")
-
-# Line 35:
-"OPENAI_BASE_URL", "http://g52lambda02.llan.ll.mit.edu:8000/v1"
+Then run the CRS:
+```bash
+python -m crs.main --task-dir ./data/arvo/2903 --output-dir ./crs_results_2903 --model gemma-3-27b-it --base-url http://g52lambda02.llan.ll.mit.edu:8000/v1 --api-key EMPTY --no-fuzzing
 ```
 
-This is exactly what worked before, just with `--host 0.0.0.0` added so you don't have the node routing problem again.
+If the download fails or the description doesn't look like a heap overflow, run this to find a good alternative task first:
+
+```bash
+python - <<'EOF'
+from datasets import load_dataset
+ds = load_dataset("sunblaze-ucb/cybergym", split="train")
+for i, row in enumerate(ds):
+    desc = row.get("vulnerability_description", "").lower()
+    if "heap" in desc and "overflow" in desc and row.get("project_language","") == "c":
+        print(f"task_id={row['task_id']}  project={row['project_name']}")
+        print(f"  {desc[:120]}")
+        print()
+    if i > 200:
+        break
+EOF
+```
+
+Paste the description output and I'll confirm it's a good target before you run the full pipeline.
