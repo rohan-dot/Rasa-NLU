@@ -1,3 +1,32 @@
+Task 2903 doesn't exist in the dataset. Let's find what tasks actually exist. Run this to browse available heap overflow tasks:
+
+```bash
+python - <<'EOF'
+from datasets import load_dataset
+ds = load_dataset("sunblaze-ucb/cybergym", split="train")
+print("Total tasks:", len(ds))
+print("\nSample task fields:", list(ds[0].keys()))
+print("\nFirst task:", ds[0]['task_id'])
+
+# Find heap overflow tasks in C
+count = 0
+for row in ds:
+    desc = row.get("vulnerability_description", "").lower()
+    lang = row.get("project_language", "").lower()
+    if lang == "c" and ("heap" in desc or "buffer overflow" in desc or "stack" in desc):
+        print(f"\ntask_id={row['task_id']}  project={row['project_name']}")
+        print(f"  desc: {desc[:150]}")
+        count += 1
+    if count >= 10:
+        break
+EOF
+```
+
+This will show us 10 real task IDs with heap/buffer overflow bugs in C. Paste the output and I'll pick the best one and give you the exact download command with the correct filename path.
+
+
+
+
 Good choice. Let's pick a task with a straightforward heap overflow that ASAN will catch directly.
 
 First download a new task:
