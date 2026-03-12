@@ -1,3 +1,46 @@
+CyberGym Task (repo-vul.tar.gz + description.txt)
+         │
+         ▼
+┌─────────────────┐
+│  data_loader.py  │  Extract codebase, read description
+└────────┬────────┘
+         │ CyberGymTask
+         ▼
+┌──────────────────────┐
+│ code_intelligence.py │  Rank files, extract snippets,
+│                      │  detect build system, classify vuln
+└────────┬─────────────┘
+         │ CodeContext
+         ▼
+┌────────────────────────────────────────────────────┐
+│                poc_strategies.py                    │
+│  Strategy 1: AnalyzeFirst    (2-shot LLM)          │
+│  Strategy 2: CallPathTargeted (function-focused)    │
+│  Strategy 3: PatternReplay   (template-seeded)     │
+│  Strategy 4: IterativeRefine (compile-loop)        │
+│  Strategy 5: Direct          (fallback)            │
+│                 ↓ via llm_router.py                │
+│              vLLM/Gemma or GPT                     │
+└────────────────┬───────────────────────────────────┘
+                 │ list[PoCResult]
+                 ▼
+┌───────────────────────────┐
+│    build_executor.py       │  Build project → compile PoC
+│                            │  → run under ASAN/UBSAN
+│    crash detected? ──YES──►│  triggered=True
+│                            │
+│    crash detected? ──NO───►│  try fuzzer.py (optional)
+└────────────────────────────┘
+                 │ list[RunResult]
+                 ▼
+┌──────────────────┐
+│  evaluator.py    │  Score, record, save JSON + Markdown
+
+
+
+
+
+
 Totally understandable. Here's everything you need:
 
 **Start vLLM with Gemma:**
