@@ -1,3 +1,7 @@
+CUDA_VISIBLE_DEVICES=0,1 python -m vllm.entrypoints.openai.api_server --model /panfs/g52-panfs/exp/FY25/models/gemma-3-27b-it --served-model-name gemma-3-27b-it --dtype bfloat16 --tensor-parallel-size 2 --gpu-memory-utilization 0.85 --max-model-len 8192 --host 0.0.0.0 --port 8000
+
+
+
 I can see the full `compile_poc` function. The fix goes right after line 486 — after both the sanitizer and non-sanitizer attempts fail, add a third fallback that compiles the PoC together with the vulnerable source files directly.
 
 Add this block after line 486 (`log += f"\nfallback error: {exc}"`):
