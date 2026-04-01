@@ -22,10 +22,10 @@ int main(int argc, char **argv) {
 EOF
 ```
 
-Then compile:
+Cast error. Run this exact line:
 
 ```bash
-g++ -fsanitize=address,undefined -g -I file/src -I file/src/../include -include string.h /tmp/driver.c magic_fuzzer.cc file/src/.libs/libmagic.a -lz -o fuzz_target
+g++ -fsanitize=address,undefined -g -fpermissive -I file/src -I file/src/../include -include string.h /tmp/driver.c magic_fuzzer.cc file/src/.libs/libmagic.a -lz -o fuzz_target
 ```
 
 Then:
