@@ -1,2 +1,4 @@
-cd /home/ro31337/.crs_workdir/57002/repo/src-vul
-grep -r "LLVMFuzzerTestOneInput" . 2>/dev/null
+cd ~/.crs_workdir/1065/repo/src-vul/file
+autoreconf -fi
+./configure --enable-static --disable-shared
+make -j4
