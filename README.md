@@ -1,6 +1,1 @@
-./configure CFLAGS="-fsanitize=address,undefined -g" \
-            LDFLAGS="-fsanitize=address,undefined" \
-            --without-xml \
-            --without-ftp
-
-make -j4
+find ~/.crs_workdir/10400/ -name "magick_config.h" 2>/dev/null
