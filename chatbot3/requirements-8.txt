@@ -1,0 +1,9 @@
+# BioASQ 14b Agentic QA - Requirements
+# pip install -r requirements.txt --break-system-packages
+
+openai>=1.12.0
+langgraph>=0.2.0
+faiss-cpu>=1.7.4
+sentence-transformers>=2.2.0
+numpy>=1.24.0
+requests>=2.31.0       # For BioASQ PubMed service (no API key needed)
