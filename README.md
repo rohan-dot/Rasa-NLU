@@ -1,2 +1,3 @@
-    chmod +x build_and_test_10400.sh
-./build_and_test_10400.sh
+    python main.py --phase B \
+    --test BioASQ-task14bPhaseB-testset1.json \
+    --train trainining14b.json
