@@ -1,3 +1,1 @@
-    python main.py --phase B \
-    --test BioASQ-task14bPhaseB-testset1.json \
-    --train trainining14b.json
+    ./fuzz_target poc_direct_script.bin 2>&1 | grep "heap-buffer-overflow"
