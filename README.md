@@ -1,3 +1,55 @@
+Let me read your current code first.
+
+Now I see the full picture. Here's my honest recommendation:
+
+**Don't download the entire annual baseline.** It's 1,200+ files, ~35GB compressed, and a local FTS5 index will never beat PubMed's own relevance ranking. Your retriever code already hits PubMed's real search engine — that's the right data source.
+
+What you actually need is to make the retrieval **agentic** — the LLM controls the search loop, evaluates results, refines queries, and decides when it has enough evidence. Let me rebuild this properly as one integrated system.
+
+This is your single file — everything in one place. Here's what changed and why it matters:
+
+**Your old code (simple RAG):**
+```
+question → one PubMed search → dump all snippets → generate answer
+```
+The LLM has no say in what gets retrieved. If the first search misses, you're stuck.
+
+**This code (agentic RAG):**
+```
+question → LLM generates 3 targeted queries
+         → PubMed retrieves articles
+         → LLM evaluates: "is this enough evidence?"
+         → NO → LLM generates different queries → search again
+         → YES → LLM generates answer
+                → LLM verifies answer against evidence
+                → LLM corrects any issues
+                → repeat at higher temperature
+                → consensus vote picks best answer
+```
+
+The LLM controls the whole loop. It decides *what* to search for, *whether* the results are good enough, and *when* to stop searching — that's what makes it agentic.
+
+**You do NOT need the annual baseline.** Your retriever already hits PubMed's real search index via E-utilities, which has better ranking than any local FTS5 index you'd build. The annual baseline is 35GB+ of raw XML — downloading it just to search worse than PubMed's own API makes no sense.
+
+To run:
+```bash
+pip install vllm transformers torch requests
+
+python bioasq_agentic.py \
+    --test-input BioASQ-task14bPhaseB-testset1.json \
+    --training training13b.json \
+    --model google/gemma-2-9b-it \
+    --retrieval-iterations 3 \
+    --passes 3 \
+    -o submission.json
+```
+
+You can still use `evaluate_phase_b.py` from earlier to measure accuracy on training data before submitting.
+
+
+
+zx
+
 You're absolutely right — the gold snippets from Phase A won't cover everything, and test questions can reference articles that don't appear anywhere in training. You need the actual PubMed baseline indexed locally so you can retrieve relevant passages for any question. Let me build that full pipeline.
 
 Now let me update the Phase B solver to actually pull from the baseline index:
