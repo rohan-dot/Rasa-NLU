@@ -99,6 +99,76 @@ def _parse_asan_stack(description: str) -> dict:
     return info
 
 
+def _extract_func_file_from_text(description: str, repo: Path):
+    """
+    Extract function name and file name from a plain-text CVE description.
+    Works for descriptions like:
+      "heap-buffer-overflow in stszin in mp4read.c"
+      "NULL dereference in ic_predict of libfaad/ic_predict.c"
+    Returns: (func_name, file_name) or (None, None)
+    """
+    # Find .c/.cpp file names mentioned
+    files = re.findall(r'[\w/]+\.(?:c|cpp|cc|h)\b', description)
+    file_name = files[0] if files else None
+
+    # Find function names: word after "in" or "function" that looks like C identifier
+    skip = {"the","this","that","from","with","which","before","after","when",
+            "faad2","version","allows","attacker","cause","code","execution",
+            "denial","service","issue","discovered","exists","located","freeware",
+            "advanced","audio","third","instance","buffer","overflow","heap",
+            "stack","null","pointer","dereference","memory","integer","free"}
+    func_name = None
+    for m in re.finditer(r'(?:in|function|of)\s+(\w{3,})', description, re.IGNORECASE):
+        word = m.group(1)
+        if word.lower() not in skip:
+            # Verify it exists in the repo source
+            src_exts = {".c", ".cpp", ".cc", ".h"}
+            for f in sorted(repo.rglob("*")):
+                if f.is_file() and f.suffix.lower() in src_exts:
+                    try:
+                        if word in f.read_text(encoding="utf-8", errors="replace"):
+                            func_name = word
+                            if not file_name:
+                                file_name = f.name
+                            break
+                    except Exception:
+                        pass
+            if func_name:
+                break
+
+    # Also try underscore-style identifiers (like stszin, ic_predict)
+    if not func_name:
+        for m in re.finditer(r'\b([a-z_]\w*(?:_\w+)*)\b', description):
+            word = m.group(1)
+            if len(word) >= 4 and word.lower() not in skip:
+                for f in sorted(repo.rglob("*.c"))[:50]:
+                    try:
+                        if word in f.read_text(encoding="utf-8", errors="replace"):
+                            func_name = word
+                            if not file_name:
+                                file_name = f.name
+                            break
+                    except Exception:
+                        pass
+                if func_name:
+                    break
+
+    return func_name, file_name
+
+
+def _infer_crash_type(description: str) -> str:
+    """Infer crash type from plain text description."""
+    d = description.lower()
+    if "heap-buffer-overflow" in d or "heap buffer overflow" in d: return "heap-buffer-overflow"
+    if "stack-buffer" in d or "stack buffer" in d: return "stack-buffer-overflow"
+    if "use-after-free" in d or "use after free" in d: return "heap-use-after-free"
+    if "null" in d and ("dereference" in d or "pointer" in d): return "null-dereference"
+    if "buffer overflow" in d or "buffer-overflow" in d: return "buffer-overflow"
+    if "integer overflow" in d: return "integer-overflow"
+    if "double free" in d: return "double-free"
+    return "memory-corruption"
+
+
 # ── Source reading ─────────────────────────────────────────────────────────
 
 _SRC_EXTS = {".c", ".cpp", ".cc", ".h", ".hpp"}
@@ -203,9 +273,21 @@ def strategy_stack_guided(task_id, description, repo_path, router, binary_name="
     results = []
     repo = Path(repo_path)
     stack = _parse_asan_stack(description)
+
+    # Fallback: extract function/file from plain text if no ASAN stack
     if not stack["crash_func"]:
-        print("    No ASAN stack found, skipping stack-guided")
-        return results
+        func, file = _extract_func_file_from_text(description, repo)
+        if func:
+            stack["crash_func"] = func
+            stack["crash_file"] = file or ""
+            stack["crash_line"] = ""
+            stack["crash_type"] = _infer_crash_type(description)
+            stack["call_chain"] = [{"frame": 0, "func": func, "file": file or "", "line": 0}]
+            print(f"    Extracted from text: {func}() in {file or 'unknown'}")
+        else:
+            print("    No crash info found in description, skipping stack-guided")
+            return results
+
     print(f"    Crash: {stack['crash_type']} in {stack['crash_func']}() "
           f"at {stack['crash_file']}:{stack['crash_line']}")
 
