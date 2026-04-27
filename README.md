@@ -1,44 +1,19 @@
-Same shallow clone issue. Fix it:
-
-```bash
-cd secbench_tasks/mruby.cve-2022-1286/repo
-git fetch --unshallow
-git checkout c30e6ebe1200
-cd ../../..
-```
-
-Then run:
-
-```bash
-ASAN_OPTIONS=detect_leaks=0 python run_task.py \
-    --task-dir ./secbench_tasks/mruby.cve-2022-1286 \
-    --run-mode file \
-    --run-args "{poc}" \
-    --base-url http://g52lambda02.llan.ll.mit.edu:8000/v1 \
-    --model gemma-3-27b-it
-```
-
-Also — to stop this from happening on every fetch, update `fetch_task.py` line that does the clone. Change `--depth 50` to just a full clone:
-
-```bash
-# In fetch_task.py, find this line:
-["git", "clone", "--depth", "50", repo_url, str(repo_dir)]
-
-# Change to:
-["git", "clone", repo_url, str(repo_dir)]
-```
-
-Slower but won't break on checkout.
-
-
-
-
-
-xxx
-
-python fetch_task.py --list --project mruby
-python fetch_task.py --id "PICK_ONE_WITH_HEAP_OVERFLOW"
-python run_task.py --task-dir ./secbench_tasks/THAT_ID \
-    --run-mode file --run-args "{poc}" \
-    --base-url http://g52lambda02.llan.ll.mit.edu:8000/v1 \
-    --model gemma-3-27b-it
+python3 -c "
+import json
+from datasets import load_dataset
+ds = load_dataset('SEC-bench/SEC-bench', split='cve')
+for row in ds:
+    iid = row['instance_id']
+    desc = row.get('bug_description','')
+    build = row.get('build_sh','')
+    # Skip projects we know are painful
+    skip = ['faad2','mruby','php','cpython']
+    if any(s in iid for s in skip):
+        continue
+    # Show ones that use configure/make/cmake (not rake/cargo/etc)
+    if 'configure' in build or 'cmake' in build or 'make' in build:
+        lang = row.get('lang','')
+        print(f'{iid}')
+        print(f'  {desc[:100]}')
+        print()
+" 2>&1 | head -80
