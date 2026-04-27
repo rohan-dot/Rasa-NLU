@@ -1,19 +1,17 @@
-python3 -c "
-import json
+cat > list_easy.py << 'EOF'
 from datasets import load_dataset
-ds = load_dataset('SEC-bench/SEC-bench', split='cve')
+ds = load_dataset("SEC-bench/SEC-bench", split="cve")
+skip = ["faad2", "mruby", "php", "cpython"]
 for row in ds:
-    iid = row['instance_id']
-    desc = row.get('bug_description','')
-    build = row.get('build_sh','')
-    # Skip projects we know are painful
-    skip = ['faad2','mruby','php','cpython']
+    iid = row["instance_id"]
     if any(s in iid for s in skip):
         continue
-    # Show ones that use configure/make/cmake (not rake/cargo/etc)
-    if 'configure' in build or 'cmake' in build or 'make' in build:
-        lang = row.get('lang','')
-        print(f'{iid}')
-        print(f'  {desc[:100]}')
+    build = row.get("build_sh", "")
+    if "configure" in build or "cmake" in build:
+        desc = row.get("bug_description", "")
+        print(f"{iid}")
+        print(f"  {desc[:120]}")
         print()
-" 2>&1 | head -80
+EOF
+
+python list_easy.py | head -80
