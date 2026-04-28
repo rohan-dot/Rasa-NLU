@@ -595,6 +595,8 @@ class StrategyOrchestrator:
     """
     Rotates through LLM strategies on a schedule.
     Each strategy gets a turn, results feed into the next round.
+    
+    v0.3: Added codebase mapping, cross-file audit, PoC verification loop.
     """
 
     def __init__(
@@ -615,11 +617,15 @@ class StrategyOrchestrator:
         self.generated_harnesses: list[str] = []
         self.round_number = 0
         self.results_log: list[StrategyResult] = []
+        # NEW: codebase intelligence (populated on first round)
+        self.codebase_map: dict | None = None
+        self.risky_files: list[tuple[str, str, int]] = []  # (filename, content, risk_score)
+        self.binary_path: str | None = None  # for PoC verification
 
     def run_round(self, corpus_dir: str) -> list[StrategyResult]:
         """
-        Run one round of all strategies.
-        Called periodically by the main orchestrator.
+        Run one round of strategies.
+        Round 1 builds the codebase map. All subsequent rounds use it.
         """
         self.round_number += 1
         results: list[StrategyResult] = []
@@ -628,17 +634,31 @@ class StrategyOrchestrator:
             self.round_number,
         )
 
-        # Strategy 1: Source Code Audit (run every 3rd round or first round)
-        if self.round_number == 1 or self.round_number % 3 == 0:
+        # ── ROUND 1 ONLY: Build codebase intelligence ──
+        if self.round_number == 1:
+            # Step 1: Fast regex pre-scan (no LLM needed)
             r = self._run_strategy(
-                "source_audit",
-                lambda: strategy_source_audit(
-                    self.llm, self.src_dir, self.output_dir, self.harness_name,
-                ),
+                "prescan",
+                lambda: self._do_prescan(),
             )
             results.append(r)
 
-        # Strategy 2: Harness Generation (run on rounds 1 and 5)
+            # Step 2: LLM builds codebase map from pre-scan results
+            r = self._run_strategy(
+                "codebase_map",
+                lambda: self._do_codebase_map(),
+            )
+            results.append(r)
+
+        # ── EVERY ROUND: Cross-file audit (uses codebase map) ──
+        if self.round_number <= 3 or self.round_number % 3 == 0:
+            r = self._run_strategy(
+                "cross_file_audit",
+                lambda: self._do_cross_file_audit(),
+            )
+            results.append(r)
+
+        # ── Harness Generation (rounds 1 and 5) ──
         if self.round_number in (1, 5):
             r = self._run_strategy(
                 "harness_gen",
@@ -646,7 +666,7 @@ class StrategyOrchestrator:
             )
             results.append(r)
 
-        # Strategy 3: Coverage-Guided Seeds (every round)
+        # ── Coverage-Guided Seeds (every round) ──
         r = self._run_strategy(
             "coverage_seeds",
             lambda: strategy_coverage_seeds(
@@ -656,7 +676,7 @@ class StrategyOrchestrator:
         )
         results.append(r)
 
-        # Strategy 4: Variant Analysis (when we have crashes)
+        # ── Variant Analysis (when we have crashes) ──
         if self.crash_reports:
             latest_crash = self.crash_reports[-1]
             r = self._run_strategy(
@@ -667,19 +687,15 @@ class StrategyOrchestrator:
             )
             results.append(r)
 
-        # Strategy 5: Direct PoC Generation (every 2nd round)
+        # ── PoC Generation + Verification Loop (every 2nd round) ──
         if self.round_number % 2 == 0:
             r = self._run_strategy(
-                "direct_poc",
-                lambda: strategy_direct_poc(
-                    self.llm, self.src_dir, self.output_dir, self.harness_name,
-                ),
+                "poc_verify",
+                lambda: self._do_poc_with_verification(),
             )
             results.append(r)
 
         self.results_log.extend(results)
-
-        # Log summary
         total = sum(r.findings for r in results)
         logger.info(
             "═══ Round %d complete: %d total findings ═══════════",
@@ -703,6 +719,359 @@ class StrategyOrchestrator:
             self.generated_harnesses.append(result)
             return [{"harness": result}]
         return []
+
+    # ── NEW: Codebase Pre-scan (fast, no LLM) ────────────────────
+
+    def _do_prescan(self) -> list[dict]:
+        """Fast regex scan of ALL source files for dangerous patterns."""
+        import re
+        DANGER_PATTERNS = [
+            (r'\bmemcpy\s*\(', "memcpy", 3),
+            (r'\bstrcpy\s*\(', "strcpy", 4),
+            (r'\bsprintf\s*\(', "sprintf", 4),
+            (r'\bmalloc\s*\(', "malloc", 2),
+            (r'\brealloc\s*\(', "realloc", 3),
+            (r'\bfree\s*\(', "free", 2),
+            (r'\bstrcat\s*\(', "strcat", 4),
+            (r'\bstrncpy\s*\(', "strncpy", 2),
+            (r'\bmemmove\s*\(', "memmove", 2),
+            (r'\batoi\s*\(', "atoi", 3),
+            (r'\bsscanf\s*\(', "sscanf", 3),
+            (r'\bgets\s*\(', "gets", 5),
+            (r'(\w+)\s*\+\+\s*.*<.*len', "loop_bound", 3),
+            (r'if\s*\(\s*\w+\s*<\s*0', "signed_check", 2),
+            (r'\(.*\)\s*\*\s*sizeof', "size_calc", 3),
+        ]
+        
+        src_path = Path(self.src_dir)
+        file_risks: list[tuple[str, str, int, list[str]]] = []
+        
+        for f in src_path.rglob("*.c"):
+            fstr = str(f).lower()
+            if any(skip in fstr for skip in ["test", ".git", "example", "python"]):
+                continue
+            try:
+                content = f.read_text(errors="replace")
+            except Exception:
+                continue
+            
+            risk_score = 0
+            found_patterns: list[str] = []
+            for pattern, name, weight in DANGER_PATTERNS:
+                matches = len(re.findall(pattern, content))
+                if matches > 0:
+                    risk_score += matches * weight
+                    found_patterns.append(f"{name}({matches})")
+            
+            if risk_score > 0:
+                rel_name = str(f.relative_to(src_path))
+                file_risks.append((rel_name, content, risk_score, found_patterns))
+        
+        # Sort by risk score descending
+        file_risks.sort(key=lambda x: -x[2])
+        
+        # Store top risky files for other strategies to use
+        self.risky_files = [
+            (name, content, score)
+            for name, content, score, _ in file_risks[:15]
+        ]
+        
+        # Log results
+        findings = []
+        for name, _, score, patterns in file_risks[:10]:
+            logger.info(
+                "[prescan] %s — risk=%d [%s]",
+                name, score, ", ".join(patterns[:5]),
+            )
+            findings.append({"file": name, "risk_score": score, "patterns": patterns})
+        
+        logger.info("[prescan] Scanned %d files, %d with risk patterns.", 
+                    len(file_risks) + sum(1 for _ in src_path.rglob("*.c")), len(file_risks))
+        return findings
+
+    # ── NEW: Codebase Map (LLM identifies attack surfaces) ────────
+
+    def _do_codebase_map(self) -> list[dict]:
+        """LLM reads the riskiest files' function signatures and identifies
+        the most dangerous code paths to audit in depth."""
+        if not self.llm.is_available() or not self.risky_files:
+            return []
+
+        # Build a summary of the riskiest files
+        summary = "These are the riskiest source files based on dangerous pattern density:\n\n"
+        for name, content, score in self.risky_files[:10]:
+            # Extract function signatures
+            funcs = _extract_function_sigs(content)
+            summary += f"## {name} (risk_score={score})\n"
+            summary += f"Functions: {', '.join(funcs[:15])}\n"
+            # Show first 500 chars for context
+            summary += f"Preview:\n{content[:500]}\n\n"
+
+        response = self.llm.chat(
+            system="""\
+You are a security researcher planning a code audit. Given a summary of 
+source files ranked by dangerous-pattern density, identify the TOP 5 most 
+likely vulnerable functions and explain WHY, tracing the data flow.
+
+For each, specify:
+- Which file and function to audit deeply
+- What type of bug is likely (overflow, use-after-free, integer overflow, etc.)
+- How external input reaches this code path
+
+Respond with ONLY a JSON array:
+[{"file": "dict.c", "function": "xmlDictAddQString", "bug_type": "integer overflow",
+  "data_flow": "XML input → parser → dict lookup → size calculation without overflow check",
+  "audit_priority": "critical"}]
+
+Your response must start with [ and end with ] — nothing else.""",
+            user=summary,
+            max_tokens=2000,
+            temperature=0.2,
+        )
+
+        if not response:
+            return []
+
+        targets = _parse_json_array(response)
+        self.codebase_map = {"targets": targets, "risky_files": [
+            (n, s) for n, _, s in self.risky_files[:10]
+        ]}
+
+        for t in targets:
+            logger.info(
+                "[codebase-map] AUDIT TARGET: %s:%s — %s (%s)",
+                t.get("file", "?"), t.get("function", "?"),
+                t.get("bug_type", "?"), t.get("audit_priority", "?"),
+            )
+
+        # Write map to disk for debugging
+        map_path = Path(self.output_dir) / "codebase_map.json"
+        map_path.write_text(json.dumps(targets, indent=2))
+
+        return targets
+
+    # ── NEW: Cross-file Audit (traces data flow across files) ─────
+
+    def _do_cross_file_audit(self) -> list[dict]:
+        """Send pairs of related files to the LLM together, 
+        tracing data flow across file boundaries."""
+        if not self.llm.is_available():
+            return []
+
+        bugs_dir = Path(self.output_dir) / "bugs"
+        bugs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Use codebase map targets if available, otherwise fall back
+        if self.codebase_map and self.codebase_map.get("targets"):
+            targets = self.codebase_map["targets"]
+        else:
+            # Fall back to top risky files
+            targets = [{"file": name} for name, _, _ in self.risky_files[:5]]
+
+        all_findings: list[dict] = []
+        src_path = Path(self.src_dir)
+
+        for target in targets[:5]:
+            target_file = target.get("file", "")
+            target_func = target.get("function", "")
+            
+            # Find the target file
+            matches = list(src_path.rglob(target_file))
+            if not matches:
+                # Try partial match
+                matches = [f for f in src_path.rglob("*.c") 
+                           if target_file.lower() in f.name.lower()]
+            if not matches:
+                continue
+
+            main_file = matches[0]
+            try:
+                main_content = main_file.read_text(errors="replace")
+            except Exception:
+                continue
+
+            # Find files that call functions in the target file
+            # or that the target file calls into
+            related_content = ""
+            func_names = _extract_function_sigs(main_content)
+            for other_file in src_path.rglob("*.c"):
+                if other_file == main_file:
+                    continue
+                try:
+                    other_text = other_file.read_text(errors="replace")
+                    # Check if this file calls any function defined in main_file
+                    for fn in func_names[:10]:
+                        if fn in other_text:
+                            rel_name = str(other_file.relative_to(src_path))
+                            # Extract just the calling context (200 chars around the call)
+                            idx = other_text.find(fn)
+                            start = max(0, idx - 200)
+                            end = min(len(other_text), idx + 200)
+                            related_content += f"\n// Caller in {rel_name}:\n{other_text[start:end]}\n"
+                            break
+                except Exception:
+                    continue
+                if len(related_content) > 3000:
+                    break
+
+            user_msg = f"AUDIT TARGET: {target_file}"
+            if target_func:
+                user_msg += f" function {target_func}"
+            if target.get("bug_type"):
+                user_msg += f"\nSuspected bug type: {target['bug_type']}"
+            if target.get("data_flow"):
+                user_msg += f"\nData flow: {target['data_flow']}"
+            user_msg += f"\n\n## Main file: {target_file}\n```c\n{main_content[:6000]}\n```"
+            if related_content:
+                user_msg += f"\n\n## Callers (how external input reaches this code):\n```c\n{related_content[:3000]}\n```"
+
+            logger.info("[cross-audit] Auditing %s with %d bytes of caller context",
+                       target_file, len(related_content))
+
+            response = self.llm.chat(
+                system=SOURCE_AUDIT_SYSTEM,
+                user=user_msg,
+                max_tokens=2000,
+                temperature=0.2,
+            )
+            if not response:
+                continue
+
+            findings = _parse_json_array(response)
+            for finding in findings:
+                finding["source_file"] = target_file
+                finding["strategy"] = "cross_file_audit"
+                finding["data_flow_context"] = bool(related_content)
+                finding["timestamp"] = time.time()
+
+                fhash = hashlib.sha256(
+                    json.dumps(finding, sort_keys=True).encode()
+                ).hexdigest()[:12]
+                bug_path = bugs_dir / f"xaudit-{fhash}.json"
+                bug_path.write_text(json.dumps(finding, indent=2))
+                logger.info(
+                    "[cross-audit] FINDING: %s in %s:%s — %s",
+                    finding.get("bug_type", "?"),
+                    target_file,
+                    finding.get("function", "?"),
+                    finding.get("description", "")[:80],
+                )
+                all_findings.append(finding)
+
+        return all_findings
+
+    # ── NEW: PoC Generation + Verification Loop ───────────────────
+
+    def _do_poc_with_verification(self) -> list[dict]:
+        """Generate PoCs, actually run them against the binary,
+        and if no crash, feed the result back to refine."""
+        if not self.llm.is_available():
+            return []
+
+        pov_dir = Path(self.output_dir) / "povs"
+        pov_dir.mkdir(parents=True, exist_ok=True)
+
+        # Find the binary to test against
+        binary = self._find_binary()
+        if not binary:
+            logger.warning("[poc-verify] No binary found, falling back to basic PoC gen")
+            return strategy_direct_poc(
+                self.llm, self.src_dir, self.output_dir, self.harness_name
+            ) or []
+
+        # Get source context, preferring risky files
+        source_context = ""
+        if self.risky_files:
+            for name, content, _ in self.risky_files[:3]:
+                source_context += f"\n// {name}\n{content[:3000]}\n"
+        else:
+            source_files = _collect_source_files(Path(self.src_dir), self.harness_name)
+            for sf, content in source_files[:3]:
+                source_context += f"\n// {sf}\n{content[:3000]}\n"
+
+        all_verified: list[dict] = []
+        MAX_ATTEMPTS = 3
+
+        for attempt in range(MAX_ATTEMPTS):
+            # Generate PoCs
+            user_msg = f"Target: {self.harness_name} (attempt {attempt + 1}/{MAX_ATTEMPTS})\n"
+            if attempt > 0:
+                user_msg += "Previous PoCs did NOT crash. Try DIFFERENT approaches.\n"
+                user_msg += "Think about: what specific byte sequence would trigger an overflow?\n"
+            user_msg += f"\nSource:\n```c\n{source_context[:5000]}\n```"
+
+            response = self.llm.chat(
+                system=POC_GEN_SYSTEM,
+                user=user_msg,
+                max_tokens=1500,
+                temperature=0.4 + (attempt * 0.2),  # increase creativity each attempt
+            )
+            if not response:
+                continue
+
+            pocs = _parse_json_array(response)
+            any_crashed = False
+
+            for poc_info in pocs:
+                hex_str = poc_info.get("hex", "")
+                if not hex_str:
+                    continue
+                try:
+                    data = bytes.fromhex(hex_str)
+                except ValueError:
+                    continue
+
+                # Actually run the PoC against the binary
+                crashed, output = _run_poc_against_binary(binary, data)
+
+                poc_hash = hashlib.sha256(data).hexdigest()[:12]
+
+                if crashed:
+                    any_crashed = True
+                    poc_path = pov_dir / f"verified-poc-{poc_hash}"
+                    poc_path.write_bytes(data)
+                    logger.info(
+                        "[poc-verify] *** VERIFIED CRASH *** %s (%d bytes): %s",
+                        poc_path.name, len(data),
+                        poc_info.get("target_bug", ""),
+                    )
+                    all_verified.append({
+                        "poc_file": str(poc_path),
+                        "crashed": True,
+                        "target_bug": poc_info.get("target_bug", ""),
+                        "output": output[:500],
+                    })
+                else:
+                    logger.debug(
+                        "[poc-verify] No crash from %s (%d bytes)",
+                        poc_hash, len(data),
+                    )
+
+            if any_crashed:
+                break  # Found a crash, stop refining
+
+        logger.info("[poc-verify] %d verified crashes from %d attempts.",
+                   len(all_verified), MAX_ATTEMPTS)
+        return all_verified
+
+    def _find_binary(self) -> str | None:
+        """Find the fuzzer binary."""
+        if self.binary_path:
+            return self.binary_path
+        build_path = Path(self.build_dir)
+        for candidate in [
+            build_path / self.harness_name,
+            build_path / f"{self.harness_name}_fuzzer",
+        ]:
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                self.binary_path = str(candidate)
+                return self.binary_path
+        # Glob
+        for g in build_path.glob(f"*{self.harness_name}*"):
+            if g.is_file() and os.access(g, os.X_OK):
+                self.binary_path = str(g)
+                return self.binary_path
+        return None
 
     def _run_strategy(
         self, name: str, func, 
@@ -862,3 +1231,54 @@ def _parse_json_array(response: str) -> list[dict]:
         return []
     except json.JSONDecodeError:
         return []
+
+
+def _extract_function_sigs(content: str) -> list[str]:
+    """Extract function names from C source code (quick regex)."""
+    import re
+    # Match C function definitions: return_type function_name(
+    pattern = r'\b([a-zA-Z_]\w*)\s*\([^)]*\)\s*\{'
+    matches = re.findall(pattern, content)
+    # Filter out common non-function keywords
+    skip = {"if", "while", "for", "switch", "return", "sizeof", "typeof"}
+    return [m for m in matches if m not in skip]
+
+
+def _run_poc_against_binary(binary: str, data: bytes) -> tuple[bool, str]:
+    """Run a PoC input against the fuzzer binary and check for crash.
+    Returns (crashed: bool, output: str)."""
+    import tempfile
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".poc") as tmp:
+            tmp.write(data)
+            tmp_path = tmp.name
+
+        env = os.environ.copy()
+        env["ASAN_OPTIONS"] = "abort_on_error=1:detect_leaks=0"
+
+        result = subprocess.run(
+            [binary, tmp_path],
+            capture_output=True,
+            timeout=10,
+            env=env,
+        )
+
+        output = result.stderr.decode("utf-8", errors="replace")
+        # ASAN crashes return non-zero exit code
+        crashed = result.returncode != 0 and (
+            "AddressSanitizer" in output or
+            "SUMMARY:" in output or
+            result.returncode < 0  # killed by signal
+        )
+
+        return crashed, output[:1000]
+
+    except subprocess.TimeoutExpired:
+        return False, "timeout"
+    except Exception as exc:
+        return False, str(exc)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
