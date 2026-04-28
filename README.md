@@ -1,3 +1,10 @@
+./run_standalone.sh ./build/xml_fuzzer --src-dir /usr/include/libxml2 --timeout 300 --vllm-model gpt-oss-120b
+
+
+
+
+
+
 mkdir -p build && clang -g -O1 -fsanitize=address,fuzzer -I/usr/include/libxml2 xml_fuzzer.c -lxml2 -lz -llzma -o build/xml_fuzzer
 
 
