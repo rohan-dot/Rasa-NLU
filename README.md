@@ -1,3 +1,9 @@
+cd ~/gemma-fuzzer && LIB=$(find ~/libxml2-vuln -name "libxml2.a" 2>/dev/null | head -1) && echo "Found: $LIB" && clang -g -O1 -fsanitize=address,fuzzer -I ~/libxml2-vuln/include -I ~/libxml2-vuln xml_fuzzer.c "$LIB" -lz -llzma -lm -o build/xml_fuzzer_vuln && echo "BUILD OK" && ./run_standalone.sh ./build/xml_fuzzer_vuln --src-dir ~/libxml2-vuln --timeout 600 --vllm-model gemma-4-31b-it
+
+
+find ~/libxml2-vuln -name "*.a" 2>/dev/null
+
+
 clang -g -O1 -fsanitize=address,fuzzer -I ~/libxml2-vuln/include -I ~/libxml2-vuln xml_fuzzer.c ~/libxml2-vuln/.libs/libxml2.a -lz -llzma -lm -o build/xml_fuzzer_vuln
 
 
