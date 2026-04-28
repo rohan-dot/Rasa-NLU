@@ -1,3 +1,20 @@
+cd ~/libxml2-vuln
+git checkout e41032ae~1
+
+
+autoreconf -fi && ./configure CC=clang CFLAGS="-g -O1 -fsanitize=address -fsanitize=fuzzer-no-link" --without-python && make clean && make -j$(nproc)
+
+
+
+
+cd ~/gemma-fuzzer
+clang -g -O1 -fsanitize=address,fuzzer -I ~/libxml2-vuln/include -I ~/libxml2-vuln ~/xml_fuzzer.c ~/libxml2-vuln/.libs/libxml2.a -lz -llzma -lm -o build/xml_fuzzer_vuln
+
+
+
+./run_standalone.sh ./build/xml_fuzzer_vuln --src-dir ~/libxml2-vuln --timeout 600 --vllm-model gemma-4-31b-it
+xx
+
 git clone https://gitlab.gnome.org/GNOME/libxml2.git ~/libxml2-vuln
 cd ~/libxml2-vuln
 
