@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PNEC Technical White Paper — Persuasion in Networked Echo Chambers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400;9..144,500;9..144,600;9..144,800;9..144,900&family=JetBrains+Mono:wght@300;400;500;600&family=Inter+Tight:wght@400;500;600;700&family=STIX+Two+Text:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0e0c;
+    --bg-2:      #14161a;
+    --panel:     #15171b;
+    --ink:       #ece8df;
+    --ink-soft:  #c5c0b3;
+    --ink-dim:   #98948a;
+    --rule:      #2a2c30;
+    --rule-soft: #1c1e22;
+    --rust:      #d96f2e;
+    --rust-dim:  #8a4319;
+    --olive:     #c4ba6d;
+    --teal:      #6db3a8;
+    --rose:      #d97a8a;
+    --sky:       #7fa9c9;
+    --serif:     'Fraunces', Georgia, serif;
+    --math:      'STIX Two Text', 'Cambria Math', Georgia, serif;
+    --mono:      'JetBrains Mono', ui-monospace, monospace;
+    --sans:      'Inter Tight', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.55;
+    overflow-x: hidden;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .frame { max-width: 1180px; margin: 0 auto; padding: 28px 36px 80px; }
+  @media (max-width: 720px) { .frame { padding: 18px 16px 60px; } }
+
+  /* ---------- HEADER ---------- */
+  .classbar {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ink-dim);
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    padding: 8px 0; margin-bottom: 36px;
+  }
+  .classbar .dot { display:inline-block; width:6px; height:6px; background: var(--rust); border-radius:50%; margin-right:8px; vertical-align:middle; }
+
+  .hero { margin-bottom: 56px; }
+  .hero .file-id {
+    font-family: var(--mono); font-size: 11px; color: var(--rust);
+    letter-spacing: 0.15em; padding: 4px 10px; border: 1px solid var(--rust-dim);
+    display: inline-block; margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-family: var(--serif); font-weight: 500;
+    font-size: clamp(30px, 5.5vw, 64px); line-height: 0.98;
+    letter-spacing: -0.025em; margin-bottom: 14px;
+    font-variation-settings: "SOFT" 50;
+  }
+  .hero h1 em { font-style: italic; color: var(--rust); font-weight: 400; }
+  .hero .subhead {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-dim);
+    line-height: 1.7; max-width: 720px;
+  }
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    margin-top: 28px; background: var(--rule); border: 1px solid var(--rule);
+  }
+  .meta-grid > div { background: var(--bg); padding: 14px 16px; }
+  .meta-grid .k {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-dim); margin-bottom: 5px;
+  }
+  .meta-grid .v { font-family: var(--serif); font-size: 14px; color: var(--ink); }
+  @media (max-width: 720px) { .meta-grid { grid-template-columns: 1fr 1fr; } }
+
+  /* ---------- SECTIONS ---------- */
+  .sec-head {
+    display: flex; align-items: baseline; gap: 16px;
+    margin: 64px 0 22px; padding-bottom: 10px; border-bottom: 1px solid var(--rule);
+  }
+  .sec-head .num { font-family: var(--mono); font-size: 12px; color: var(--rust); letter-spacing: 0.2em; }
+  .sec-head h2 { font-family: var(--serif); font-weight: 500; font-size: clamp(22px,2.8vw,32px); letter-spacing:-0.015em; }
+  .sec-head .tag { margin-left:auto; font-family: var(--mono); font-size:10px; color: var(--ink-dim); letter-spacing: 0.15em; text-transform: uppercase; }
+
+  .sub-head {
+    font-family: var(--serif); font-style: italic; font-weight: 500;
+    font-size: 22px; margin: 36px 0 14px; color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .sub-head::before {
+    content: ''; display: inline-block; width: 24px; height: 1px;
+    background: var(--rust); margin-right: 14px; vertical-align: middle;
+  }
+
+  p.body { font-size: 15px; line-height: 1.7; margin-bottom: 14px; color: var(--ink-soft); }
+  p.body strong { color: var(--ink); font-weight: 600; }
+  p.body code, .ic { font-family: var(--mono); font-size: 12.5px; color: var(--olive); background: rgba(196,186,109,0.07); padding: 1px 5px; }
+
+  .lead { font-family: var(--serif); font-size: 18px; line-height: 1.6; color: var(--ink); border-left: 2px solid var(--rust); padding-left: 20px; margin-bottom: 22px; }
+
+  /* ---------- MATH ---------- */
+  .eq-block {
+    background: var(--panel); border: 1px solid var(--rule);
+    padding: 22px 26px; margin: 18px 0; position: relative;
+    overflow-x: auto;
+  }
+  .eq-block .eq-tag {
+    position: absolute; top: 10px; right: 14px;
+    font-family: var(--mono); font-size: 10px; color: var(--ink-dim);
+    letter-spacing: 0.1em;
+  }
+  .eq-block .eq {
+    font-family: var(--math);
+    font-size: 18px; line-height: 1.6;
+    color: var(--ink);
+    text-align: left;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .eq-block .eq i { font-style: italic; }
+  .eq-block .eq sub, .eq-block .eq sup { font-size: 0.7em; }
+  .eq-block .where {
+    margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--rule);
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim);
+    line-height: 1.7; white-space: normal;
+  }
+  .eq-block .where b { color: var(--olive); font-weight: 500; }
+  .eq-block .where .wsym { font-family: var(--math); font-style: italic; color: var(--ink); font-size: 13px; }
+
+  /* ---------- TABLES ---------- */
+  table.tbl {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 13.5px; background: var(--panel);
+  }
+  table.tbl th, table.tbl td {
+    padding: 10px 14px; text-align: left;
+    border-bottom: 1px solid var(--rule); vertical-align: top;
+  }
+  table.tbl th {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--rust);
+    border-bottom: 1px solid var(--rust-dim); background: var(--bg);
+    font-weight: 500;
+  }
+  table.tbl td { color: var(--ink-soft); line-height: 1.5; }
+  table.tbl td b { color: var(--ink); font-weight: 600; }
+  table.tbl td .mono { font-family: var(--mono); font-size: 11.5px; color: var(--olive); }
+  table.tbl tr:last-child td { border-bottom: none; }
+
+  /* ---------- LISTS ---------- */
+  ul.bullets, ol.bullets { list-style: none; margin: 14px 0; }
+  ul.bullets li, ol.bullets li {
+    padding: 6px 0 6px 26px; position: relative;
+    font-size: 14.5px; line-height: 1.65; color: var(--ink-soft);
+  }
+  ul.bullets li::before {
+    content: '▸'; position: absolute; left: 6px; top: 6px;
+    color: var(--rust); font-size: 11px;
+  }
+  ol.bullets {
+    counter-reset: ol-c;
+  }
+  ol.bullets li::before {
+    counter-increment: ol-c; content: counter(ol-c, decimal-leading-zero);
+    position: absolute; left: 0; top: 8px;
+    font-family: var(--mono); font-size: 10px; color: var(--rust); letter-spacing: 0.05em;
+  }
+  ul.bullets li b, ol.bullets li b { color: var(--ink); font-weight: 600; }
+  ul.bullets li code, ol.bullets li code { font-family: var(--mono); font-size: 12px; color: var(--olive); background: rgba(196,186,109,0.06); padding: 1px 5px; }
+
+  /* ---------- DIAGRAM ---------- */
+  .pipeline {
+    border: 1px solid var(--rule); padding: 28px 22px;
+    margin: 22px 0; background: var(--panel);
+    overflow-x: auto;
+  }
+  .pipeline-row {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+    align-items: stretch; min-width: 760px;
+  }
+  .pl-stage {
+    border: 1px solid var(--rule); padding: 14px 14px 14px 14px;
+    background: var(--bg); position: relative;
+  }
+  .pl-stage::after {
+    content: '→'; position: absolute; right: -16px; top: 50%;
+    transform: translateY(-50%); color: var(--rust);
+    font-family: var(--mono); font-size: 18px; z-index: 2;
+  }
+  .pl-stage:last-child::after { display: none; }
+  .pl-stage .stg-num {
+    font-family: var(--mono); font-size: 9px; color: var(--rust);
+    letter-spacing: 0.15em; margin-bottom: 6px;
+  }
+  .pl-stage .stg-title {
+    font-family: var(--serif); font-size: 16px; font-weight: 500;
+    margin-bottom: 6px; line-height: 1.2;
+  }
+  .pl-stage .stg-out {
+    font-family: var(--mono); font-size: 10px; color: var(--olive);
+    line-height: 1.5; margin-top: 8px;
+    border-top: 1px dashed var(--rule); padding-top: 6px;
+  }
+  .pl-stage .stg-body {
+    font-size: 11.5px; color: var(--ink-dim); line-height: 1.5;
+  }
+
+  /* ---------- CALLOUT ---------- */
+  .callout {
+    border: 1px solid var(--rust-dim); background: rgba(217,111,46,0.05);
+    padding: 18px 22px; margin: 20px 0; position: relative;
+  }
+  .callout .lbl {
+    position: absolute; top: -9px; left: 18px; background: var(--bg);
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
+    color: var(--rust); padding: 0 8px; text-transform: uppercase;
+  }
+  .callout p { font-family: var(--serif); font-size: 16px; line-height: 1.55; color: var(--ink); }
+  .callout p strong { color: var(--rust); font-weight: 500; }
+
+  /* ---------- TIMELINE ---------- */
+  .gantt { border: 1px solid var(--rule); padding: 22px; background: var(--panel); margin: 18px 0; overflow-x: auto; }
+  .gantt-grid {
+    display: grid;
+    grid-template-columns: 220px repeat(18, 1fr);
+    gap: 0;
+    min-width: 700px;
+  }
+  .gantt-grid .gh {
+    font-family: var(--mono); font-size: 9px; color: var(--ink-dim);
+    text-align: center; padding: 4px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .gantt-grid .gh.lbl { text-align: left; padding-left: 4px; color: var(--rust); }
+  .gantt-grid .gname {
+    font-size: 12.5px; padding: 8px 4px;
+    border-bottom: 1px solid var(--rule-soft);
+    color: var(--ink);
+  }
+  .gantt-grid .gbar {
+    grid-column-end: span 1;
+    border-bottom: 1px solid var(--rule-soft);
+    position: relative;
+    height: 32px;
+  }
+  .gantt-grid .gbar.fill {
+    background: linear-gradient(90deg, var(--rust), var(--rust-dim));
+    margin: 8px 1px;
+    border-radius: 1px;
+    height: 16px;
+  }
+  .gantt-grid .gbar.fill.olive { background: linear-gradient(90deg, var(--olive), rgba(196,186,109,0.4)); }
+  .gantt-grid .gbar.fill.teal { background: linear-gradient(90deg, var(--teal), rgba(109,179,168,0.4)); }
+  .gantt-grid .gbar.fill.rose { background: linear-gradient(90deg, var(--rose), rgba(217,122,138,0.4)); }
+  .gantt-grid .gbar.fill.sky { background: linear-gradient(90deg, var(--sky), rgba(127,169,201,0.4)); }
+  .gantt-grid .gbar.milestone::before {
+    content: '◆'; position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%); color: var(--rust); font-size: 14px;
+  }
+
+  /* ---------- COST GRID ---------- */
+  .costs { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin: 18px 0; }
+  .costs > div { background: var(--bg); padding: 18px 20px; }
+  .costs .ck { font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; color: var(--ink-dim); text-transform: uppercase; margin-bottom: 6px; }
+  .costs .cv { font-family: var(--serif); font-size: 24px; color: var(--ink); margin-bottom: 4px; }
+  .costs .ce { font-family: var(--mono); font-size: 11px; color: var(--olive); }
+  @media (max-width: 720px) { .costs { grid-template-columns: 1fr; } }
+
+  /* ---------- RISK REGISTER ---------- */
+  .risk-row {
+    display: grid; grid-template-columns: 50px 1fr 90px 90px;
+    gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--rule);
+    align-items: start;
+  }
+  .risk-row:last-child { border-bottom: none; }
+  .risk-row .rid { font-family: var(--mono); font-size: 11px; color: var(--rust); letter-spacing: 0.1em; }
+  .risk-row .rt { font-size: 14px; line-height: 1.5; color: var(--ink); }
+  .risk-row .rt b { color: var(--ink); font-weight: 600; display: block; margin-bottom: 3px; }
+  .risk-row .rt span { color: var(--ink-dim); font-size: 13px; display: block; margin-top: 4px; }
+  .risk-row .rs {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+    text-align: center; padding: 3px 0; border: 1px solid var(--rule);
+    text-transform: uppercase;
+    align-self: start;
+  }
+  .risk-row .rs.h { color: var(--rust); border-color: var(--rust-dim); }
+  .risk-row .rs.m { color: var(--olive); border-color: rgba(196,186,109,0.4); }
+  .risk-row .rs.l { color: var(--teal); border-color: rgba(109,179,168,0.4); }
+  @media (max-width: 720px) {
+    .risk-row { grid-template-columns: 36px 1fr; }
+    .risk-row .rs { grid-column: 2; display: inline-block; margin-right: 8px; padding: 2px 8px; }
+  }
+
+  /* ---------- REFS ---------- */
+  .refs {
+    columns: 2; column-gap: 36px; column-rule: 1px dashed var(--rule);
+    font-family: var(--mono); font-size: 11px; line-height: 1.7; color: var(--ink-dim);
+  }
+  @media (max-width: 720px) { .refs { columns: 1; } }
+  .refs .ref-group { break-inside: avoid; margin-bottom: 22px; }
+  .refs .ref-group h4 {
+    font-family: var(--sans); font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--rust); margin-bottom: 9px; font-weight: 600;
+  }
+  .refs p { margin-bottom: 9px; padding-left: 12px; text-indent: -12px; }
+  .refs b { color: var(--ink); font-weight: 600; }
+
+  .footer {
+    margin-top: 70px; padding-top: 22px; border-top: 1px solid var(--rule);
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 10px; color: var(--ink-dim);
+    letter-spacing: 0.15em; text-transform: uppercase;
+  }
+  .footer span { display: block; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="classbar">
+    <span><span class="dot"></span>Technical White Paper · Internal</span>
+    <span>PNEC-002 · v1.0 · 2026-04-27</span>
+  </div>
+
+  <header class="hero">
+    <span class="file-id">WHITE PAPER · PNEC-002</span>
+    <h1>Calibrating Agentic Audiences with <em>Physics-Informed</em> Coefficients of Echo-Chamber Diffusion</h1>
+    <p class="subhead">
+      A four-stage research program: (A) fit a PINN with explicit opinion-dynamics priors to longitudinal
+      Reddit / Bluesky / Telegram cascade data and extract interpretable coefficients;
+      (B) calibrate an LLM-driven agentic audience until its emergent coefficients fall inside
+      real-data confidence intervals on held-out behaviors; (C) run a Hackenburg-style factorial
+      sweep of persuasion levers <em>at the network level</em>; (D) for each effective lever, design
+      and measure the matching inoculation, mirroring Volkova's BRIES architecture.
+    </p>
+
+    <div class="meta-grid">
+      <div><div class="k">Sponsor target</div><div class="v">DARPA · IARPA · ONR · AFRL</div></div>
+      <div><div class="k">Effort</div><div class="v">12–18 months</div></div>
+      <div><div class="k">Headcount</div><div class="v">3–5 FTE</div></div>
+      <div><div class="k">Compute envelope</div><div class="v">≈ $20–30k inference</div></div>
+    </div>
+  </header>
+
+  <!-- §1 -->
+  <div class="sec-head">
+    <span class="num">§ 01</span>
+    <h2>Problem framing</h2>
+    <span class="tag">Where each leg comes from</span>
+  </div>
+
+  <p class="body">
+    Three lines of work converge on this design. Hackenburg et al. (Science, 2025) gave the first
+    comprehensive empirical map of conversational-AI persuasion, but only at the dyadic level:
+    one model, one human, one issue at a time. Okawa &amp; Iwata (KDD 2022) introduced
+    sociologically-informed neural networks that fit Friedkin-Johnsen and Hegselmann-Krause ODEs
+    to real social-media opinion data, recovering interpretable coefficients. Volkova et al. (2025) shipped
+    BRIES, a compound-AI persuasion-attack/defense system, but the audience inside BRIES is not
+    population-level-calibrated against real diffusion behavior &mdash; she has called this validation gap
+    <em>&ldquo;totally understudied.&rdquo;</em>
+  </p>
+
+  <div class="callout">
+    <span class="lbl">Thesis</span>
+    <p>
+      The <strong>same coefficients</strong> a PINN fits on real echo-chamber data are the
+      <strong>natural ground-truth fingerprint</strong> for validating LLM-agent simulations of those
+      chambers. With a calibrated agentic audience in hand, the Hackenburg lever-sweep can be
+      replayed inside the network &mdash; revealing which persuasion tactics propagate, which die out,
+      and which targeted defenses neutralize them.
+    </p>
+  </div>
+
+  <!-- Pipeline diagram -->
+  <h3 class="sub-head">Pipeline at a glance</h3>
+
+  <div class="pipeline">
+    <div class="pipeline-row">
+      <div class="pl-stage">
+        <div class="stg-num">A · DATA</div>
+        <div class="stg-title">Cascade extraction</div>
+        <div class="stg-body">Reddit / Bluesky / Telegram. Per user-time stance scores; reply graph.</div>
+        <div class="stg-out">u<sub>i</sub>(t) ∈ [-1,1]; A<sub>ij</sub>; w<sub>ij</sub></div>
+      </div>
+      <div class="pl-stage">
+        <div class="stg-num">B · PINN</div>
+        <div class="stg-title">Coefficient fit</div>
+        <div class="stg-body">SINN / OPINN ensemble. Three priors (FJ, HK, DCR). Bootstrap CIs.</div>
+        <div class="stg-out">θ = {α, w, ε, D, v, R}</div>
+      </div>
+      <div class="pl-stage">
+        <div class="stg-num">C · AGENTS</div>
+        <div class="stg-title">LLM audience</div>
+        <div class="stg-body">200–1000 personas; memory; rewiring. Tuned to match PINN coeffs on held-out behavior.</div>
+        <div class="stg-out">Agent stack with calibration certificate</div>
+      </div>
+      <div class="pl-stage">
+        <div class="stg-num">D · SWEEP</div>
+        <div class="stg-title">Persuasion levers</div>
+        <div class="stg-body">Hackenburg factorial replicated <em>inside</em> the chamber. ΔAttitude, reach, accuracy.</div>
+        <div class="stg-out">Lever effect-size matrix</div>
+      </div>
+      <div class="pl-stage">
+        <div class="stg-num">E · DEFEND</div>
+        <div class="stg-title">Inoculation</div>
+        <div class="stg-body">Per-lever prebunk, friction, rewiring. Causal counterfactuals.</div>
+        <div class="stg-out">Defense effectiveness curves</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- §2 -->
+  <div class="sec-head">
+    <span class="num">§ 02</span>
+    <h2>PINN → ODE formulation</h2>
+    <span class="tag">Three priors, one ensemble</span>
+  </div>
+
+  <p class="body">
+    We treat opinion <i>u<sub>i</sub>(t)</i> as a continuous scalar in [&minus;1, +1] for user
+    <i>i</i> at time <i>t</i>, sampled at discrete observation events (post / comment timestamps) and
+    interpolated by the neural surrogate. The neural surrogate is an MLP <code>u<sub>θ</sub>(t,&nbsp;i)</code>
+    with sinusoidal positional encoding for <i>t</i> and a learned 64-dim user embedding for <i>i</i>;
+    output passed through tanh.
+  </p>
+
+  <p class="body">
+    Three physical priors are fit independently, then ensembled. Each gives a different,
+    socially-meaningful coefficient set. Reporting all three avoids the identifiability trap of
+    committing to one mechanism prematurely.
+  </p>
+
+  <h3 class="sub-head">Prior P1 — Friedkin–Johnsen (linear, anchored)</h3>
+
+  <div class="eq-block">
+    <span class="eq-tag">EQ. P1</span>
+    <div class="eq">
+      d<i>u<sub>i</sub></i> / d<i>t</i> &nbsp;=&nbsp; α<sub><i>i</i></sub> ( <i>s<sub>i</sub></i> &minus; <i>u<sub>i</sub></i> ) &nbsp;+&nbsp; ∑<sub><i>j</i> ∈ N(<i>i</i>)</sub> <i>w<sub>ij</sub></i> ( <i>u<sub>j</sub></i> &minus; <i>u<sub>i</sub></i> ) &nbsp;+&nbsp; η<sub><i>i</i></sub>(<i>t</i>)
+    </div>
+    <div class="where">
+      <span class="wsym">α<sub>i</sub></span> = <b>stubbornness</b> · pull toward innate prior.&nbsp;&nbsp;
+      <span class="wsym">s<sub>i</sub></span> = innate stance (mean of user's first 5 posts).&nbsp;&nbsp;
+      <span class="wsym">w<sub>ij</sub></span> = <b>directed social-influence weight</b>.&nbsp;&nbsp;
+      <span class="wsym">η<sub>i</sub></span> = stochastic noise (Brownian).
+    </div>
+  </div>
+
+  <h3 class="sub-head">Prior P2 — Hegselmann–Krause bounded confidence</h3>
+
+  <div class="eq-block">
+    <span class="eq-tag">EQ. P2</span>
+    <div class="eq">
+      d<i>u<sub>i</sub></i> / d<i>t</i> &nbsp;=&nbsp; (1 / |<i>N<sub>i</sub></i>(<i>t</i>)|) &nbsp; ∑<sub><i>j</i> ∈ <i>N<sub>i</sub></i>(<i>t</i>)</sub> <i>A<sub>ij</sub></i> ( <i>u<sub>j</sub></i> &minus; <i>u<sub>i</sub></i> )
+    </div>
+    <div class="eq" style="margin-top: 10px;">
+      <i>N<sub>i</sub></i>(<i>t</i>) &nbsp;=&nbsp; { <i>j</i> &nbsp;:&nbsp; | <i>u<sub>j</sub></i>(<i>t</i>) &minus; <i>u<sub>i</sub></i>(<i>t</i>) |  &nbsp;≤&nbsp;  ε<sub><i>i</i></sub> }
+    </div>
+    <div class="where">
+      <span class="wsym">ε<sub>i</sub></span> = <b>confidence radius</b> &mdash; per-user threshold beyond which a peer's opinion is ignored.
+      Smaller ε = tighter chamber. This is the single most diagnostic coefficient for echo-chamber strength.
+    </div>
+  </div>
+
+  <h3 class="sub-head">Prior P3 — Diffusion-Convection-Reaction (graph PDE, à la OPINN)</h3>
+
+  <div class="eq-block">
+    <span class="eq-tag">EQ. P3</span>
+    <div class="eq">
+      d<i>u</i>/d<i>t</i> &nbsp;=&nbsp; &minus;<i>D</i>·<i>L</i><sub>G</sub>·<i>u</i> &nbsp;+&nbsp; <i>v</i>·<i>B</i>·<i>u</i> &nbsp;+&nbsp; <i>R</i>·<i>u</i>·(1 &minus; <i>u</i><sup>2</sup>)
+    </div>
+    <div class="where">
+      <span class="wsym">L<sub>G</sub></span> = symmetric graph Laplacian.&nbsp;&nbsp;
+      <span class="wsym">D</span> = <b>diffusion coefficient</b> · spread of opinions across the graph.&nbsp;&nbsp;
+      <span class="wsym">B</span> = signed (directed) edge operator.&nbsp;&nbsp;
+      <span class="wsym">v</span> = <b>convection</b> · directional bias (asymmetric influence).&nbsp;&nbsp;
+      <span class="wsym">R</span> = <b>reaction</b> · self-reinforcing extremism (cubic Allen-Cahn-style nonlinearity).
+    </div>
+  </div>
+
+  <h3 class="sub-head">Total loss</h3>
+
+  <div class="eq-block">
+    <span class="eq-tag">EQ. L</span>
+    <div class="eq">
+      L<sub>total</sub> &nbsp;=&nbsp; λ<sub>d</sub> · L<sub>data</sub> &nbsp;+&nbsp; λ<sub>p</sub> · L<sub>phys</sub> &nbsp;+&nbsp; λ<sub>r</sub> · L<sub>reg</sub>
+    </div>
+    <div class="eq" style="margin-top: 12px;">
+      L<sub>data</sub> &nbsp;=&nbsp; (1/<i>N</i><sub>obs</sub>) ∑ &nbsp;| <i>u<sub>θ</sub></i>(<i>t</i>,<i>i</i>) &minus; <i>u</i><sub>obs</sub>(<i>t</i>,<i>i</i>) |<sup>2</sup>
+    </div>
+    <div class="eq" style="margin-top: 12px;">
+      L<sub>phys</sub> &nbsp;=&nbsp; (1/<i>N</i><sub>coll</sub>) ∑ &nbsp;| ∂<i>u<sub>θ</sub></i>/∂<i>t</i>  &minus;  <i>F</i><sub>φ</sub>(<i>u<sub>θ</sub></i>, &nbsp;graph) |<sup>2</sup>
+    </div>
+    <div class="where">
+      <i>F<sub>φ</sub></i> = the chosen physical prior (P1 / P2 / P3) with learnable parameters φ.&nbsp;&nbsp;
+      Collocation points are sampled from observation timestamps + 5× density of random interior points.&nbsp;&nbsp;
+      L<sub>reg</sub> is a sparsity penalty on <i>w<sub>ij</sub></i> and a smoothness penalty on the per-user α<sub>i</sub>, ε<sub>i</sub>.
+    </div>
+  </div>
+
+  <p class="body">
+    <strong>Hyperparameters.</strong>
+    λ<sub>d</sub> = 1, λ<sub>p</sub> ∈ {0.1, 1, 10} swept; λ<sub>r</sub> = 1e&minus;3.
+    Optimizer: Adam with cosine schedule, lr = 1e&minus;3 → 1e&minus;5.
+    Per-user parameters initialized at the population mean.
+    Training: 5,000 epochs with early stopping on a 20% validation slice.
+  </p>
+
+  <p class="body">
+    <strong>Why all three priors.</strong>
+    FJ is the cleanest interpretable baseline; HK is the canonical echo-chamber model
+    (the confidence radius is what the literature actually argues about); DCR is the SOTA
+    (OPINN, 2026) and admits richer dynamics including extremism reinforcement. Reporting
+    coefficient ranges <em>across</em> priors is the right way to handle identifiability:
+    we don't claim "the" coefficient, we claim a fingerprint that is stable across reasonable
+    choices of mechanism.
+  </p>
+
+  <!-- §3 -->
+  <div class="sec-head">
+    <span class="num">§ 03</span>
+    <h2>Data pipeline (Reddit reference build)</h2>
+    <span class="tag">Replicable on Bluesky &amp; Telegram</span>
+  </div>
+
+  <p class="body">
+    Reddit is the lead platform for the reference build. It offers (i) a public archive
+    (Pushshift up to 2023, Arctic Shift afterwards), (ii) explicit reply structure giving
+    a real interaction graph, (iii) sufficient longitudinal density for ODE fitting,
+    and (iv) clearly delineated communities (subreddits) that correspond to candidate
+    echo chambers.
+  </p>
+
+  <table class="tbl">
+    <thead>
+      <tr><th style="width: 22%;">Step</th><th>Operation</th><th>Output</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>D1 · Topic select</b></td><td>Pick 3 candidate cases with high activity, polarized priors, and a known external shock (e.g., Supreme Court ruling, election, scientific announcement). Window: 6–12 months around the shock.</td><td><span class="ic">{topic, t<sub>start</sub>, t<sub>end</sub>}</span></td></tr>
+      <tr><td><b>D2 · Subreddit slice</b></td><td>Pull all posts and comments matching topic keywords from 3–5 communities representing a polarization spectrum (e.g., r/politics, r/conservative, r/news, r/centrist, r/neutralpolitics).</td><td>Raw corpus, ~10⁶–10⁷ items</td></tr>
+      <tr><td><b>D3 · Stance projection</b></td><td>Fine-tune RoBERTa-large on a stance-detection benchmark (SemEval 2016 Stance, Q-FEVER); apply to each user's items in rolling 7-day windows; aggregate to <i>u<sub>i</sub></i>(<i>t</i>) ∈ [&minus;1, +1] with a confidence weight.</td><td><span class="ic">u_i(t), c_i(t)</span></td></tr>
+      <tr><td><b>D4 · Graph build</b></td><td>Directed reply graph: edge (<i>i</i>→<i>j</i>) if <i>i</i> replied to <i>j</i>. Weight = log(1 + replies in window). Drop users below 5 posts and edges with weight &lt; 0.5.</td><td><span class="ic">G = (V, E, w)</span></td></tr>
+      <tr><td><b>D5 · Innate prior</b></td><td>For each user, <i>s<sub>i</sub></i> = mean stance over their first 5 on-topic posts (anchored before the shock when possible).</td><td><span class="ic">s_i for all i ∈ V</span></td></tr>
+      <tr><td><b>D6 · Train/val/test split</b></td><td>Block-temporal: train on first 60% of window, validate on next 20%, test (held-out behaviors) on final 20%. Critical for non-circular validation.</td><td>3 disjoint time slabs</td></tr>
+      <tr><td><b>D7 · Quality gates</b></td><td>Min 200 active users with ≥ 20 timestamps each. Rejection criteria: stance-classifier accuracy &lt; 70% on hand-labeled spot check; graph fragmented into &gt; 5 disconnected components.</td><td>Pass / fail per topic</td></tr>
+    </tbody>
+  </table>
+
+  <p class="body">
+    <strong>Bluesky &amp; Telegram extension.</strong> Bluesky has a public firehose with full
+    reply structure, similar to Reddit but with a different community shape (no subreddit
+    boundary &mdash; communities emerge from following graphs). Telegram public channels are
+    one-to-many broadcast; reply graphs are weaker but cross-channel forwarding gives a usable
+    interaction signal. Volkova's group already uses these &mdash; the pipeline is platform-agnostic
+    once stance scores and an interaction graph are in hand.
+  </p>
+
+  <!-- §4 -->
+  <div class="sec-head">
+    <span class="num">§ 04</span>
+    <h2>Coefficient extraction &amp; non-circular validation</h2>
+    <span class="tag">The crux of the contribution</span>
+  </div>
+
+  <h3 class="sub-head">What we extract</h3>
+
+  <table class="tbl">
+    <thead>
+      <tr><th>Coefficient</th><th>Prior</th><th>Interpretation</th><th>Reporting</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="ic">⟨α⟩, var(α)</span></td><td>P1 (FJ)</td><td>Community-level mean &amp; spread of stubbornness.</td><td>Bootstrap 95% CI · per community</td></tr>
+      <tr><td><span class="ic">⟨w⟩<sub>in</sub> / ⟨w⟩<sub>out</sub></span></td><td>P1</td><td>Ratio of in-group to out-group social influence (homophily strength).</td><td>Bootstrap 95% CI · per community pair</td></tr>
+      <tr><td><span class="ic">⟨ε⟩, var(ε)</span></td><td>P2 (HK)</td><td>Mean confidence radius &mdash; the field's go-to chamber-tightness metric.</td><td>Bootstrap 95% CI · per community</td></tr>
+      <tr><td><span class="ic">D, v, R</span></td><td>P3 (DCR)</td><td>Diffusion / convective bias / nonlinear reinforcement.</td><td>Point estimates with sensitivity to λ<sub>p</sub></td></tr>
+      <tr><td><span class="ic">R²<sub>oos</sub></span></td><td>any</td><td>Fit quality on the held-out 20% test slab.</td><td>Single scalar per (community × prior)</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-head">The non-circular validation protocol</h3>
+
+  <p class="body">
+    The honest concern with this whole pipeline: if we calibrate agents to match PINN coefficients,
+    then validate the agents using PINN coefficients, the loop is tautological. Solution: the
+    coefficients are the <em>fingerprint</em>, the validation is on <em>separate, held-out
+    behaviors</em> that the calibration never sees.
+  </p>
+
+  <p class="body">
+    The agents are tuned only on the first 60% of the data (training slab). Validation lives entirely on
+    the test slab (final 20%) and on five behaviors that the PINN fit does not directly score:
+  </p>
+
+  <ol class="bullets">
+    <li><b>Cascade timing.</b> When does a polarizing post peak in reach? Compare empirical CDF of cascade times in real vs. simulated data; pass = KS-test p &gt; 0.05.</li>
+    <li><b>Drop-out rates.</b> Fraction of users who stop posting within 14 days after a hostile reply. Compare distributions.</li>
+    <li><b>Sentiment trajectories.</b> Per-user u<sub>i</sub>(t) curves over the test slab; compare with DTW (dynamic time warping) distance, normalized.</li>
+    <li><b>Cross-topic transfer.</b> Run the calibrated agents on a <em>different</em> topic in the same communities. Check if the emergent coefficients shift in the same direction as the real shift.</li>
+    <li><b>Network centrality of opinion leaders.</b> Top-k by attention received in sim vs. real (rank correlation Spearman ρ ≥ 0.5).</li>
+  </ol>
+
+  <p class="body">
+    A simulation passes if it lands within real-data CIs on the PINN coefficients AND clears all
+    five behavioral gates. Pre-register these thresholds.
+  </p>
+
+  <!-- §5 -->
+  <div class="sec-head">
+    <span class="num">§ 05</span>
+    <h2>Persuasion-lever sweep at network scale</h2>
+    <span class="tag">Hackenburg, replicated inside the chamber</span>
+  </div>
+
+  <p class="body">
+    Hackenburg et al. measured AI persuasion in dyads. We replicate the same lever taxonomy
+    but inside the calibrated network. Key design move: the lever is applied to a single
+    <em>persuader agent</em>, and we measure its effect on the rest of the network &mdash; not on a
+    single recipient. This converts a stimulus-response measurement into a diffusion measurement.
+  </p>
+
+  <h3 class="sub-head">Factor table</h3>
+
+  <table class="tbl">
+    <thead>
+      <tr><th>Factor</th><th>Levels</th><th>Source / motivation</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>F1 — Persuader role</b></td><td>peripheral · hub (top-decile degree) · bridge (top-decile betweenness) · in-group seeded · out-group seeded</td><td>Granovetter (weak ties); Watts; spreader-set theory</td></tr>
+      <tr><td><b>F2 — Post-training method</b></td><td>base · SFT-on-persuasion-corpus · DPO with persuasion preferences · RM-best-of-N (N=8)</td><td>Hackenburg's strongest lever (+51%)</td></tr>
+      <tr><td><b>F3 — Prompting strategy</b></td><td>basic · information-density · emotional · narrative · Socratic · authority · identity-appeal · framing</td><td>Hackenburg RQ3 (8 strategies, +27%)</td></tr>
+      <tr><td><b>F4 — Network topology</b></td><td>scale-free (Barabási–Albert) · small-world (Watts–Strogatz) · Erdős–Rényi</td><td>Echo-chamber sensitivity literature</td></tr>
+      <tr><td><b>F5 — Audience prior strength</b></td><td>weak · moderate · strong</td><td>Bright et al. 2020 — chambers form when priors are strong</td></tr>
+      <tr><td><b>F6 — Persuader / audience alignment</b></td><td>aligned · opposed</td><td>Bayesian persuasion; Meng 2021</td></tr>
+    </tbody>
+  </table>
+
+  <p class="body">
+    Full factorial = <span class="ic">5 × 4 × 8 × 3 × 3 × 2 = 2,880 cells</span> &mdash; intractable.
+    We use a <strong>two-stage design</strong>:
+  </p>
+
+  <ol class="bullets">
+    <li><b>Primary study.</b> 3-way factorial F2 × F3 × F1 (post-training × prompting × persuader role) at fixed F4 = scale-free, F5 = moderate, F6 = aligned. <span class="ic">4 × 8 × 5 = 160 cells</span>. This is the direct Hackenburg replication, plus the network-position dimension.</li>
+    <li><b>Secondary studies.</b> Take the top-3 cells from primary and sweep F4, F5, F6 around them (<span class="ic">3 × 3 × 3 × 2 = 54 cells × 3 = 162 cells</span>). Tests whether the primary findings hold across topology, prior, and alignment.</li>
+  </ol>
+
+  <p class="body">
+    <strong>Replications.</strong> 30 random seeds per cell (graph realization, persona init, LLM
+    sampling). Per-cell power: detect a 3pp ΔAttitude with 0.8 power at α=0.05 given typical
+    between-sim variance.
+  </p>
+
+  <p class="body">
+    <strong>Total compute.</strong> 322 cells × 30 reps = 9,660 sims. At 200 agents × 50 timesteps
+    × ~3 LLM calls per agent-timestep (post / read / decide) ≈ 30k LLM calls per sim. ≈ <strong>290M calls
+    total</strong>. Open-weights cached inference (Llama-3-70B, Qwen-2.5-72B, Mistral-Small) on a single
+    H100 node ≈ 1k tok/sec; ≈ $0.0001/call equivalent ≈ $29k. Frontier-model spot checks (GPT-4o,
+    Claude Sonnet, Gemini Pro) on 5% of cells ≈ +$5k. <strong>Total: ≈ $35k inference budget.</strong>
+  </p>
+
+  <h3 class="sub-head">Outcomes per simulation</h3>
+
+  <table class="tbl">
+    <thead>
+      <tr><th>Outcome</th><th>Definition</th><th>Why we measure it</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>ΔAttitude<sub>mean</sub></b></td><td>Mean change in <i>u<sub>i</sub></i> across non-persuader agents over the persuasion window.</td><td>Direct Hackenburg analog · primary outcome</td></tr>
+      <tr><td><b>Cascade reach</b></td><td>% agents who endorse / re-share the persuasive content.</td><td>Network-specific outcome · captures diffusion that dyadic Hackenburg can't</td></tr>
+      <tr><td><b>Polarization (var u)</b></td><td>Variance of opinions at end of window.</td><td>Echo-chamber side-effect &mdash; persuasion may polarize even when it doesn't shift the mean</td></tr>
+      <tr><td><b>NCI</b></td><td>Pearson correlation of agent's opinion with mean of its neighbors.</td><td>Standard chamber-tightness metric (Wang et al. COLING 2025)</td></tr>
+      <tr><td><b>Factual accuracy</b></td><td>% of fact-checkable claims in persuader output that are true (auto-fact-check + LLM-as-judge ensemble).</td><td>Replicates Hackenburg's persuasion-accuracy tradeoff &mdash; do information-dense agents lie more in echo chambers?</td></tr>
+      <tr><td><b>Latency</b></td><td>Time to half-spread.</td><td>Diagnostic for which levers cascade fast vs. slow-but-deep</td></tr>
+      <tr><td><b>Defection</b></td><td>% agents who change network ties during the window.</td><td>Captures structural side-effects (Sasahara unfollowing dynamics)</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-head">Statistical analysis plan</h3>
+
+  <div class="eq-block">
+    <span class="eq-tag">EQ. M</span>
+    <div class="eq">
+      ΔAttitude<sub>ijklm</sub> &nbsp;=&nbsp; β<sub>0</sub> &nbsp;+&nbsp; β<sub>1</sub><i>·</i>F2<sub>i</sub> &nbsp;+&nbsp; β<sub>2</sub><i>·</i>F3<sub>j</sub> &nbsp;+&nbsp; β<sub>3</sub><i>·</i>F1<sub>k</sub> &nbsp;+&nbsp; (interactions) &nbsp;+&nbsp; <i>u</i><sub>topic(<i>l</i>)</sub> &nbsp;+&nbsp; <i>u</i><sub>seed(<i>m</i>)</sub> &nbsp;+&nbsp; ε
+    </div>
+    <div class="where">
+      Multilevel mixed-effects model. Random intercepts for <b>topic</b> and <b>seed</b>; fixed
+      effects for the factorial. Two-way interactions tested first; three-way only on
+      pre-registered hypotheses. <b>Multiple comparisons:</b> Benjamini–Hochberg at 5% FDR
+      across the main-effects table.
+    </div>
+  </div>
+
+  <p class="body">
+    <strong>Pre-registration.</strong> Hypotheses, factor levels, outcomes, statistical model,
+    and exclusion criteria are pre-registered on OSF before any sims are run. Replicates Hackenburg's
+    standard.
+  </p>
+
+  <!-- §6 -->
+  <div class="sec-head">
+    <span class="num">§ 06</span>
+    <h2>Inoculation companion (BRIES-mirror)</h2>
+    <span class="tag">Defense for every offense</span>
+  </div>
+
+  <p class="body">
+    For each significant lever from §05, we run a paired defense experiment with three
+    interventions, evaluated via causal counterfactual estimation. This mirrors the
+    Twister/Detector/Defender/Assessor pattern in Volkova's BRIES (2025) and gives the
+    program native defense-first framing.
+  </p>
+
+  <table class="tbl">
+    <thead>
+      <tr><th>Defense</th><th>Mechanism</th><th>Estimand</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>D1 · Pre-bunking</b></td><td>Brief warning to audience agents about the rhetorical tactic about to be used (e.g., "the next post will use emotional appeals to bypass your reasoning").</td><td>ATE on ΔAttitude with vs. without warning, conditioning on lever cell.</td></tr>
+      <tr><td><b>D2 · Friction injection</b></td><td>Platform-level: rate-limit re-shares of high-information-density posts; require a brief reflection prompt before re-share.</td><td>ATT on cascade reach.</td></tr>
+      <tr><td><b>D3 · Structural rewiring</b></td><td>Introduce 5% bridge agents seeded with dissenting in-group views (Bail's "common ground" intervention).</td><td>Difference-in-differences on polarization (var u).</td></tr>
+    </tbody>
+  </table>
+
+  <p class="body">
+    <strong>Causal estimation.</strong> DoWhy / EconML for ATE / ATT; sensitivity analysis with
+    Manski bounds. Defense effectiveness is reported as the % reduction in the lever's effect size
+    on the primary outcome.
+  </p>
+
+  <!-- §7 -->
+  <div class="sec-head">
+    <span class="num">§ 07</span>
+    <h2>Timeline, cost, risk register</h2>
+    <span class="tag">Operational</span>
+  </div>
+
+  <h3 class="sub-head">Gantt</h3>
+
+  <div class="gantt">
+    <div class="gantt-grid">
+      <div class="gh lbl">Phase</div>
+      <div class="gh">M1</div><div class="gh">M2</div><div class="gh">M3</div>
+      <div class="gh">M4</div><div class="gh">M5</div><div class="gh">M6</div>
+      <div class="gh">M7</div><div class="gh">M8</div><div class="gh">M9</div>
+      <div class="gh">M10</div><div class="gh">M11</div><div class="gh">M12</div>
+      <div class="gh">M13</div><div class="gh">M14</div><div class="gh">M15</div>
+      <div class="gh">M16</div><div class="gh">M17</div><div class="gh">M18</div>
+
+      <div class="gname">00 &middot; Scoping &amp; data</div>
+      <div class="gbar fill" style="grid-column: span 2;"></div>
+      <div class="gbar" style="grid-column: span 16;"></div>
+
+      <div class="gname">01 &middot; PINN fit</div>
+      <div class="gbar" style="grid-column: span 1;"></div>
+      <div class="gbar fill olive" style="grid-column: span 4;"></div>
+      <div class="gbar" style="grid-column: span 13;"></div>
+
+      <div class="gname">02 &middot; Go / no-go</div>
+      <div class="gbar" style="grid-column: span 4;"></div>
+      <div class="gbar milestone" style="grid-column: span 1;"></div>
+      <div class="gbar" style="grid-column: span 13;"></div>
+
+      <div class="gname">03 &middot; Agentic audience</div>
+      <div class="gbar" style="grid-column: span 4;"></div>
+      <div class="gbar fill teal" style="grid-column: span 5;"></div>
+      <div class="gbar" style="grid-column: span 9;"></div>
+
+      <div class="gname">04 &middot; Lever sweep</div>
+      <div class="gbar" style="grid-column: span 8;"></div>
+      <div class="gbar fill rose" style="grid-column: span 5;"></div>
+      <div class="gbar" style="grid-column: span 5;"></div>
+
+      <div class="gname">05 &middot; Inoculation</div>
+      <div class="gbar" style="grid-column: span 11;"></div>
+      <div class="gbar fill sky" style="grid-column: span 5;"></div>
+      <div class="gbar" style="grid-column: span 2;"></div>
+
+      <div class="gname">06 &middot; Write-up</div>
+      <div class="gbar" style="grid-column: span 13;"></div>
+      <div class="gbar fill" style="grid-column: span 5;"></div>
+    </div>
+  </div>
+
+  <h3 class="sub-head">Cost envelope</h3>
+
+  <div class="costs">
+    <div>
+      <div class="ck">Personnel · 18 mo</div>
+      <div class="cv">$1.05M</div>
+      <div class="ce">3.5 FTE blended (1 PI · 2 ML · 0.5 RA)</div>
+    </div>
+    <div>
+      <div class="ck">Compute</div>
+      <div class="cv">$35k</div>
+      <div class="ce">≈ 290M open-weights LLM calls + frontier spot checks</div>
+    </div>
+    <div>
+      <div class="ck">Data · IRB · ethics</div>
+      <div class="cv">$25k</div>
+      <div class="ce">Pushshift access · IRB filings · red-team review</div>
+    </div>
+  </div>
+
+  <p class="body" style="margin-top: 12px;"><strong>Total request:</strong> ≈ $1.1M for 18 months. Modest by program-of-record standards; appropriate for a single-PI exploratory grant.</p>
+
+  <h3 class="sub-head">Risk register</h3>
+
+  <div>
+    <div class="risk-row">
+      <div class="rid">R1</div>
+      <div class="rt"><b>PINN coefficients are not stable across priors.</b><span>Coefficients fit under FJ, HK, and DCR may give inconsistent rankings of community polarization. Mitigation: report ensemble across priors and pre-register an aggregation rule (median rank across priors).</span></div>
+      <div class="rs h">High</div>
+      <div class="rs m">Containable</div>
+    </div>
+    <div class="risk-row">
+      <div class="rid">R2</div>
+      <div class="rt"><b>Held-out behaviors are too easy / too hard.</b><span>If all sims pass behavior gates trivially, the validation isn't discriminative; if none pass, the gates may be impossibly tight. Mitigation: pilot on a known-bad agent stack first to confirm the gates fail it; tune thresholds before main runs.</span></div>
+      <div class="rs m">Med</div>
+      <div class="rs m">Containable</div>
+    </div>
+    <div class="risk-row">
+      <div class="rid">R3</div>
+      <div class="rt"><b>Compute overrun.</b><span>Per-sim cost may balloon if agents need long context (memory) or many tool calls. Mitigation: cap tokens per agent-step; prefer summary memory; cache repeat prompts; reserve 25% of compute as overflow buffer.</span></div>
+      <div class="rs m">Med</div>
+      <div class="rs l">Manageable</div>
+    </div>
+    <div class="risk-row">
+      <div class="rid">R4</div>
+      <div class="rt"><b>Data access shutdown.</b><span>Pushshift / Bluesky firehose / Telegram could restrict access mid-project. Mitigation: snapshot data at project start; have two backup platforms; design pipeline to be platform-agnostic.</span></div>
+      <div class="rs m">Med</div>
+      <div class="rs l">Manageable</div>
+    </div>
+    <div class="risk-row">
+      <div class="rid">R5</div>
+      <div class="rt"><b>Stance classifier bias / drift.</b><span>RoBERTa-based stance scores carry their own biases (training-set politics, language). Mitigation: hand-label 1k items per topic for accuracy gate; ensemble with a second classifier; report stance-projection error as a separate uncertainty band on coefficients.</span></div>
+      <div class="rs m">Med</div>
+      <div class="rs m">Containable</div>
+    </div>
+    <div class="risk-row">
+      <div class="rid">R6</div>
+      <div class="rt"><b>Dual-use / weaponization.</b><span>Findings about which persuasion levers cascade in echo chambers are operationally useful to malign actors. Mitigation: defense-first framing in every paper; paired inoculation experiments published <em>with</em> attacks; staged disclosure protocol; IRB + red-team review at each milestone; no release of fine-tuned attack models.</span></div>
+      <div class="rs h">High</div>
+      <div class="rs m">Procedural</div>
+    </div>
+    <div class="risk-row">
+      <div class="rid">R7</div>
+      <div class="rt"><b>LLM persona stability over long horizons.</b><span>Documented drift (SALM 2025). Mitigation: personality-vector consistency check every N steps; reset on threshold breach; report drift rate as a sim quality metric.</span></div>
+      <div class="rs l">Low</div>
+      <div class="rs l">Manageable</div>
+    </div>
+    <div class="risk-row">
+      <div class="rid">R8</div>
+      <div class="rt"><b>Hackenburg's persuasion–accuracy tradeoff dominates findings.</b><span>If "the most persuasive levers also produce the most lies" replicates trivially, the network-level paper risks looking redundant. Mitigation: lead with network-specific findings (cascade reach, latency, defection); position the tradeoff as confirmation, not the headline.</span></div>
+      <div class="rs l">Low</div>
+      <div class="rs l">Manageable</div>
+    </div>
+  </div>
+
+  <!-- REFERENCES -->
+  <div class="sec-head">
+    <span class="num">§ 08</span>
+    <h2>References</h2>
+    <span class="tag">Pulled live · April 2026</span>
+  </div>
+
+  <div class="refs">
+    <div class="ref-group">
+      <h4>Persuasion (anchor)</h4>
+      <p><b>Hackenburg, K., Tappin, B. M., Hewitt, L., Saunders, E., Black, S., Lin, H., Fist, C., Margetts, H., Rand, D. G., Summerfield, C.</b> (2025). The levers of political persuasion with conversational artificial intelligence. <em>Science</em> 390(6777), eaea3884.</p>
+      <p>Hackenburg &amp; Margetts (2024). Evaluating the persuasive influence of political microtargeting with LLMs. <em>PNAS</em> 121, e2403116121.</p>
+      <p>Hackenburg et al. (2025). Scaling language model size yields diminishing returns for single-message political persuasion. <em>PNAS</em> 122, e2413443122.</p>
+      <p>Matz, S. C. et al. (2024). The potential of generative AI for personalized persuasion at scale. <em>Sci Rep</em> 14, 4692.</p>
+    </div>
+
+    <div class="ref-group">
+      <h4>Volkova lineage</h4>
+      <p><b>Volkova, S., Dupree, W., Kao, H.-T., Bautista, P., Ganberg, G., Beaubien, J., Cassani, L.</b> (2025). Proactive Defense: Compound AI for Detecting Persuasion Attacks and Measuring Inoculation Effectiveness (BRIES). <em>arXiv:2511.21749</em>.</p>
+      <p>Volkova, S. et al. (2023). Explaining and predicting human behavior and social dynamics in simulated virtual worlds. <em>Comput. Math. Organ. Theory</em> 29(1), 226–241.</p>
+      <p>Volkova, S., Glenski, M., Ayton, E. et al. (2021). Machine intelligence to detect, characterise, and defend against influence operations. <em>J. Information Warfare</em> 20(2), 42–66.</p>
+      <p>Cohen, M. … &amp; Volkova, S. (2025). Big Five personality and AI capability effects in LLM-simulated negotiation dialogues. <em>KDD Workshop on Agentic and Generative AI Evaluation</em>.</p>
+      <p>Volkova, S., Cassani, L. et al. (2025). Compound AI for decision advantage. <em>17th MODSIM World Conf.</em></p>
+      <p>Volkova, S., Kao, H., Penafiel, L. et al. (2025). VirTLab-Eval. <em>HFES 2025</em>.</p>
+      <p>Rashkin, Choi, Jang, Choi, Volkova (2017). Truth of varying shades. <em>EMNLP</em>.</p>
+    </div>
+
+    <div class="ref-group">
+      <h4>PINN for opinion / social dynamics</h4>
+      <p>Okawa, M. &amp; Iwata, T. (2022). Predicting Opinion Dynamics via Sociologically-Informed Neural Networks (SINN). <em>KDD '22</em>.</p>
+      <p>Gong, C. et al. (2026). Advancing Opinion Dynamics Modeling with Neural Diffusion-Convection-Reaction Equation (OPINN). <em>arXiv:2602.05403</em>.</p>
+      <p>Wang, Y. &amp; Li, X. (2024). A neural probabilistic bounded confidence model. <em>Expert Systems with Applications</em>.</p>
+      <p>Lv, O. et al. (2023). A Unified View on Neural Message Passing with Opinion Dynamics for Social Networks (ODNet). <em>arXiv:2310.01272</em>.</p>
+      <p>Raissi, M., Perdikaris, P., Karniadakis, G. E. (2019). Physics-informed neural networks. <em>J. Comput. Phys.</em> 378, 686–707.</p>
+      <p>DeGroot, M. H. (1974). Reaching a consensus. <em>JASA</em>.</p>
+      <p>Friedkin, N. E. &amp; Johnsen, E. C. (1990). Social influence and opinions. <em>J. Math. Sociol.</em></p>
+      <p>Hegselmann, R. &amp; Krause, U. (2002). Opinion dynamics and bounded confidence. <em>JASSS</em> 5(3).</p>
+    </div>
+
+    <div class="ref-group">
+      <h4>LLM agentic social simulation</h4>
+      <p>Park, J. S. et al. (2023). Generative Agents: Interactive Simulacra of Human Behavior. <em>UIST '23</em>.</p>
+      <p>Wang, C., Liu, Z., Yang, D., Chen, X. (2025). Decoding Echo Chambers: LLM-Powered Simulations Revealing Polarization in Social Networks. <em>COLING 2025</em>.</p>
+      <p>SALM (2025). A Multi-Agent Framework for LM-Driven Social Network Simulation. <em>arXiv:2505.09081</em>.</p>
+      <p>(2025) LLM-Driven Agents for Simulating Echo Chamber Formation. <em>arXiv:2502.18138</em>.</p>
+      <p>ElecTwit (2026). Persuasion in Multi-Agent Social Systems. <em>arXiv:2601.00994</em>.</p>
+      <p>Hullman et al. (2025). Validating LLM simulations as behavioral evidence.</p>
+      <p>Cinelli, M. et al. (2021). The echo chamber effect on social media. <em>PNAS</em> 118(9), e2023301118.</p>
+      <p>Bright, J. et al. (2020). Echo chambers exist! (But they're full of opposing views). <em>arXiv:2001.11461</em>.</p>
+      <p>Sasahara, K. et al. (2021). Social influence and unfollowing accelerate the emergence of echo chambers. <em>J. Comp. Soc. Sci.</em></p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>White Paper · PNEC-002</span>
+    <span>Compiled · 27 Apr 2026</span>
+    <span>Working draft &mdash; not for distribution</span>
+  </div>
+
+</div>
+</body>
+</html>
