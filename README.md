@@ -1,3 +1,17 @@
+which clang
+which gcc
+clang --version
+module avail 2>&1 | grep -i clang
+module avail 2>&1 | grep -i llvm
+conda list | grep clang
+pkg-config --libs libxml-2.0
+find /usr -name "libxml2" -type d 2>/dev/null
+
+
+
+
+
+
 # 1. Extract
 tar -xzf gemma-fuzzer.tar.gz && cd gemma-fuzzer
 
