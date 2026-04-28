@@ -96,13 +96,13 @@ def strategy_source_audit(
 
     all_findings: list[dict] = []
 
-    for src_file, content in source_files[:5]:  # audit up to 5 files per round
+    for src_file, content in source_files[:8]:  # audit up to 8 files per round
         logger.info("[audit] Analyzing: %s (%d bytes)", src_file, len(content))
 
         response = llm.chat(
             system=SOURCE_AUDIT_SYSTEM,
-            user=f"File: {src_file}\n\n```c\n{content[:6000]}\n```",
-            max_tokens=1500,
+            user=f"File: {src_file}\n\n```c\n{content[:8000]}\n```",
+            max_tokens=2000,
             temperature=0.2,
         )
         if not response:
@@ -750,41 +750,73 @@ class StrategyOrchestrator:
 def _collect_source_files(
     src_path: Path,
     harness_name: str,
-    max_files: int = 5,
+    max_files: int = 8,
 ) -> list[tuple[str, str]]:
-    """Collect and prioritize source files for analysis."""
+    """Collect and prioritize source files for security auditing.
+    
+    IMPORTANT: Prioritizes .c implementation files over headers.
+    Headers have declarations, not bugs. Implementation has the bugs.
+    Also boosts files containing security-relevant patterns.
+    """
     files: list[tuple[str, str, int]] = []
 
-    for ext in ("*.c", "*.cc", "*.cpp", "*.h"):
+    # Security-relevant keywords — files containing these are more
+    # likely to have vulnerabilities
+    SEC_KEYWORDS = [
+        "malloc", "realloc", "calloc", "free",
+        "memcpy", "memmove", "strcpy", "strncpy", "strcat",
+        "sprintf", "snprintf", "sscanf",
+        "strlen", "sizeof",
+        "buffer", "overflow", "bounds",
+        "size", "length", "count", "nargs",
+    ]
+
+    for ext in ("*.c", "*.cc", "*.cpp"):
         for f in src_path.rglob(ext):
-            # Skip test files and build artifacts
             fstr = str(f).lower()
             if any(skip in fstr for skip in [
                 "test", "bench", "example", "demo", ".git",
-                "build/", "CMakeFiles",
+                "build/", "CMakeFiles", "python", "fuzz/",
             ]):
                 continue
 
             try:
                 content = f.read_text(errors="replace")
-                size = len(content)
-                # Prioritize: files matching harness name get highest priority
-                priority = 0
+                
+                # Base priority for .c files
+                priority = 10
                 fname = f.name.lower()
-                hname = harness_name.lower()
+                hname = harness_name.lower() if harness_name else ""
+
+                # Boost files matching harness name
                 if hname and hname in fname:
-                    priority = 3
-                elif "parse" in fname or "read" in fname:
-                    priority = 2
-                elif fname.endswith(".c"):
-                    priority = 1
+                    priority += 20
+
+                # Boost files with security-relevant names
+                if any(kw in fname for kw in [
+                    "parse", "read", "dict", "buf", "string",
+                    "encoding", "uri", "xpath", "valid", "entity",
+                    "catalog", "schema", "relaxng", "html",
+                    "memory", "alloc",
+                ]):
+                    priority += 15
+
+                # Boost files containing security-relevant code patterns
+                content_lower = content.lower()
+                sec_hits = sum(1 for kw in SEC_KEYWORDS if kw in content_lower)
+                priority += min(sec_hits * 2, 20)  # cap at +20
 
                 files.append((str(f.relative_to(src_path)), content, priority))
             except Exception:
                 continue
 
-    # Sort by priority descending, take top N
-    files.sort(key=lambda x: (-x[2], len(x[1])))
+    # Sort by priority descending
+    files.sort(key=lambda x: -x[2])
+    
+    # Log what we're picking
+    for name, _, prio in files[:max_files]:
+        logger.debug("[file-select] %s (priority=%d)", name, prio)
+
     return [(name, content) for name, content, _ in files[:max_files]]
 
 

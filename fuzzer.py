@@ -206,12 +206,12 @@ class LibFuzzerRunner:
                     self._process_crash(crash_buffer)
                     crash_buffer = []
 
-            # Parse stats
+            # Parse stats — LibFuzzer format: "#12345 INITED cov: X ... exec/s: Y"
             if line.startswith("#") and "exec/s:" in line:
                 try:
                     parts = line.split()
-                    idx = parts.index("exec/s:")
-                    self.state.total_execs = int(parts[1])
+                    # Total execs is the number after #
+                    self.state.total_execs = int(parts[0].lstrip("#"))
                 except (ValueError, IndexError):
                     pass
 
