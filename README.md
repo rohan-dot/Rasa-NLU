@@ -1,3 +1,29 @@
+git clone https://gitlab.gnome.org/GNOME/libxml2.git ~/libxml2-vuln
+cd ~/libxml2-vuln
+
+git log --oneline --all | head -50
+
+
+cd ~/libxml2-vuln
+./autogen.sh
+./configure CC=clang CFLAGS="-g -O1 -fsanitize=address -fsanitize=fuzzer-no-link"
+make -j$(nproc)
+
+
+cd ~/gemma-fuzzer
+clang -g -O1 -fsanitize=address,fuzzer \
+    -I~/libxml2-vuln/include \
+    xml_fuzzer.c \
+    ~/libxml2-vuln/.libs/libxml2.a -lz -llzma -lm \
+    -o build/xml_fuzzer_vuln
+
+./run_standalone.sh ./build/xml_fuzzer_vuln --src-dir ~/libxml2-vuln --timeout 600 --vllm-model gemma-4-31b-it
+
+
+
+
+old commit
+
 ./run_standalone.sh ./build/xml_fuzzer --src-dir ~/libxml2-src --timeout 300 --vllm-model gemma-4-31b-it
 
 
