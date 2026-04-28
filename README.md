@@ -1,3 +1,6 @@
+conda install -c conda-forge clang clangxx compiler-rt libxml2
+
+
 which clang
 which gcc
 clang --version
