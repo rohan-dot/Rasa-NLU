@@ -1,99 +1,47 @@
-cd ~/libxml2-vuln && make clean && ./configure CC=clang CFLAGS="-g -O1 -fsanitize=address -fsanitize=fuzzer-no-link" --without-python --enable-static && make -j$(nproc) && cd ~/gemma-fuzzer && clang -g -O1 -fsanitize=address,fuzzer -I ~/libxml2-vuln/include -I ~/libxml2-vuln xml_fuzzer.c ~/libxml2-vuln/.libs/libxml2.a -lz -llzma -lm -o build/xml_fuzzer_vuln && echo "BUILD OK" && ./run_standalone.sh ./build/xml_fuzzer_vuln --src-dir ~/libxml2-vuln --timeout 600 --vllm-model gemma-4-31b-it
+
+1. Clone repos:
+   git clone https://github.com/ossf/oss-crs.git ~/oss-crs
+   git clone https://github.com/google/oss-fuzz.git ~/oss-fuzz
+
+2. Start vLLM (MUST use 0.0.0.0):
+   CUDA_VISIBLE_DEVICES=0,1 python -m vllm.entrypoints.openai.api_server \
+       --model /panfs/g52-panfs/exp/FY25/models/gpt-oss-120b \
+       --served-model-name gpt-oss-120b \
+       --dtype bfloat16 --tensor-parallel-size 2 \
+       --gpu-memory-utilization 0.85 --max-model-len 8192 \
+       --host 0.0.0.0 --port 8000
+
+3. Check docker bridge IP:
+   ip addr show docker0 | grep inet
+   (if not 172.17.0.1, edit oss-crs/crs.yaml VLLM_HOST)
+
+4. Run on ANY project (just swap the project name and harness):
+
+   cd ~/oss-crs
+
+   uv run oss-crs prepare \
+       --compose-file /path/to/gemma-fuzzer/compose.yaml
+
+   uv run oss-crs build-target \
+       --compose-file /path/to/gemma-fuzzer/compose.yaml \
+       --fuzz-proj-path ~/oss-fuzz/projects/libxml2
+
+   uv run oss-crs run \
+       --compose-file /path/to/gemma-fuzzer/compose.yaml \
+       --fuzz-proj-path ~/oss-fuzz/projects/libxml2 \
+       --target-harness xml \
+       --timeout 3600
+
+   uv run oss-crs artifacts \
+       --compose-file /path/to/gemma-fuzzer/compose.yaml \
+       --fuzz-proj-path ~/oss-fuzz/projects/libxml2 \
+       --target-harness xml
+
+5. To fuzz a different project, just change the path:
+   --fuzz-proj-path ~/oss-fuzz/projects/curl
+   --target-harness curl_fuzzer
+
+   That's it. No manual building, no writing harnesses,
+   no clang commands. OSS-CRS handles all of it.
 
 
-
-cd ~/gemma-fuzzer && LIB=$(find ~/libxml2-vuln -name "libxml2.a" 2>/dev/null | head -1) && echo "Found: $LIB" && clang -g -O1 -fsanitize=address,fuzzer -I ~/libxml2-vuln/include -I ~/libxml2-vuln xml_fuzzer.c "$LIB" -lz -llzma -lm -o build/xml_fuzzer_vuln && echo "BUILD OK" && ./run_standalone.sh ./build/xml_fuzzer_vuln --src-dir ~/libxml2-vuln --timeout 600 --vllm-model gemma-4-31b-it
-
-
-find ~/libxml2-vuln -name "*.a" 2>/dev/null
-
-
-clang -g -O1 -fsanitize=address,fuzzer -I ~/libxml2-vuln/include -I ~/libxml2-vuln xml_fuzzer.c ~/libxml2-vuln/.libs/libxml2.a -lz -llzma -lm -o build/xml_fuzzer_vuln
-
-
-autoreconf -fi && ./configure CC=clang CFLAGS="-g -O1 -fsanitize=address -fsanitize=fuzzer-no-link" --without-python && make clean && make -j$(nproc)
-
-cd ~/gemma-fuzzer
-
-
-clang -g -O1 -fsanitize=address,fuzzer -I ~/libxml2-vuln/include -I ~/libxml2-vuln ~/xml_fuzzer.c ~/libxml2-vuln/.libs/libxml2.a -lz -llzma -lm -o build/xml_fuzzer_vuln
-
-./run_standalone.sh ./build/xml_fuzzer_vuln --src-dir ~/libxml2-vuln --timeout 600 --vllm-model gemma-4-31b-it
-x
-cd ~/libxml2-vuln
-git checkout e41032ae~1
-
-
-autoreconf -fi && ./configure CC=clang CFLAGS="-g -O1 -fsanitize=address -fsanitize=fuzzer-no-link" --without-python && make clean && make -j$(nproc)
-
-
-
-
-cd ~/gemma-fuzzer
-clang -g -O1 -fsanitize=address,fuzzer -I ~/libxml2-vuln/include -I ~/libxml2-vuln ~/xml_fuzzer.c ~/libxml2-vuln/.libs/libxml2.a -lz -llzma -lm -o build/xml_fuzzer_vuln
-
-
-
-./run_standalone.sh ./build/xml_fuzzer_vuln --src-dir ~/libxml2-vuln --timeout 600 --vllm-model gemma-4-31b-it
-xx
-
-git clone https://gitlab.gnome.org/GNOME/libxml2.git ~/libxml2-vuln
-cd ~/libxml2-vuln
-
-git log --oneline --all | head -50
-
-
-cd ~/libxml2-vuln
-./autogen.sh
-./configure CC=clang CFLAGS="-g -O1 -fsanitize=address -fsanitize=fuzzer-no-link"
-make -j$(nproc)
-
-
-cd ~/gemma-fuzzer
-clang -g -O1 -fsanitize=address,fuzzer \
-    -I~/libxml2-vuln/include \
-    xml_fuzzer.c \
-    ~/libxml2-vuln/.libs/libxml2.a -lz -llzma -lm \
-    -o build/xml_fuzzer_vuln
-
-./run_standalone.sh ./build/xml_fuzzer_vuln --src-dir ~/libxml2-vuln --timeout 600 --vllm-model gemma-4-31b-it
-
-
-
-
-old commit
-
-./run_standalone.sh ./build/xml_fuzzer --src-dir ~/libxml2-src --timeout 300 --vllm-model gemma-4-31b-it
-
-
-
-
-
-apt source libxml2 2>/dev/null || git clone https://gitlab.gnome.org/GNOME/libxml2.git ~/libxml2-src
-
-
-./run_standalone.sh ./build/xml_fuzzer --src-dir /usr/include/libxml2 --timeout 300 --vllm-model gpt-oss-120b
-
-
-
-
-
-
-mkdir -p build && clang -g -O1 -fsanitize=address,fuzzer -I/usr/include/libxml2 xml_fuzzer.c -lxml2 -lz -llzma -o build/xml_fuzzer
-
-
-# 1. Extract
-tar -xzf gemma-fuzzer.tar.gz && cd gemma-fuzzer
-
-# 2. Build a target
-sudo apt install clang libxml2-dev
-./build_target.sh ~/oss-fuzz/projects/libxml2
-
-# 3. Run (vLLM should already be running)
-./run_standalone.sh ./build/libxml2/xml_read_memory_fuzzer \
-    --src-dir ~/oss-fuzz/projects/libxml2 \
-    --timeout 600
-
-# 4. Results
-ls output/xml_read_memory_fuzzer/povs/   # crashes
-ls output/xml_read_memory_fuzzer/bugs/   # LLM reports
