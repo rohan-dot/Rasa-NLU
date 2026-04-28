@@ -1,3 +1,9 @@
+./run_standalone.sh ./build/xml_fuzzer --src-dir ~/libxml2-src --timeout 300 --vllm-model gemma-4-31b-it
+
+
+
+
+
 apt source libxml2 2>/dev/null || git clone https://gitlab.gnome.org/GNOME/libxml2.git ~/libxml2-src
 
 
