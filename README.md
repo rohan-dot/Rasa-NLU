@@ -1,3 +1,23 @@
+
+mkdir -p build
+clang -g -O1 -fsanitize=address,fuzzer \
+    -I/usr/include/libxml2 \
+    ~/oss-fuzz/projects/libxml2/xml_read_memory_fuzzer.c \
+    -lxml2 -lz -llzma \
+    -o build/xml_fuzzer
+
+
+pip install openai
+
+./run_standalone.sh ./build/xml_fuzzer \
+    --src-dir ~/oss-fuzz/projects/libxml2 \
+    --timeout 300 \
+    --vllm-model gpt-oss-120b
+    
+
+
+
+
 conda install -c conda-forge clang clangxx compiler-rt libxml2
 
 
