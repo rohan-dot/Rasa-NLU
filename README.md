@@ -1,3 +1,6 @@
+clang -g -O1 -fsanitize=address,fuzzer -I ~/libxml2-vuln/include -I ~/libxml2-vuln xml_fuzzer.c ~/libxml2-vuln/.libs/libxml2.a -lz -llzma -lm -o build/xml_fuzzer_vuln
+
+
 autoreconf -fi && ./configure CC=clang CFLAGS="-g -O1 -fsanitize=address -fsanitize=fuzzer-no-link" --without-python && make clean && make -j$(nproc)
 
 cd ~/gemma-fuzzer
