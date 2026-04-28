@@ -1,4 +1,17 @@
+git clone https://github.com/google/oss-fuzz.git ~/oss-fuzz
 
+
+mkdir -p build
+
+clang -g -O1 -fsanitize=address,fuzzer \
+    -I/usr/include/libxml2 \
+    ~/oss-fuzz/projects/libxml2/xml_read_memory_fuzzer.c \
+    -lxml2 -lz -llzma \
+    -o build/xml_fuzzer
+
+
+
+xxx
 mkdir -p build
 clang -g -O1 -fsanitize=address,fuzzer \
     -I/usr/include/libxml2 \
