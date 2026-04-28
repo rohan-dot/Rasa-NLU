@@ -1,3 +1,37 @@
+cat > /tmp/xml_fuzzer.c << 'EOF'
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <stdint.h>
+#include <stddef.h>
+
+int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+    xmlDocPtr doc = xmlReadMemory((const char *)data, size,
+                                  "noname.xml", NULL, 0);
+    if (doc != NULL) {
+        xmlFreeDoc(doc);
+    }
+    return 0;
+}
+EOF
+
+mkdir -p build
+
+clang -g -O1 -fsanitize=address,fuzzer \
+    -I/usr/include/libxml2 \
+    /tmp/xml_fuzzer.c \
+    -lxml2 -lz -llzma \
+    -o build/xml_fuzzer
+
+pip install openai
+
+./run_standalone.sh ./build/xml_fuzzer \
+    --src-dir /usr/include/libxml2 \
+    --timeout 300 \
+    --vllm-model gpt-oss-120b
+
+
+
+
 git clone https://github.com/google/oss-fuzz.git ~/oss-fuzz
 
 
