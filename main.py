@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -29,6 +30,8 @@ from crash_analyzer import CrashAnalyzer
 from fuzzer import LibFuzzerRunner
 from llm_client import VLLMClient
 from strategies import StrategyOrchestrator
+from callgraph import build_callgraph
+from agents import AgentOrchestrator
 
 LOG_FORMAT = "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
 
@@ -160,16 +163,40 @@ def main() -> None:
     )
 
     # ══════════════════════════════════════════════════════════════
-    # PHASE 1: PRE-FUZZING LLM ANALYSIS
-    # Run source audit and direct PoC generation BEFORE fuzzing.
-    # This is what separates a real CRS from "just run libfuzzer".
+    # PHASE 0: BUILD CODEBASE INTELLIGENCE (no LLM needed)
+    # ══════════════════════════════════════════════════════════════
+
+    logger.info("╔══════════════════════════════════════════════════╗")
+    logger.info("║  PHASE 0: Building Call Graph (ctags)            ║")
+    logger.info("╚══════════════════════════════════════════════════╝")
+
+    call_graph = build_callgraph(args.src_dir)
+    logger.info(call_graph.to_summary())
+
+    # Find the binary for PoC verification
+    binary_path = None
+    for candidate in [
+        Path(args.build_dir) / args.harness,
+        Path(args.build_dir) / f"{args.harness}_fuzzer",
+    ]:
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            binary_path = str(candidate)
+            break
+    if not binary_path:
+        for g in Path(args.build_dir).glob(f"*{args.harness}*"):
+            if g.is_file() and os.access(g, os.X_OK):
+                binary_path = str(g)
+                break
+
+    # ══════════════════════════════════════════════════════════════
+    # PHASE 1: PRE-FUZZING — Strategy Round + Multi-Agent Pipeline
     # ══════════════════════════════════════════════════════════════
 
     logger.info("╔══════════════════════════════════════════════════╗")
     logger.info("║  PHASE 1: Pre-Fuzzing LLM Analysis              ║")
     logger.info("╚══════════════════════════════════════════════════╝")
 
-    # Strategy round 1: source audit + harness gen + initial seeds + PoCs
+    # Strategy round 1: prescan + codebase map + cross-file audit + harness gen + seeds
     pre_results = strategies.run_round(str(corpus_dir))
 
     for r in pre_results:
@@ -177,6 +204,43 @@ def main() -> None:
             "  [pre-fuzz] %s: %d findings (%.1fs)",
             r.strategy_name, r.findings, r.elapsed,
         )
+
+    # Run the multi-agent pipeline if we have a binary and call graph
+    if binary_path and call_graph.functions:
+        logger.info("╔══════════════════════════════════════════════════╗")
+        logger.info("║  Multi-Agent Pipeline (Scanner → Exploiter)     ║")
+        logger.info("╚══════════════════════════════════════════════════╝")
+
+        agent_orch = AgentOrchestrator(
+            llm=llm,
+            call_graph=call_graph,
+            binary_path=binary_path,
+            src_dir=args.src_dir,
+            output_dir=args.output_dir,
+        )
+        pipeline_result = agent_orch.run_pipeline(
+            risky_files=strategies.risky_files,
+            max_scan_targets=8,
+            max_exploit_targets=3,
+        )
+
+        # Add any generated harnesses to the strategies tracker
+        for h in agent_orch.generated_harnesses:
+            strategies.generated_harnesses.append(h)
+
+        # Feed findings into crash context
+        for exploit in agent_orch.all_exploits:
+            if exploit.crashed:
+                strategies.add_crash(
+                    f"{exploit.finding.bug_type}: {exploit.finding.description}",
+                    {
+                        "crash_type": exploit.finding.bug_type,
+                        "affected_function": exploit.finding.function,
+                        "root_cause": exploit.finding.description,
+                    },
+                )
+    else:
+        logger.warning("Skipping multi-agent pipeline (no binary or empty call graph).")
 
     # ══════════════════════════════════════════════════════════════
     # PHASE 2: FUZZING + CONTINUOUS LLM STRATEGIES
