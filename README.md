@@ -1,3 +1,8 @@
+output/xml_fuzzer_vuln/generated_harnesses/exploit_FREE_AND_NULL_8a2cc7ed output/xml_fuzzer_vuln/povs/exploit-crash-* 2>&1 | tail -20
+
+
+
+
 ls output/xml_fuzzer_vuln/generated_harnesses/exploit_*
 
 
