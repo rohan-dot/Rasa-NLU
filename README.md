@@ -1,8 +1,5 @@
-# Your results
-python eval_any.py --pred batch4_local_phaseA.json --gold 13B1_golden.json
+ls -la output/xml_fuzzer_vuln/povs/
+cat output/xml_fuzzer_vuln/bugs/verified-*.json
 
-# His results
-python eval_any.py --pred 13B1_golden.multihop.optimized.json --gold 13B1_golden.json
 
-# His other version
-python eval_any.py --pred 13B1_golden.rag.optimized.json --gold 13B1_golden.json
+for poc in output/xml_fuzzer_vuln/povs/exploit-*; do echo "=== $poc ===" && output/xml_fuzzer_vuln/generated_harnesses/exploit_FREE_AND_NULL_* "$poc" 2>&1 | head -5; done
