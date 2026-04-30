@@ -1,3 +1,7 @@
+chmod +x run_standalone.sh && ./run_standalone.sh ./build/xml_fuzzer_vuln --src-dir ~/libxml2-vuln --timeout 1200 --vllm-model gemma-4-31b-it
+
+
+
 cd ~ && tar -xzf gemma-fuzzer-v4-final.tar.gz && cd gemma-fuzzer
 
 pip install tree-sitter tree-sitter-c openai
