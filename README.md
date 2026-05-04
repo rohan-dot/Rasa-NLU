@@ -1,1 +1,3 @@
-python3 -c "open('/tmp/deep.json','w').write('[' * 100000)"
+additional_env:
+  VLLM_MODEL: "kimi-k2.6"
+  USE_THINKING_PROMPTS: "1"
