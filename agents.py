@@ -80,7 +80,7 @@ def compile_harness(code: str, name: str, src_dir: str, output_dir: str) -> tupl
     inc_dirs = find_include_dirs(src_dir)
     lib = find_static_lib(src_dir)
 
-    def _build_cmd(extra_defines: list[str] = None) -> list[str]:
+    def _build_cmd(extra_defines: list[str] = None, extra_libs: list[str] = None) -> list[str]:
         cmd = ["clang", "-g", "-O1", "-fsanitize=address,fuzzer"]
 
         # Auto-include config.h if it exists (autotools/cmake projects)
@@ -97,18 +97,40 @@ def compile_harness(code: str, name: str, src_dir: str, output_dir: str) -> tupl
         cmd.append(str(src_path))
         if lib:
             cmd.append(lib)
-        cmd.extend(["-lz", "-llzma", "-lm", "-lpthread",
-                    "-Wl,--allow-multiple-definition",
-                    "-o", str(bin_path)])
+        # Only add libraries that are actually needed
+        cmd.extend(["-lm", "-Wl,--allow-multiple-definition"])
+        if extra_libs:
+            cmd.extend(extra_libs)
+        cmd.extend(["-o", str(bin_path)])
         return cmd
 
-    # Attempt 1: compile normally
+    # Attempt 1: compile with minimal flags (no -lz -llzma)
     try:
         cmd = _build_cmd()
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         if result.returncode == 0:
             logger.info("[compile] OK: %s", bin_path.name)
             return str(bin_path), ""
+
+        stderr = result.stderr
+
+        # If linker can't find symbols, try adding common libraries
+        if "undefined reference" in stderr or "cannot find" in stderr:
+            extra_libs = []
+            if "lzma" in stderr or "LZMA" in stderr:
+                extra_libs.append("-llzma")
+            if "compress" in stderr or "inflate" in stderr or "zlibVersion" in stderr:
+                extra_libs.append("-lz")
+            if "pthread" in stderr:
+                extra_libs.append("-lpthread")
+            if extra_libs:
+                logger.info("[compile] Retrying with libs: %s", " ".join(extra_libs))
+                cmd = _build_cmd(extra_libs=extra_libs)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                if result.returncode == 0:
+                    logger.info("[compile] OK (with extra libs): %s", bin_path.name)
+                    return str(bin_path), ""
+                stderr = result.stderr
 
         # Attempt 2: parse errors for unknown type names / undeclared identifiers
         # and define them as empty macros
