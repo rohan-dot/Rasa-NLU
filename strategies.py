@@ -21,6 +21,15 @@ from llm_client import VLLMClient
 
 logger = logging.getLogger("gemma-fuzzer.strategies")
 
+# Load thinking prompts if enabled
+_use_thinking = os.environ.get("USE_THINKING_PROMPTS", "0") == "1"
+_CODEBASE_MAP_PROMPT = None
+if _use_thinking:
+    try:
+        from prompts_thinking import CODEBASE_MAP_PROMPT as _CODEBASE_MAP_PROMPT
+    except ImportError:
+        pass
+
 
 @dataclass
 class StrategyResult:
@@ -134,14 +143,16 @@ class StrategyOrchestrator:
             funcs = [f for f in funcs if f not in {"if", "for", "while", "switch"}]
             summary += f"## {name} (risk={score})\nFunctions: {', '.join(funcs[:15])}\n\n"
 
-        response = self.llm.chat(
-            system="""\
+        _default_prompt = """\
 Identify the TOP 5 most likely vulnerable functions. For each specify
 file, function, likely bug type, and how external input reaches it.
 Respond ONLY with a JSON array. Start with [ end with ].
 [{"file":"f.c","function":"func","bug_type":"overflow",
   "data_flow":"input→parse→func(buf,controlled_size)",
-  "audit_priority":"critical"}]""",
+  "audit_priority":"critical"}]"""
+
+        response = self.llm.chat(
+            system=_CODEBASE_MAP_PROMPT if _CODEBASE_MAP_PROMPT else _default_prompt,
             user=summary, max_tokens=2000, temperature=0.2,
         )
         if not response:

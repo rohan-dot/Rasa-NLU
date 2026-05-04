@@ -34,6 +34,31 @@ from llm_client import VLLMClient
 
 logger = logging.getLogger("gemma-fuzzer.agents")
 
+# ── Load prompt set based on environment ──────────────────────────
+# Set USE_THINKING_PROMPTS=1 for reasoning models (Kimi K2.6, o3, etc.)
+_use_thinking = os.environ.get("USE_THINKING_PROMPTS", "0") == "1"
+
+if _use_thinking:
+    try:
+        from prompts_thinking import (
+            SCANNER_PROMPT as _SCANNER,
+            BATCH_SCANNER_PROMPT as _BATCH_SCANNER,
+            HARNESS_PROMPT as _HARNESS,
+            HARNESS_FIX_PROMPT as _HARNESS_FIX,
+            HARNESS_NOCRASH_PROMPT as _HARNESS_NOCRASH,
+            REACHABILITY_PROMPT as _REACHABILITY,
+            VERIFIER_PROMPT as _VERIFIER,
+            CODEBASE_MAP_PROMPT as _CODEBASE_MAP,
+            AUTO_HARNESS_PROMPT as _AUTO_HARNESS,
+        )
+        logger.info("[agents] Using THINKING prompts (reasoning model mode).")
+    except ImportError:
+        _use_thinking = False
+        logger.warning("[agents] prompts_thinking.py not found, using standard prompts.")
+
+if not _use_thinking:
+    logger.info("[agents] Using standard prompts.")
+
 
 @dataclass
 class ScanFinding:
@@ -663,6 +688,16 @@ The script must write to "/tmp/reachability_input".
 Use only Python standard library.
 
 Output ONLY the Python script. No markdown. Start with a comment."""
+
+
+# ── Override with thinking prompts if enabled ─────────────────────
+if _use_thinking:
+    SCANNER_PROMPT = _SCANNER
+    HARNESS_PROMPT = _HARNESS
+    HARNESS_FIX_PROMPT = _HARNESS_FIX
+    HARNESS_NOCASH_PROMPT = _HARNESS_NOCRASH  # note: typo preserved for compatibility
+    REACHABILITY_PROMPT = _REACHABILITY
+    VERIFIER_PROMPT = _VERIFIER
 
 
 class VerifierAgent:

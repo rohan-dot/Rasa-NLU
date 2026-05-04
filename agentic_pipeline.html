@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioASQ Agentic RAG Pipeline</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: #0a0e17;
+    color: #e0e4ef;
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  .header {
+    text-align: center;
+    padding: 40px 20px 20px;
+    position: relative;
+  }
+  .header h1 {
+    font-size: 2.2em;
+    font-weight: 700;
+    background: linear-gradient(135deg, #00d4ff, #7b61ff, #ff6b9d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: #6b7394;
+    font-size: 1em;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  
+  .pipeline {
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 0 20px;
+    position: relative;
+  }
+  
+  /* Vertical line */
+  .pipeline::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, #00d4ff33, #7b61ff33, #ff6b9d33);
+    transform: translateX(-50%);
+  }
+  
+  .step {
+    position: relative;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeIn 0.5s forwards;
+  }
+  .step:nth-child(1) { animation-delay: 0.1s; }
+  .step:nth-child(2) { animation-delay: 0.2s; }
+  .step:nth-child(3) { animation-delay: 0.3s; }
+  .step:nth-child(4) { animation-delay: 0.4s; }
+  .step:nth-child(5) { animation-delay: 0.5s; }
+  .step:nth-child(6) { animation-delay: 0.6s; }
+  .step:nth-child(7) { animation-delay: 0.7s; }
+  .step:nth-child(8) { animation-delay: 0.8s; }
+  .step:nth-child(9) { animation-delay: 0.9s; }
+  .step:nth-child(10) { animation-delay: 1.0s; }
+  .step:nth-child(11) { animation-delay: 1.1s; }
+  
+  @keyframes fadeIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .step-label {
+    width: 100px;
+    text-align: right;
+    padding-top: 14px;
+    flex-shrink: 0;
+  }
+  .step-label span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .step-label .think { background: #1a2744; color: #00d4ff; }
+  .step-label .act { background: #1a2730; color: #00ffaa; }
+  .step-label .observe { background: #2a1a30; color: #c084fc; }
+  .step-label .reflect { background: #2a2a1a; color: #fbbf24; }
+  .step-label .answer { background: #2a1a1a; color: #ff6b9d; }
+  
+  .step-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 16px;
+    position: relative;
+    z-index: 2;
+  }
+  .step-dot.think { background: #00d4ff; box-shadow: 0 0 12px #00d4ff44; }
+  .step-dot.act { background: #00ffaa; box-shadow: 0 0 12px #00ffaa44; }
+  .step-dot.observe { background: #c084fc; box-shadow: 0 0 12px #c084fc44; }
+  .step-dot.reflect { background: #fbbf24; box-shadow: 0 0 12px #fbbf2444; }
+  .step-dot.answer { background: #ff6b9d; box-shadow: 0 0 12px #ff6b9d44; }
+  
+  .step-card {
+    flex: 1;
+    border-radius: 10px;
+    padding: 16px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .step-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, #ffffff08, #ffffff03) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+  }
+  .step-card.think-card { background: #0d1829; border-left: 3px solid #00d4ff; }
+  .step-card.act-card { background: #0d1f1a; border-left: 3px solid #00ffaa; }
+  .step-card.observe-card { background: #170d20; border-left: 3px solid #c084fc; }
+  .step-card.reflect-card { background: #1a1a0d; border-left: 3px solid #fbbf24; }
+  .step-card.answer-card { background: #1f0d14; border-left: 3px solid #ff6b9d; }
+  
+  .step-card h3 {
+    font-size: 0.95em;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .step-card p {
+    font-size: 0.82em;
+    color: #8892b0;
+    line-height: 1.5;
+  }
+  .step-card .tool {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7em;
+    background: #ffffff0a;
+    border: 1px solid #ffffff15;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+    color: #a0aec0;
+  }
+  
+  .loop-indicator {
+    position: absolute;
+    right: -40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65em;
+    color: #fbbf24;
+    writing-mode: vertical-lr;
+    letter-spacing: 2px;
+  }
+  
+  .branch {
+    margin: 20px 0;
+    padding: 16px;
+    border: 1px dashed #ffffff15;
+    border-radius: 12px;
+    background: #0a0e1799;
+  }
+  .branch-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7em;
+    color: #7b61ff;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  .tool-card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.2s;
+  }
+  .tool-card:hover {
+    border-color: #374151;
+    transform: translateY(-2px);
+  }
+  .tool-card h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8em;
+    color: #00ffaa;
+    margin-bottom: 6px;
+  }
+  .tool-card p {
+    font-size: 0.75em;
+    color: #6b7394;
+    line-height: 1.4;
+  }
+  
+  .stats {
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .stat {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 10px;
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .stat .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8em;
+    font-weight: 700;
+    background: linear-gradient(135deg, #00d4ff, #7b61ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .stat .label {
+    font-size: 0.7em;
+    color: #6b7394;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .section-title {
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: 700;
+    color: #e0e4ef;
+    margin: 40px 0 20px;
+    position: relative;
+  }
+  .section-title::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, #00d4ff, #7b61ff);
+    margin: 8px auto 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>BioASQ Agentic RAG Pipeline</h1>
+  <p>ReAct-style reasoning over 37M PubMed articles</p>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="num">37M</div><div class="label">Articles Indexed</div></div>
+  <div class="stat"><div class="num">7</div><div class="label">Agent Tools</div></div>
+  <div class="stat"><div class="num">3</div><div class="label">Answer Passes</div></div>
+  <div class="stat"><div class="num">82%</div><div class="label">Accuracy</div></div>
+</div>
+
+<div class="section-title">Agent Reasoning Loop</div>
+
+<div class="pipeline">
+  
+  <div class="step">
+    <div class="step-label"><span class="think">THINK</span></div>
+    <div class="step-dot think"></div>
+    <div class="step-card think-card">
+      <h3>Analyze Question Complexity</h3>
+      <p>LLM determines if this is a simple single-hop question or requires multi-hop reasoning across multiple facts.</p>
+      <div class="tool">DECOMPOSE → 2-4 sub-questions if multi-hop</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="act">ACT</span></div>
+    <div class="step-dot act"></div>
+    <div class="step-card act-card">
+      <h3>Semantic Search (FAISS IVF8192)</h3>
+      <p>Encode question with PubMedBERT embeddings → search 37M pre-indexed vectors → return top 30 semantically similar articles in &lt;1 second.</p>
+      <div class="tool">SEARCH_SEMANTIC(query) → cosine similarity</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="act">ACT</span></div>
+    <div class="step-dot act"></div>
+    <div class="step-card act-card">
+      <h3>Keyword Search (BM25 / SQLite)</h3>
+      <p>Exact keyword matching catches gene names, drug names, and rare terms that embeddings miss. Fused with semantic via Reciprocal Rank Fusion (60/40).</p>
+      <div class="tool">SEARCH_BM25(query) → term frequency scoring</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="observe">OBSERVE</span></div>
+    <div class="step-dot observe"></div>
+    <div class="step-card observe-card">
+      <h3>Evaluate Retrieved Evidence</h3>
+      <p>LLM reads top passages and determines: is there enough evidence to answer this question? Checks for completeness and relevance.</p>
+      <div class="tool">EVALUATE → SUFFICIENT / INSUFFICIENT</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="reflect">REFLECT</span></div>
+    <div class="step-dot reflect"></div>
+    <div class="step-card reflect-card" style="position:relative;">
+      <h3>Generate New Queries (if insufficient)</h3>
+      <p>If evidence is insufficient, LLM generates 3 new search queries using completely different terms. Loop back to SEARCH. Up to 4 iterations.</p>
+      <div class="tool">QUERY_GEN → 3 new queries → loop back ↑</div>
+      <div class="loop-indicator">← LOOP ×4</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="act">ACT</span></div>
+    <div class="step-dot act"></div>
+    <div class="step-card act-card">
+      <h3>Cross-Encoder Reranking</h3>
+      <p>ms-marco-MiniLM-L-12-v2 scores each (query, passage) pair with cross-attention. 30 candidates → top 15. Under 1 second on CPU.</p>
+      <div class="tool">RERANK → cross-encoder relevance scoring</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="answer">ANSWER</span></div>
+    <div class="step-dot answer"></div>
+    <div class="step-card answer-card">
+      <h3>Multi-Pass Answer Generation</h3>
+      <p>3 independent answer passes at increasing temperatures (0.15, 0.30, 0.45). Type-specific prompts for factoid, yes/no, list, summary. Adversarial yes/no reasoning.</p>
+      <div class="tool">GENERATE × 3 passes</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="act">ACT</span></div>
+    <div class="step-dot act"></div>
+    <div class="step-card act-card">
+      <h3>Self-Verification</h3>
+      <p>LLM re-reads evidence and checks its own answer for errors, unsupported claims, or missing key information. Corrects if needed.</p>
+      <div class="tool">VERIFY → cross-check against evidence</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="act">ACT</span></div>
+    <div class="step-dot act"></div>
+    <div class="step-card act-card">
+      <h3>List Review (list questions only)</h3>
+      <p>Second extraction pass: "What items did you miss?" Reviews evidence passage-by-passage to find items the first pass overlooked.</p>
+      <div class="tool">LIST_REVIEW → catch missed items</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="reflect">REFLECT</span></div>
+    <div class="step-dot reflect"></div>
+    <div class="step-card reflect-card">
+      <h3>Consensus</h3>
+      <p>Majority vote across all passes for factoid/yes-no. Union merge for list items. Median-length selection for ideal answers. Filters garbage responses.</p>
+      <div class="tool">CONSENSUS → majority vote / union merge</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><span class="answer">OUTPUT</span></div>
+    <div class="step-dot answer"></div>
+    <div class="step-card answer-card">
+      <h3>BioASQ Submission</h3>
+      <p>Documents + snippets + exact answers + ideal answers. Formatted per BioASQ spec: list-of-lists for factoid/list, string for yes/no, 200-word cap on ideal.</p>
+      <div class="tool">Phase A+ and Phase B JSON files + reasoning trace</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section-title">Agent Tools</div>
+
+<div class="tools-grid">
+  <div class="tool-card">
+    <h4>SEARCH_SEMANTIC</h4>
+    <p>FAISS IVF8192 over 37M PubMedBERT embeddings. Memory-mapped, sub-second search.</p>
+  </div>
+  <div class="tool-card">
+    <h4>SEARCH_BM25</h4>
+    <p>Pre-built BM25 sparse retrieval. Catches exact terms embeddings miss.</p>
+  </div>
+  <div class="tool-card">
+    <h4>SEARCH_HYBRID</h4>
+    <p>Reciprocal Rank Fusion merging semantic (60%) + keyword (40%) results.</p>
+  </div>
+  <div class="tool-card">
+    <h4>RERANK</h4>
+    <p>Cross-encoder (ms-marco-MiniLM) scores query-passage pairs with cross-attention.</p>
+  </div>
+  <div class="tool-card">
+    <h4>DECOMPOSE</h4>
+    <p>LLM breaks multi-hop questions into independent sub-questions.</p>
+  </div>
+  <div class="tool-card">
+    <h4>VERIFY</h4>
+    <p>Self-check: LLM re-reads evidence and corrects its own answer.</p>
+  </div>
+  <div class="tool-card">
+    <h4>SYNTHESIZE</h4>
+    <p>Combines sub-answers from multi-hop decomposition into coherent final answer.</p>
+  </div>
+</div>
+
+<div style="text-align:center;padding:40px;color:#6b7394;font-size:0.75em;font-family:'JetBrains Mono',monospace;">
+  BioASQ Task 14 · Gemma 4 31B · PubMedBERT · FAISS IVF8192 · ms-marco Reranker
+</div>
+
+</body>
+</html>

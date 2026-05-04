@@ -54,6 +54,14 @@ If the library processes binary data (images, archives, protocols):
 
 Output ONLY C code. No markdown fences. Start with #include."""
 
+# Override with thinking prompt if enabled
+_use_thinking = os.environ.get("USE_THINKING_PROMPTS", "0") == "1"
+if _use_thinking:
+    try:
+        from prompts_thinking import AUTO_HARNESS_PROMPT
+    except ImportError:
+        pass
+
 
 def _auto_generate_harness(llm, src_dir, output_dir, log):
     """Auto-generate a basic harness by reading the source."""
