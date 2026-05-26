@@ -1,61 +1,87 @@
-a4ir
-You're right, I overrode a section title that was actually doing real work for the venue. Agent4IR's whole point is "why agents in IR" — keeping **Why Agents at All?** signals to the reviewer that you're answering the workshop's core question, not just reporting a system.
+Understood. Let me re-read §5 carefully against your actual results, and propose changes that strengthen the CSS argument using *your* numbers and *your* existing structure — not replace it with mine.
 
-Keep your existing section title. Use the new prose I wrote underneath it. One change to the opening sentence so it reads as an answer to the title's question rather than a generic table observation:
+## What §5 currently does well
 
-```latex
-\subsection{Why Agents at All?}
+- §5.1 makes the "evidence labor is invisible" argument and lands "governed agency over more autonomy" — that closing line is good.
+- §5.2 names the moral compression problem, cites the right automation-bias literature (Abdelwanis, Khera), and explains the adversarial yes/no procedure.
+- §5.3 cites Elish and WHO and ends with a strong "agent logs are CSS data" line.
 
-The workshop's framing question has a sharp answer in
-Table~\ref{tab:results}, but not the one the headline 76.0
-suggests. The more revealing observation is that the 35.7-overall
-zero-shot Gemma 4 31B baseline---a system that does \emph{no}
-retrieval and \emph{no} control---already reaches 94.0 on yes/no
-and 41.63 SemanticF1 on ideal answers. On the two regimes where
-evidence labor is hardest to observe at the output, the
-no-retrieval baseline is competitive with every system on the
-page. On the two regimes where evidence labor is locally
-visible---factoid (8.0) and list (0.0)---the same baseline
-collapses to single digits. The gap between the agentic system
-and the zero-shot system is therefore not uniform across BioASQ's
-four regimes. It is concentrated almost entirely on the regimes
-that make evidence work auditable.
+The bones are there. The problem is that **§5 reads like it could have been written without Table 1**. The CSS arguments are made *abstractly* — they would survive unchanged if every number in your table were different. That's the gap to close.
 
-Agents matter, in other words, precisely where non-agentic
-systems can fake competence. Performance on binary and narrative
-outputs underdetermines whether the system has done any evidence
-work at all; performance on entity-level outputs does not. From
-the perspective of someone designing for clinical deployment, the
-failure mode the table exposes is not random error but a
-\emph{systematic asymmetry} in which the easiest answers to fake
-are also the most consequential to get wrong. That asymmetry is
-the case for agents in biomedical IR.
-```
+## What to change, section by section
 
-The two-word change — opening with "The workshop's framing question" and closing with "That asymmetry is the case for agents in biomedical IR" — turns the section into a direct response to Agent4IR's central topic rather than a generic results discussion. Reviewer reads the title, reads the first sentence, sees you're answering their question.
+### §5.1 — one sentence change
 
-§5.2 and §5.3 stay as I wrote them. Don't change anything else. Recompile, check page count, ship it.
+The paragraph argues that "systems sharing a retrieval substrate behave very differently depending on control policy." That claim needs a number attached to it from your own table. Right now it floats.
 
-Yeah, "The Argument Is in the Table" is too cute. Some less-stupid options, in different registers:
+**Find this sentence in your §5.1:**
 
-**Plain / safe:**
-- Type-Level Performance and What It Means
-- Reading the Per-Type Spread
-- Per-Regime Results
+> "In our results, systems that share a retrieval substrate behave very differently depending on the control policy around that substrate."
 
-**Pointed:**
-- Where the Evidence Labor Shows Up
-- Where the Gap Lives
-- The Asymmetry Across Question Types
-- Not All Regimes Are Created Equal
+**Replace with:**
 
-**Aligned with your framing throughout the paper:**
-- Evidence Labor Across the Four Regimes
-- Control Policy and the Per-Type Distribution
+> "Table 1 makes this visible: DSPy ReAct RAG and the hybrid agent run over the same retrieval substrate (PubMedBERT dense, BM25 sparse, RRF fusion, cross-encoder reranker), and the only meaningful difference between them is the control policy wrapped around that substrate — yet the hybrid agent reaches 96.0 on list while DSPy ReAct, even after MIPROv2 optimization, stays at 0.0. The retrieval components are identical; the evidence trajectory is not."
 
-My pick for your paper: **"Where the Evidence Labor Shows Up"** — it's short, it's the actual point of the subsection, and "evidence labor" is your own load-bearing phrase from the abstract and intro, so it threads naturally into §5.2 and §5.3.
+That one sentence change turns §5.1's central claim from gestural to data-anchored.
 
-If you want safer/more conservative for a workshop reviewer: **"Type-Level Performance and What It Means."**
+### §5.2 — needs one number-heavy paragraph inserted
+
+§5.2 has the moral compression argument but never uses Table 1 to prove it. The zero-shot Gemma row is the strongest piece of evidence you have for the moral compression claim and it doesn't appear in §5.2 at all.
+
+**Insert this paragraph after your existing sentence:**
+
+> "A tool that answers 'yes' correctly but cannot retrieve the relevant entities, mechanisms, or exceptions may still encourage automation bias, a known concern for AI-based clinical decision support [1, 14]."
+
+**New paragraph to insert:**
+
+> "Table 1 shows this concretely. Zero-shot Gemma 4 31B — a system that performs no retrieval whatsoever — scores 94.0 on yes/no, matching DSPy RAG + MIPROv2 (94.0) and DSPy ReAct RAG + MIPROv2 (94.0), and exceeding our hybrid agent's 88.0. On the same row, that zero-shot system scores 8.0 on factoid and 0.0 on list. The yes/no column is therefore unable to distinguish a system that has read the literature from a system that has read nothing; it is unable to distinguish a prompt-optimized RAG program from a parametric-memory closure. The binary output is achievable from any of these epistemic states because the channel itself is too narrow to carry the difference. This is the moral compression problem in arithmetic form."
+
+### §5.2 — and add a closing sentence about the agent's lower yes/no score
+
+Your hybrid agent scores *lower* than zero-shot on yes/no (88.0 vs 94.0). That's not a weakness to hide — it's the strongest evidence that your adversarial procedure does what it claims to do. Currently §5.2 doesn't say this.
+
+**Find this sentence:**
+
+> "It does, however, change binary closure from a generation habit into an accountable step."
+
+**Add immediately after it:**
+
+> "The six-point yes/no regression relative to the no-retrieval baseline (94.0 → 88.0) is consistent with this reading: the agent is unwilling to commit to the easy 94.0 when the evidence pool does not warrant it. We interpret this as the cost of refusing to over-confidently close binary questions, paid against a benchmark that rewards confident closure."
+
+### §5.3 — one paragraph rework
+
+§5.3 makes the Elish argument and lists design principles, but the link from your results to the crumple-zone claim is asserted rather than shown. The 40.3-point within-model gap from §4 is the operational measure of the crumple zone and it never gets reused in §5.3.
+
+**Find this sentence in your §5.3:**
+
+> "A clinician shown a polished answer may be formally 'in the loop' while having little visibility into query reformulations, omitted abstracts, or ranking errors."
+
+**Add immediately after it:**
+
+> "Our table puts a number on this gap: 40.3 overall points and 96 list-F1 points on the same Gemma 4 31B backbone separate the agent from its zero-shot version. That gap is, in operational terms, the evidence labor the agentic configuration takes on at run time that the zero-shot configuration silently passes through to whoever reads its output. Crucially, the gap is invisible on yes/no (88.0 vs 94.0) and small on summary (51.0 vs 41.6), which are the regimes where the output gives the user nothing concrete to verify. The crumple zone is widest exactly where the interface gives the clinician the least to push back on."
+
+## What NOT to change
+
+- Keep "Why Agents at All?" as the §5.1 title. It answers the workshop's framing question and you were right to push back on that.
+- Keep "The Moral Cost of Yes/No" and "Accountability Without the Moral Crumple Zone" as titles.
+- Keep the WHO closing in §5.3 — it lands the design-obligations point you want.
+- Don't add new subsections. Four edits inside the existing three subsections is all this needs.
+
+## Total length impact
+
+Adding four insertions and one one-sentence swap. Roughly 14-16 lines added total. You can absorb that by tightening §3.1 — the "We therefore use the term *agentic* in a deliberately bounded sense" paragraph and the next one ("This bounded form of agency is the methodological core...") restate things your intro already said. Compressing those two paragraphs to ~6 lines total saves what these §5 inserts cost.
+
+## Why this version actually delivers the CSS framing
+
+Your current §5 names CSS concepts (moral compression, crumple zones, evidence labor as data). My proposed changes make each concept point to a specific cell of your table:
+
+- **Moral compression** → the 94.0 / 94.0 / 94.0 / 88.0 yes/no column, where systems doing vastly different amounts of evidence work produce indistinguishable binary outputs.
+- **Crumple zone** → the 40.3 overall and 96 list-F1 gap that measures the labor invisibly offloaded to the human.
+- **Evidence labor as data** → the same-substrate ReAct vs. hybrid agent comparison (0.0 vs 96.0 on list) that shows control policy, not retrieval components, drives the behavior.
+
+Each CSS claim now has a number from *your* table doing the work behind it. That's the difference between a paper that *names* CSS concepts and one that *operationalizes* them from its own data. That's the version Agent4IR reviewers will read as a real CSS contribution, not as a methods paper with a sociotechnical postscript.
+
+Make these four edits, fix the `§??` in §3.2, recompile twice, check page count, and you're done.
 
 
 
