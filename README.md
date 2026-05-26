@@ -1,3 +1,111 @@
+Got it — three specific rewrites from Leslie. Let me apply them surgically. First, locate Edit 1:
+
+Apply Edit 1 — lead with the missing-feedback-loop claim:
+
+Apply Edit 2 — make "First, on Phase B…" a claim not a finding:
+
+Now verify the `§??` cross-ref will resolve, then rebuild:
+
+Label is in place — `§??` will resolve to `§5` after two `pdflatex` passes (this is standard, not a bug). Rebuild:
+
+`§??` now resolves to `§5`, the claim-first restructure of "Third..." is visible. Now check page 2 for the Failure mode 1 rewrite:
+
+All three advisor edits applied and rendered correctly. Repackage:
+
+All three advisor comments addressed. Here are the drop-in LaTeX blocks for your Overleaf, plus the cross-ref fix.
+
+---
+
+### Edit 1 — Leslie's comment on the "class of moves" sentence
+
+Her concern: the sentence reads like an aside; she had to back-trace to figure out what it's claiming. **Fix:** lead with the feedback-loop claim, then enumerate the moves, then add why generator fine-tuning can't recover them. Replace your current "Failure mode 1" paragraph with:
+
+```latex
+\textbf{Failure mode 1: list performance plateaus around
+$30$--$35$~F1 on Phase~A$^+$ across most of the field.} A single
+retrieval pass that misses one of the gold entities cannot
+recover it, no matter how good the generator is. Fine-tuning the
+generator (BIT.UA) does not help, because the bottleneck is not
+in the generation step. Static-pipeline retrieval upgrades
+(UniTor's synthetic snippets, BIT.UA's DPRF) help but remain
+bounded by what the first-stage query returns. \emph{A static
+retrieval pipeline lacks the feedback loop that biomedical
+experts rely on when searching the literature by hand.} The
+class of moves it cannot make at run time --- decomposing a
+compound question into sub-queries, noticing that the evidence
+pool is insufficient and re-querying, or backing off from an
+over-narrow phrasing --- is precisely the set of moves a
+biomedical expert performs when searching manually. Generator
+fine-tuning cannot recover these moves either, because the
+bottleneck they address is not the model's reasoning over the
+snippets it receives; it is which snippets reach the model in
+the first place.
+```
+
+---
+
+### Edit 2 — Leslie's comment "more a finding than a claim"
+
+She wants the claim ("open-weights agentic RAG with no fine-tuning is competitive") to lead; the 0.94/0.32 numbers become *evidence for the claim*, not the claim itself.
+
+### Edit 3 — Leslie's comment "content is sort of jumbled / put main claim first"
+
+Same fix: lead with "the retrieval-bottleneck interpretation is further supported by…" then the (i) and (ii) findings.
+
+Both are in one block — replace your entire `Our results, reported in §4, support three claims…` paragraph (everything from "Our results" through to the end of the "retrieval-bottleneck interpretation" sentence) with:
+
+```latex
+Our results, reported in \S\ref{sec:results}, support three
+claims. First, an open-weights agentic RAG architecture with no
+domain fine-tuning produces answer-quality competitive with the
+upper-middle of the field on the gold-snippet condition: our
+best system reaches $0.94$ yes/no accuracy and $0.32$ list~F1
+on Phase~B~\cite{nentidis2025bioasq13}. Second, retrieval recall
+--- not generation quality --- is the binding constraint on the
+end-to-end pipeline: the same generator drops by $0.15$--$0.22$
+points across every metric when it must retrieve its own
+evidence in Phase~A$^+$ rather than receive gold snippets, and
+because the generator is unchanged across the two phases this
+gap measures retrieval cost almost in isolation. Third, the
+retrieval-bottleneck interpretation is further supported by two
+negative experimental findings: (i)~few-shot conditioning on
+training-set exemplars produced scores indistinguishable from
+the base agent, and (ii)~swapping Gemma~3 27B for Gemma~4 31B
+lifted Phase~B factoid and list~F1 by roughly $6$ and $5$
+points but did not move Phase~A$^+$ scores at all --- a
+stronger generator helps where generation is the limit, not
+where retrieval is.
+```
+
+---
+
+### Edit 4 — the `§??` you saw rendered
+
+That's not a bug in the LaTeX — the label `\label{sec:discuss}` exists on your `\section{Discussion and Conclusion}` line. `§??` happens whenever LaTeX hasn't propagated cross-references yet. **Fix in Overleaf:** click *Recompile* twice (or click the dropdown next to Recompile and pick "Recompile from scratch"). The verified preview now shows `§5 discusses implications for future BioASQ submissions`.
+
+If it still shows `??` after two compiles, search for `\label{sec:discuss}` in your `main.tex`. It should be on the same line as `\section{Discussion and Conclusion}`, like:
+
+```latex
+\section{Discussion and Conclusion}\label{sec:discuss}
+```
+
+If your edits to the Discussion section accidentally dropped the label, restore it there.
+
+---
+
+### What changed structurally vs. content
+
+All three edits are **rhetorical** restructures — no factual claims changed, no numbers moved. Same evidence, same conclusions; the words just land in the order Leslie suggested (claim → support, not support → claim). The paper stays 15 pages.
+
+
+
+
+
+
+
+
+xxx
+
 Fair. Sticking to the moral/discussion content. Here are three targeted swaps — the moral compression paragraph (§5.2), the accountability paragraph (§5.3), and a one-sentence fix in §5.1 for the "automony" typo and clunky tail. Everything else in the paper stays exactly as you have it.
 
 **§5.2 — replace whole subsection.** What this does: defines moral compression more sharply, leads with the killer empirical observation (high yes/no scores from systems with poor evidence completeness, pulled from the table), and replaces the vague "right interface" line with a concrete spec.
