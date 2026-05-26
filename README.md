@@ -1,66 +1,48 @@
-Yes — making Table 1 single-column will reclaim most of what you need. It's currently spanning both columns with `table*`, which eats a full half-page of vertical space.
-
-The trick is that your column headers (Factoid, Yes/No, List, SemanticF1, Overall) plus the system names won't fit cleanly in one column at normal font size. You need three changes together:
-
-1. Switch from `table*` to `table` (single column)
-2. Shrink to `\small` or `\footnotesize`
-3. Abbreviate the column headers
-
-Drop-in replacement — find your current `\begin{table*}...\end{table*}` for Table 1 and replace the whole block with:
-
-```latex
-\begin{table}[t]
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\caption{BioASQ-style validation results}
-\label{tab:results}
-\begin{tabular}{lrrrrr}
-\toprule
-System & Fact. & Y/N & List & SemF1 & Ovr. \\
-\midrule
-Zero-shot Gemma 4 31B           & 8.0  & 94.0 & 0.0  & 41.6 & 35.7$^\dagger$ \\
-Agentic SQLite FTS5             & 62.0 & 88.0 & 87.0 & 49.0 & 71.5 \\
-Agentic hybrid FAISS+BM25+IVF   & 69.0 & 88.0 & 96.0 & 51.0 & \textbf{76.0} \\
-Agentic SQLite FTS5, CoT        & 50.0 & 82.0 & 70.0 & 49.0 & 62.75 \\
-\midrule
-DSPy RAG                        & 12.0 & 82.0 & 4.0  & 49.0 & 36.75 \\
-DSPy RAG + MIPROv2              & 27.0 & 94.0 & 13.0 & 48.0 & 45.5 \\
-DSPy MultiHop RAG               & 12.0 & 76.0 & 0.0  & 49.0 & 34.25 \\
-DSPy MultiHop RAG + MIPROv2     & 27.0 & 88.0 & 13.0 & 48.0 & 44.0 \\
-DSPy ReAct RAG                  & 8.0  & 76.0 & 0.0  & 55.0 & 34.75 \\
-DSPy ReAct RAG + MIPROv2        & 31.0 & 94.0 & 0.0  & 55.0 & 45.0 \\
-\bottomrule
-\end{tabular}
-\end{table}
-```
-
-Changes I made:
-- `table*` → `table` (single column instead of spanning)
-- `\footnotesize` with `\tabcolsep=3pt` for compactness
-- Column header abbreviations: Factoid → Fact., Yes/No → Y/N, SemanticF1 → SemF1, Overall → Ovr. (Y/N and List stay readable)
-- Added `\midrule` separating agentic rows from DSPy rows for scanability
-- Bolded your best result (76.0) so it pops at footnote size
-- Trimmed 41.63 → 41.6 (one less digit, saves width)
-- "COT prompt" → "CoT" (standard capitalization, shorter)
-
-This should give you back roughly half a page. Combined with the §3.1 cuts I mentioned earlier (the two paragraphs near the end of §3.1 that restate the bounded-agency framing from your intro), you should be safely back under 4 pages.
-
-If you're still bleeding over by a few lines after this change, two emergency moves in priority order:
-
-**Move 1.** In §3.1, the paragraph starting *"We therefore use the term agentic in a deliberately bounded sense"* can collapse to two sentences:
-
-> "We use *agentic* in a deliberately bounded sense: the system cannot invent tools, browse arbitrary sources, or act outside the evidence context. Its agency is located in the retrieval-and-reasoning loop — deciding when evidence is insufficient, selecting new searches, comparing competing passages, and revising answers when support is weak."
-
-The rest of that paragraph (CSS-perspective restatement) is already covered in §5.1.
-
-**Move 2.** The first paragraph of §5.3 has some repetition with §5.1's "invisible labor" framing. The sentence *"These are not only user-interface features; they are IR requirements for responsible biomedical agents"* is good — but the preceding 4-sentence build-up to it can compress.
-
-Try the table change alone first, recompile, see where you land. The table change alone is usually enough.
+"This asymmetry reshapes what accountability has to mean in practice. The question is not whether to keep the human ``in the loop,'' but how to hand evidence work back to the human in a form they can audit."
 
 
+\subsection{Accountability Beyond the Moral Crumple Zone}
 
-Understood. Let me re-read §5 carefully against your actual results, and propose changes that strengthen the CSS argument using *your* numbers and *your* existing structure — not replace it with mine.
+Agentic systems also risk creating what Elish~\cite{elish2019moral}
+calls a moral crumple zone: humans absorb blame for failures of
+automated systems that they could not realistically understand or
+control. A clinician shown a polished answer may be formally ``in
+the loop'' while having little visibility into query reformulations,
+omitted abstracts, or ranking errors. Our table puts a number on
+this gap: 40.3 overall points and 96 list-F1 points on the same
+Gemma 4 31B backbone separate the agent from its zero-shot version.
+That gap is, in operational terms, the evidence labor the agentic
+configuration takes on at run time that the zero-shot configuration
+silently passes through to whoever reads its output. Crucially, the
+gap is invisible on yes/no (88.0 vs 94.0) and small on summary
+(51.0 vs 41.6), which are the regimes where the output gives the
+user nothing concrete to verify. The crumple zone is widest exactly
+where the interface gives the clinician the least to push back on.
+
+If the asymmetry in Table~1 is real, then the design response is
+not whether to keep the human ``in the loop'' but how to hand
+evidence work back to the human in a form they can audit. Our
+design principle is accountable hand-off, not human replacement.
+The agent must provide provenance for retrieved documents and
+snippets, record its search path, expose sufficiency decisions,
+and abstain or flag uncertainty when evidence is weak. These are
+not user-interface features; they are IR requirements for
+responsible biomedical agents. This also reframes evaluation: a
+four-column score table is necessary but insufficient. We should
+evaluate whether traces help humans detect errors, whether list
+omissions cluster around rare diseases or under-studied
+populations, whether generated queries systematically privilege
+well-indexed terminology, and whether users over-trust
+high-confidence binary answers. Agent logs become computational
+social science data: they reveal how an automated system
+operationalizes relevance, uncertainty, and biomedical authority.
+The WHO guidance on AI for health~\cite{who2021ethics} calls for
+transparency, responsibility, and inclusiveness; in agentic
+biomedical QA, those values become concrete IR obligations:
+bounded tool use, evidence provenance, calibrated abstention,
+answer-type-specific safeguards, and meaningful human review.
+
+c
 
 ## What §5 currently does well
 
