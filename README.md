@@ -1,38 +1,26 @@
-```latex
-\section{Findings}
+\section{Limitations and Conclusion}
 
-Table~1 shows four patterns. First, the strongest performance
-comes from a domain-governed agent. The hybrid FAISS+BM25+IVF
-agent reaches 76.0 overall, ahead of the SQLite FTS5 agent (71.5)
-and the best DSPy baseline (45.5) by 30.5 points. On the same
-Gemma 4 31B backbone, the agentic loop adds 40.3 points over
-zero-shot generation ($35.7 \rightarrow 76.0$), isolating control
-policy from model-class effects.
+The agentic system and the DSPy baselines run on different
+backbones---Gemma 4 31B for the agent, gpt-oss-120b for the DSPy
+programs---so Table~1 is not a model-controlled head-to-head. We
+read it as a comparison of \emph{control-policy regimes} rather
+than of language models: the within-model anchor for the agentic
+loop is the Zero-shot Gemma 4 31B row, which isolates the
+contribution of the control policy from the model. Other
+limitations apply. The corpus is title/abstract-only, excluding
+full-text evidence. DSPy optimization used question-answer pairs
+from \texttt{rag-mini-bioasq}, not gold snippets, which may
+disadvantage evidence-grounded behavior. Logged agent traces are
+not automatically usable by clinicians or researchers; future work
+must test whether traces actually improve human judgment.
 
-Second, the gain is concentrated in recall-sensitive regimes. On
-list, the hybrid agent reaches 96.0 while every DSPy variant
-falls between 0.0 and 13.0, with three of six scoring 0.0. On
-factoid, 69.0 against a best-DSPy of 31.0. Removing dense
-retrieval and the cross-encoder (SQLite FTS5) yields 62.0/87.0
-on factoid/list; further removing type-specific generation
-(FTS5 + CoT) yields 50.0/70.0. The agentic loop accounts for
-most of the gap over DSPy; dense retrieval with reranking and
-type-specific prompting account for the remainder.
-
-Third, optimization improves benchmark behavior on the regimes it
-can reach but does not address evidence completeness. MIPROv2
-lifts DSPy RAG factoid from 12.0 to 27.0 and yes/no from 82.0 to
-94.0; ReAct RAG + MIPROv2 reaches 94.0 yes/no and 55.0
-SemanticF1. Yet list F1 for optimized ReAct remains 0.0 and
-optimized RAG only 13.0. Optimization aligns answer style and
-binary outputs to benchmark expectations without retrieving the
-evidence behind them.
-
-Fourth, yes/no and summary scores can mislead on their own.
-Zero-shot Gemma 4 31B---no retrieval at all---reaches 94.0 yes/no
-and 41.63 SemanticF1 while scoring 8.0 factoid and 0.0 list. The
-regimes where a system can score well without doing evidence
-work are the same regimes where the output gives the reader
-nothing concrete to verify. We return to this asymmetry in \S5.2
-and \S5.3.
-```
+We conclude that biomedical QA agents should be framed as
+evidence mediators, not medical authorities. The technical
+finding is that a domain-governed agentic loop improves
+recall-sensitive and exact-answer regimes over static and generic
+agentic baselines. The computational social science finding is
+that the value of agents lies in making evidence labor visible
+and governable. The central question is not only whether the
+answer is correct, but whether the path to the answer can be
+inspected, challenged, and responsibly handed back to human
+experts.
