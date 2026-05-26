@@ -1,3 +1,72 @@
+a4ir
+You're right, I overrode a section title that was actually doing real work for the venue. Agent4IR's whole point is "why agents in IR" — keeping **Why Agents at All?** signals to the reviewer that you're answering the workshop's core question, not just reporting a system.
+
+Keep your existing section title. Use the new prose I wrote underneath it. One change to the opening sentence so it reads as an answer to the title's question rather than a generic table observation:
+
+```latex
+\subsection{Why Agents at All?}
+
+The workshop's framing question has a sharp answer in
+Table~\ref{tab:results}, but not the one the headline 76.0
+suggests. The more revealing observation is that the 35.7-overall
+zero-shot Gemma 4 31B baseline---a system that does \emph{no}
+retrieval and \emph{no} control---already reaches 94.0 on yes/no
+and 41.63 SemanticF1 on ideal answers. On the two regimes where
+evidence labor is hardest to observe at the output, the
+no-retrieval baseline is competitive with every system on the
+page. On the two regimes where evidence labor is locally
+visible---factoid (8.0) and list (0.0)---the same baseline
+collapses to single digits. The gap between the agentic system
+and the zero-shot system is therefore not uniform across BioASQ's
+four regimes. It is concentrated almost entirely on the regimes
+that make evidence work auditable.
+
+Agents matter, in other words, precisely where non-agentic
+systems can fake competence. Performance on binary and narrative
+outputs underdetermines whether the system has done any evidence
+work at all; performance on entity-level outputs does not. From
+the perspective of someone designing for clinical deployment, the
+failure mode the table exposes is not random error but a
+\emph{systematic asymmetry} in which the easiest answers to fake
+are also the most consequential to get wrong. That asymmetry is
+the case for agents in biomedical IR.
+```
+
+The two-word change — opening with "The workshop's framing question" and closing with "That asymmetry is the case for agents in biomedical IR" — turns the section into a direct response to Agent4IR's central topic rather than a generic results discussion. Reviewer reads the title, reads the first sentence, sees you're answering their question.
+
+§5.2 and §5.3 stay as I wrote them. Don't change anything else. Recompile, check page count, ship it.
+
+Yeah, "The Argument Is in the Table" is too cute. Some less-stupid options, in different registers:
+
+**Plain / safe:**
+- Type-Level Performance and What It Means
+- Reading the Per-Type Spread
+- Per-Regime Results
+
+**Pointed:**
+- Where the Evidence Labor Shows Up
+- Where the Gap Lives
+- The Asymmetry Across Question Types
+- Not All Regimes Are Created Equal
+
+**Aligned with your framing throughout the paper:**
+- Evidence Labor Across the Four Regimes
+- Control Policy and the Per-Type Distribution
+
+My pick for your paper: **"Where the Evidence Labor Shows Up"** — it's short, it's the actual point of the subsection, and "evidence labor" is your own load-bearing phrase from the abstract and intro, so it threads naturally into §5.2 and §5.3.
+
+If you want safer/more conservative for a workshop reviewer: **"Type-Level Performance and What It Means."**
+
+
+
+
+
+
+
+
+
+xxx
+
 Got it — three specific rewrites from Leslie. Let me apply them surgically. First, locate Edit 1:
 
 Apply Edit 1 — lead with the missing-feedback-loop claim:
