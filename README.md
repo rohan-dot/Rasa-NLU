@@ -1,3 +1,12 @@
+Here are the three advisor edits in clean copy-paste blocks. Find by the anchor phrase, replace the whole block.
+
+---
+
+### Edit 1 — Failure mode 1 paragraph (Leslie's "I was a little lost on the placement" comment)
+
+Anchor: search for *"Failure mode 1: list performance plateaus"*
+
+```latex
 \textbf{Failure mode 1: list performance plateaus around
 $30$--$35$~F1 on Phase~A$^+$ across most of the field.} A single
 retrieval pass that misses one of the gold entities cannot
@@ -17,7 +26,15 @@ fine-tuning cannot recover these moves either, because the
 bottleneck they address is not the model's reasoning over the
 snippets it receives; it is which snippets reach the model in
 the first place.
+```
 
+---
+
+### Edit 2 + Edit 3 — "Our results support three claims" paragraph (Leslie's "more a finding than a claim" + "content is sort of jumbled, claim first" comments)
+
+Anchor: search for *"Our results, reported in"*
+
+```latex
 Our results, reported in \S\ref{sec:results}, support three
 claims. First, an open-weights agentic RAG architecture with no
 domain fine-tuning produces answer-quality competitive with the
@@ -38,3 +55,26 @@ lifted Phase~B factoid and list~F1 by roughly $6$ and $5$
 points but did not move Phase~A$^+$ scores at all --- a
 stronger generator helps where generation is the limit, not
 where retrieval is.
+```
+
+---
+
+### Edit 4 — the `§??` rendering bug
+
+Not a text edit. Confirm the discussion section has the label on it. Find:
+
+```latex
+\section{Discussion and Conclusion}
+```
+
+and make sure it reads:
+
+```latex
+\section{Discussion and Conclusion}\label{sec:discuss}
+```
+
+Then in Overleaf hit Recompile twice (or use the dropdown → "Recompile from scratch"). The `§??` becomes `§5`.
+
+---
+
+That's all three of Leslie's comments plus the cross-ref fix. Get the BioASQ paper submitted and then actually take a break.
