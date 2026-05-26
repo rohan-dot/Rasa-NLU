@@ -1,3 +1,14 @@
+Yes — making Table 1 single-column will reclaim most of what you need. It's currently spanning both columns with `table*`, which eats a full half-page of vertical space.
+
+The trick is that your column headers (Factoid, Yes/No, List, SemanticF1, Overall) plus the system names won't fit cleanly in one column at normal font size. You need three changes together:
+
+1. Switch from `table*` to `table` (single column)
+2. Shrink to `\small` or `\footnotesize`
+3. Abbreviate the column headers
+
+Drop-in replacement — find your current `\begin{table*}...\end{table*}` for Table 1 and replace the whole block with:
+
+```latex
 \begin{table}[t]
 \centering
 \footnotesize
@@ -22,7 +33,30 @@ DSPy ReAct RAG + MIPROv2        & 31.0 & 94.0 & 0.0  & 55.0 & 45.0 \\
 \bottomrule
 \end{tabular}
 \end{table}
+```
 
+Changes I made:
+- `table*` → `table` (single column instead of spanning)
+- `\footnotesize` with `\tabcolsep=3pt` for compactness
+- Column header abbreviations: Factoid → Fact., Yes/No → Y/N, SemanticF1 → SemF1, Overall → Ovr. (Y/N and List stay readable)
+- Added `\midrule` separating agentic rows from DSPy rows for scanability
+- Bolded your best result (76.0) so it pops at footnote size
+- Trimmed 41.63 → 41.6 (one less digit, saves width)
+- "COT prompt" → "CoT" (standard capitalization, shorter)
+
+This should give you back roughly half a page. Combined with the §3.1 cuts I mentioned earlier (the two paragraphs near the end of §3.1 that restate the bounded-agency framing from your intro), you should be safely back under 4 pages.
+
+If you're still bleeding over by a few lines after this change, two emergency moves in priority order:
+
+**Move 1.** In §3.1, the paragraph starting *"We therefore use the term agentic in a deliberately bounded sense"* can collapse to two sentences:
+
+> "We use *agentic* in a deliberately bounded sense: the system cannot invent tools, browse arbitrary sources, or act outside the evidence context. Its agency is located in the retrieval-and-reasoning loop — deciding when evidence is insufficient, selecting new searches, comparing competing passages, and revising answers when support is weak."
+
+The rest of that paragraph (CSS-perspective restatement) is already covered in §5.1.
+
+**Move 2.** The first paragraph of §5.3 has some repetition with §5.1's "invisible labor" framing. The sentence *"These are not only user-interface features; they are IR requirements for responsible biomedical agents"* is good — but the preceding 4-sentence build-up to it can compress.
+
+Try the table change alone first, recompile, see where you land. The table change alone is usually enough.
 
 
 
