@@ -1,26 +1,43 @@
-\section{Limitations and Conclusion}
+\subsection{Accountability Beyond the Moral Crumple Zone}
 
-The agentic system and the DSPy baselines run on different
-backbones---Gemma 4 31B for the agent, gpt-oss-120b for the DSPy
-programs---so Table~1 is not a model-controlled head-to-head. We
-read it as a comparison of \emph{control-policy regimes} rather
-than of language models: the within-model anchor for the agentic
-loop is the Zero-shot Gemma 4 31B row, which isolates the
-contribution of the control policy from the model. Other
-limitations apply. The corpus is title/abstract-only, excluding
-full-text evidence. DSPy optimization used question-answer pairs
-from \texttt{rag-mini-bioasq}, not gold snippets, which may
-disadvantage evidence-grounded behavior. Logged agent traces are
-not automatically usable by clinicians or researchers; future work
-must test whether traces actually improve human judgment.
-
-We conclude that biomedical QA agents should be framed as
-evidence mediators, not medical authorities. The technical
-finding is that a domain-governed agentic loop improves
-recall-sensitive and exact-answer regimes over static and generic
-agentic baselines. The computational social science finding is
-that the value of agents lies in making evidence labor visible
-and governable. The central question is not only whether the
-answer is correct, but whether the path to the answer can be
-inspected, challenged, and responsibly handed back to human
-experts.
+Agentic systems also risk creating what Elish~\cite{elish2019moral}
+calls a moral crumple zone: humans absorb blame for failures of
+automated systems that they could not realistically understand or
+control. A clinician shown a polished answer may be formally ``in
+the loop'' while having little visibility into query
+reformulations, omitted abstracts, or ranking errors. Our table
+puts a number on this gap. Moving from zero-shot Gemma 4 31B to
+the hybrid agent on the same backbone, the overall score rises by
+40.3 points, list F1 rises by 96 points (from 0.0 to 96.0), and
+factoid accuracy rises by 61 points (from 8.0 to 69.0). That is
+the evidence labor the agentic configuration takes on at run time
+that the zero-shot configuration silently passes through to
+whoever reads its output. Crucially, the same comparison shows
+almost no movement on yes/no (the agent loses 6 points, 94.0 to
+88.0) and only modest movement on summary (the agent gains 9
+points, 41.6 to 51.0). The regimes where the output gives the
+reader nothing concrete to verify are exactly the regimes where
+the gap between doing the evidence work and not doing it is
+hardest to see. This asymmetry reshapes what accountability has
+to mean in practice. The question is not whether to keep the
+human ``in the loop,'' but how to hand evidence work back in a
+form they can audit. Our design principle is therefore
+accountable hand-off, not human replacement. The agent must
+provide provenance for retrieved documents and snippets, record
+its search path, expose sufficiency decisions, and abstain or
+flag uncertainty when evidence is weak. These are IR requirements
+for responsible biomedical agents, not user-interface features.
+This also reframes evaluation. A four-column score table is
+necessary but insufficient: we should evaluate whether traces
+help humans detect errors, whether list omissions cluster around
+rare diseases or under-studied populations, whether generated
+queries systematically privilege well-indexed terminology, and
+whether users over-trust high-confidence binary answers. Agent
+logs become computational social science data: they reveal how
+an automated system operationalizes relevance, uncertainty, and
+biomedical authority. The WHO guidance on AI for
+health~\cite{who2021ethics} calls for transparency,
+responsibility, and inclusiveness; in agentic biomedical QA,
+those values become concrete IR obligations: bounded tool use,
+evidence provenance, calibrated abstention, answer-type-specific
+safeguards, and meaningful human review.
