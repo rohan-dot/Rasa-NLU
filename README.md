@@ -1,3 +1,4 @@
+```latex
 \section{Findings}
 
 Table~1 shows four patterns. First, the strongest performance
@@ -11,13 +12,12 @@ policy from model-class effects.
 Second, the gain is concentrated in recall-sensitive regimes. On
 list, the hybrid agent reaches 96.0 while every DSPy variant
 falls between 0.0 and 13.0, with three of six scoring 0.0. On
-factoid, 69.0 against a best-DSPy of 31.0. The ablation rows
-locate the active ingredient: removing dense retrieval and the
-cross-encoder (SQLite FTS5) still reaches 62.0/87.0 on
-factoid/list, while removing type-specific generation (FTS5 +
-CoT) drops to 50.0/70.0. The agentic loop itself carries most of
-the lift over DSPy; dense+reranker and type-specific prompting
-add the remainder.
+factoid, 69.0 against a best-DSPy of 31.0. Removing dense
+retrieval and the cross-encoder (SQLite FTS5) yields 62.0/87.0
+on factoid/list; further removing type-specific generation
+(FTS5 + CoT) yields 50.0/70.0. The agentic loop accounts for
+most of the gap over DSPy; dense retrieval with reranking and
+type-specific prompting account for the remainder.
 
 Third, optimization improves benchmark behavior on the regimes it
 can reach but does not address evidence completeness. MIPROv2
@@ -35,3 +35,4 @@ regimes where a system can score well without doing evidence
 work are the same regimes where the output gives the reader
 nothing concrete to verify. We return to this asymmetry in \S5.2
 and \S5.3.
+```
