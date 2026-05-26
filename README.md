@@ -1,21 +1,12 @@
-It worked! Tell him yes, the LiteLLM config should use `host.docker.internal`:
+He doesn't need it. The `--add-host` was only for the test container. OSS-CRS uses docker-compose, and on Docker 20.10+, `host.docker.internal` works automatically in compose services on Linux.
+
+Tell him: just run it. The LiteLLM config already points to `host.docker.internal:8000`, and since the test proved that resolves correctly, the LiteLLM sidecar will too.
+
+If it somehow doesn't work, he can add this to `gemma-fuzzer/compose.yaml` under the CRS service:
 
 ```yaml
-model_list:
-  - model_name: "gpt-oss-120b"
-    litellm_params:
-      model: "openai/gpt-oss-120b"
-      api_base: "http://host.docker.internal:8000/v1"
-      api_key: "dummy"
+extra_hosts:
+  - "host.docker.internal:host-gateway"
 ```
 
-And in `run-fuzzer.sh`:
-
-```bash
-export VLLM_HOST="oss-crs-litellm-1"
-export VLLM_PORT="4000"
-```
-
-The chain: gemma-fuzzer container → LiteLLM sidecar (`oss-crs-litellm-1:4000`) → `host.docker.internal:8000` → vLLM on the host machine.
-
-Then `oss-crs prepare` to rebuild, and `oss-crs run`.
+But try without it first — it should just work.
