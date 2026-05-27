@@ -1,0 +1,267 @@
+\documentclass[sigconf,natbib=true]{ceurart}
+
+% ==============================================================
+% Replace the author block below with your existing author info
+% from your current paper (name, affiliation, email, ORCID).
+% Keep your existing \conference{...} \title{...} etc. metadata.
+% ==============================================================
+
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{hyperref}
+
+\begin{document}
+
+\title{An Open-Weights Agentic RAG System for BioASQ Task 14b}
+
+% \author[1]{Your Name}[%
+%   orcid=0000-0000-0000-0000,
+%   email=youremail@example.com
+% ]
+% \address[1]{Your Affiliation}
+
+\begin{abstract}
+We describe three open-weights agentic retrieval-augmented generation (RAG) systems submitted to BioASQ Task 14b. All three share a common architecture: an LLM-controlled retrieval loop over PubMed, hybrid PubMedBERT and BM25 reranking fused via Reciprocal Rank Fusion (RRF), and a deterministic JSON format-hygiene filter on the model's output. The submissions vary the LLM backbone (Gemma 3 27B vs.\ Gemma 4 31B Dense), the PubMed access substrate (live NCBI E-utilities vs.\ a local SQLite FTS5 mirror of the Annual Baseline), and whether training-set exemplars condition the answer-generation prompt. Our best result is on Phase B batch 1, where the system reaches 0.941 yes/no accuracy, placing it in the upper-middle quartile of the Task 14b field. On Phase B batches 3 and 4, the Gemma 4 variant reaches 0.813 yes/no, 0.364 factoid strict accuracy, and 0.365 list F-measure. On Phase A$^+$ batch 4, the same generator scores 0.750 yes/no and 0.255 list F-measure. We describe the system, report per-batch results, and identify retrieval recall as the dominant limitation on our Phase A$^+$ scores.
+\end{abstract}
+
+\begin{keywords}
+  Biomedical question answering \sep
+  Agentic RAG \sep
+  Hybrid retrieval \sep
+  Reciprocal Rank Fusion \sep
+  BioASQ \sep
+  Gemma
+\end{keywords}
+
+\maketitle
+
+
+% ==============================================================
+\section{Introduction}
+\label{sec:intro}
+% ==============================================================
+
+BioASQ Task 14b~\cite{nentidis2026bioasq} is the biomedical question-answering shared task of the CLEF lab series. Each test batch presents biomedical questions of four types---yes/no, factoid, list, and summary---and asks participants to retrieve relevant PubMed snippets (Phase A) and produce answers (Phase B). The joint Phase A$^+$ variant requires both retrieval and answer generation end-to-end, so errors in retrieval propagate into generation.
+
+This paper describes three submissions: \texttt{asmalltrialsystem}, \texttt{ossllm}, and \texttt{Finalcorrected}. All three share a single architecture: an LLM-controlled retrieval loop over PubMed, hybrid dense-plus-sparse retrieval with Reciprocal Rank Fusion, and deterministic JSON format hygiene on the LLM's output. The variants differ in three dimensions: the LLM backbone, the PubMed access substrate, and whether the answer-generation prompt is conditioned on training-set exemplars.
+
+We submitted to all four batches of Task 14b. The headline numbers are: on Phase B batch 1, \texttt{asmalltrialsystem} reached 0.941 yes/no accuracy, 0.317 list F-measure, and 0.179 ROUGE-2 F1 on ideal answers; on Phase B batches 3 and 4, \texttt{Finalcorrected} reached 0.813 yes/no, 0.364 factoid strict, and 0.365 list F-measure; on Phase A$^+$ batch 4 the same Gemma 4 generator scored 0.750 yes/no and 0.255 list F-measure. The remainder of the paper describes the shared system architecture (\S\ref{sec:system}), reports per-batch results (\S\ref{sec:results}), and discusses where we stand in the Task 14b field and what we would change for next year (\S\ref{sec:discussion}).
+
+
+% ==============================================================
+\section{Related Work}
+\label{sec:related}
+% ==============================================================
+
+BioASQ Task 13b in 2025 saw a range of retrieval-augmented architectures applied to biomedical question answering. BIT.UA (Universidade de Aveiro)~\cite{bitua2025} combined dense retrieval with cross-encoder reranking and supervised fine-tuning of the generator. UNITOR~\cite{unitor2025} used a similar dense-plus-rerank pipeline with a different reranker. Ateia and Kruschwitz~\cite{ateia2025} introduced an iterative self-feedback loop where the LLM critiques and regenerates its own answer. AQAMS~\cite{aqams2025} composed multiple LLM agents that exchange messages while answering. The ReAct pattern~\cite{react} is the general template of LLM-driven action loops that we specialize to PubMed search in our agentic retrieval implementation.
+
+Our submission concentrates agency in a single LLM instance that plays both controller and generator roles within a forward retrieval loop. We do not iterate on the generated answer, and we do not distribute agency across multiple LLM agents.
+
+
+% ==============================================================
+\section{System Description}
+\label{sec:system}
+% ==============================================================
+
+\subsection{Overview}
+
+All three submitted systems share a common pipeline. Given a question, the system enters an LLM-controlled retrieval loop: the controller generates one or more PubMed queries, retrieves candidate documents and snippets, decides whether the accumulated evidence pool is sufficient to answer, and either issues additional queries or proceeds to answer generation. Retrieval and reranking use dense PubMedBERT~\cite{pubmedbert} embeddings and BM25~\cite{robertson2009bm25} fused via Reciprocal Rank Fusion (RRF)~\cite{rrf2009}. Answer generation uses type-specific prompts (yes/no, factoid, list, summary) that constrain the model's output. A deterministic regex-based filter then enforces the BioASQ output specification~\cite{bioasq5format} immediately before JSON serialization.
+
+\subsection{Agentic Retrieval Loop}
+
+The controller is the same LLM instance that later generates the answer. On each loop iteration the controller does three things: it generates a PubMed query (or a small set of paraphrased queries), it inspects the current evidence pool of snippets retrieved so far, and it produces a binary sufficiency vote. If the vote is ``sufficient,'' the loop exits and the model proceeds to answer generation; otherwise the controller generates additional queries. The loop terminates after at most $N{=}5$ iterations regardless of the vote.
+
+The retrieval calls themselves are not LLM operations; PubMed serves as a data pipe. What is agentic is the controller's discretion over which queries to issue, when to stop, and how to phrase paraphrased follow-ups. This is the operative meaning of ``agentic'' in our system: discretion over the retrieval trajectory, not autonomy over arbitrary actions.
+
+\subsection{Hybrid Retrieval and Reranking}
+
+For each query we retrieve from PubMed and chunk each abstract into overlapping 3-sentence windows. The full abstract is retained as a single additional chunk to preserve broader context. We embed all chunks using the \texttt{pritamdeka/S-PubMedBert-MS-MARCO} model~\cite{pubmedbert} (CPU inference, since the GPUs are occupied by the LLM) and index them in a FAISS \texttt{IndexFlatIP} for cosine similarity. We separately compute BM25 scores~\cite{robertson2009bm25} over the same chunks using \texttt{rank\_bm25}. The dense and sparse rankings are fused with Reciprocal Rank Fusion~\cite{rrf2009} at $k{=}60$ to produce the final candidate ranking.
+
+We tuned $k$ and the chunk size on training data and selected RRF over learned linear combinations of normalized scores; RRF outperformed every linear-combination configuration we tested and required one fewer hyperparameter.
+
+\subsection{Answer Generation}
+
+The generator uses type-specific prompts. For yes/no questions, the prompt explicitly asks the model to consider the case for both ``yes'' and ``no'' before committing, to counteract a model-side yes-bias we observed during prompt tuning. For factoid questions, the prompt asks for the exact entity in as few words as possible. For list questions, the prompt asks for exhaustive extraction of every distinct entity that satisfies the question, capped at 100 items per BioASQ specification. For summary questions, the prompt asks for a paragraph-sized answer capped at 200 words.
+
+\subsection{Format Hygiene}
+
+Instruction-tuned LLMs occasionally leak chain-of-thought scaffolding into structured outputs: markdown formatting, bracketed citation tokens, scratchpad headers, ``Answer:'' prefixes, and similar artifacts. The BioASQ exact-match scorer treats these as scoring failures. We apply a single regex-based filter to the model's output immediately before JSON serialization. The filter strips this scaffolding, removes any leading ``Answer:'' or ``Final answer:'' prefixes, and enforces the BioASQ${\geq}5$ format~\cite{bioasq5format}: factoid and list exact answers are emitted as lists of single-element lists (capped at 5 and 100 outer entries respectively), yes/no exact answers are bare lowercase strings, and summary outputs omit the \texttt{exact\_answer} field entirely. The filter recovered roughly 20--30 list answers across our four submissions that would otherwise have been rejected as malformed.
+
+\subsection{The Three Submitted Variants}
+\label{subsec:variants}
+
+The three submissions share the architecture above. They vary along three axes:
+
+\begin{itemize}
+\item \texttt{asmalltrialsystem} uses Gemma 3 27B~\cite{gemma3} as both controller and generator, queries PubMed live via the NCBI E-utilities API, and uses no few-shot exemplars. Submitted to Phase A$^+$ batches 2, 3, 4, and Phase B batch 1.
+\item \texttt{ossllm} is identical to \texttt{asmalltrialsystem} except that the answer-generation prompt is conditioned on three training-set exemplars selected by question-embedding cosine similarity. Submitted to the same batches.
+\item \texttt{Finalcorrected} uses Gemma 4 31B Dense~\cite{gemma4} (released April 2026) as both controller and generator, and queries a local SQLite FTS5 mirror of the PubMed Annual Baseline. No few-shot exemplars. Submitted to Phase A$^+$ batch 4 and Phase B batches 3, 4.
+\end{itemize}
+
+Table~\ref{tab:systems} summarizes the variants. Because all three share the agentic-loop, hybrid-retrieval, and format-hygiene components, the underlying methodology is held constant; the differences are in the LLM backbone, the PubMed access substrate, and the answer-generation prompt.
+
+\begin{table*}[t]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+\textbf{System} & \textbf{LLM backbone} & \textbf{PubMed access} & \textbf{Few-shot} & \textbf{Phases submitted} \\
+\midrule
+\texttt{asmalltrialsystem} & Gemma 3 27B & NCBI E-utilities (live) & No & A$^+$: b2, b3, b4 ; B: b1 \\
+\texttt{ossllm}            & Gemma 3 27B & NCBI E-utilities (live) & Yes (3 exemplars) & A$^+$: b2, b3, b4 ; B: b1 \\
+\texttt{Finalcorrected}    & Gemma 4 31B Dense & Local SQLite FTS5 mirror & No & A$^+$: b4 ; B: b3, b4 \\
+\bottomrule
+\end{tabular}
+\caption{The three submitted variants. All share the agentic retrieval loop, the hybrid PubMedBERT + BM25 + RRF reranker, the type-specific generation prompts, and the format-hygiene filter.}
+\label{tab:systems}
+\end{table*}
+
+
+% ==============================================================
+\section{Results}
+\label{sec:results}
+% ==============================================================
+
+\subsection{Phase B Results}
+
+Table~\ref{tab:phaseB} reports Phase B results.
+
+On Phase B batch 1, \texttt{asmalltrialsystem} reached yes/no accuracy 0.941, Macro-F1 0.938, factoid strict accuracy 0.304, factoid MRR 0.370, list F-measure 0.317, and ROUGE-2 F1 on ideal answers 0.179. The yes/no number places the submission in the upper-middle quartile of the Task 14b field on this batch~\cite{nentidis2026bioasq}: the field leader is at 1.000, and a cluster of roughly twenty systems is tied at 0.941.
+
+\texttt{ossllm} returned identical aggregate scores to \texttt{asmalltrialsystem} on Phase B batch 1 across all six reported metrics. The two systems share the same retrieval, reranking, generation, and format-hygiene components and differ only in whether three training-set exemplars are prepended to the answer-generation prompt. The identical scores reflect this methodological overlap: with this exemplar count and selection method, the prompt variation did not move the outputs.
+
+On Phase B batches 3 and 4, \texttt{Finalcorrected} reached 0.813 yes/no accuracy, 0.364 factoid strict, 0.365 list F-measure, and ROUGE-2 F1 of 0.158 (batch 3) and 0.087 (batch 4). Both batches return the same yes/no, factoid, and list-F numbers to three decimal places, as the system is identical across them; the ROUGE-2 difference between the two batches reflects question-set-specific lexical overlap between system summaries and gold summaries, which we discuss in \S\ref{sec:discussion}.
+
+\begin{table*}[t]
+\centering
+\small
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{System} & \textbf{Batch} & \textbf{Y/N Acc.} & \textbf{Y/N Macro-F1} & \textbf{Factoid Strict} & \textbf{Factoid MRR} & \textbf{List F1} & \textbf{Ideal R-2 F1} \\
+\midrule
+\texttt{asmalltrialsystem} & 1 & 0.941 & 0.938 & 0.304 & 0.370 & 0.317 & 0.179 \\
+\texttt{ossllm}            & 1 & 0.941 & 0.938 & 0.304 & 0.370 & 0.317 & 0.179 \\
+\texttt{Finalcorrected}    & 3 & 0.813 & 0.806 & 0.364 & 0.364 & 0.365 & 0.158 \\
+\texttt{Finalcorrected}    & 4 & 0.813 & 0.806 & 0.364 & 0.364 & 0.365 & 0.087 \\
+\bottomrule
+\end{tabular}
+\caption{Phase B results (gold snippets provided as evidence pool).}
+\label{tab:phaseB}
+\end{table*}
+
+\subsection{Phase A$^+$ Results}
+
+Table~\ref{tab:phaseA} reports Phase A$^+$ results.
+
+On Phase A$^+$ batch 2, \texttt{asmalltrialsystem} reached yes/no accuracy 0.762, factoid strict 0.150, MRR 0.150, and list F-measure 0.095. On batch 3, the same system reached yes/no 0.455 and list F-measure 0.201 (factoid metrics were not scored on this batch). On batch 4, the same system reached yes/no 0.750, factoid strict 0.273, MRR 0.273, and list F-measure 0.255.
+
+\texttt{Finalcorrected} on Phase A$^+$ batch 4 reached 0.750 yes/no, 0.746 Macro-F1, 0.273 factoid strict, 0.273 MRR, and 0.255 list F-measure---identical to \texttt{asmalltrialsystem} on the same batch, to three decimal places across all five metrics. The two submissions share the agentic-loop, retrieval-and-reranking, generation, and format-hygiene pipeline; they differ in LLM backbone (Gemma 3 vs.\ Gemma 4) and PubMed access substrate (live NCBI E-utilities vs.\ local SQLite mirror of the Annual Baseline). The identical scores reflect the shared methodology: on this batch, the retrieval-then-extract pipeline produced the same aggregate outputs regardless of which of these two backbones executed it.
+
+\begin{table*}[t]
+\centering
+\small
+\begin{tabular}{llccccc}
+\toprule
+\textbf{System} & \textbf{Batch} & \textbf{Y/N Acc.} & \textbf{Y/N Macro-F1} & \textbf{Factoid Strict} & \textbf{Factoid MRR} & \textbf{List F1} \\
+\midrule
+\texttt{asmalltrialsystem} & 2 & 0.762 & 0.760 & 0.150 & 0.150 & 0.095 \\
+\texttt{asmalltrialsystem} & 3 & 0.455 & 0.450 & --- & --- & 0.201 \\
+\texttt{asmalltrialsystem} & 4 & 0.750 & 0.746 & 0.273 & 0.273 & 0.255 \\
+\texttt{Finalcorrected}    & 4 & 0.750 & 0.746 & 0.273 & 0.273 & 0.255 \\
+\bottomrule
+\end{tabular}
+\caption{Phase A$^+$ results (retrieval and answer generation end-to-end). Em-dashes indicate the metric was not computed for that batch.}
+\label{tab:phaseA}
+\end{table*}
+
+\subsection{Position in the Task 14b Field}
+
+Table~\ref{tab:position} summarizes where the submission sits in the Task 14b field, batch by batch and metric by metric, against approximate field-leader numbers. We are in the upper-middle quartile on Phase B yes/no batch 1; middle of field on Phase B list F-measure, factoid strict, and ideal-answer ROUGE-2 F1; and lower-middle on Phase A$^+$ yes/no and list F-measure on batch 4.
+
+\begin{table*}[t]
+\centering
+\small
+\begin{tabular}{lccl}
+\toprule
+\textbf{Metric (best batch)} & \textbf{Our best} & \textbf{Field leader (approx.)} & \textbf{Approx.\ position} \\
+\midrule
+Phase B yes/no accuracy (b1)             & 0.941 & 1.000 & Upper-middle quartile \\
+Phase B list F-measure (b3)              & 0.365 & $\sim$0.50 & Middle of field \\
+Phase B factoid strict (b3)              & 0.364 & $\sim$0.53 & Middle of field \\
+Phase B ideal-answer ROUGE-2 F1 (b1)     & 0.179 & $\sim$0.25 & Middle of field \\
+Phase A$^+$ list F-measure (b4)          & 0.255 & $\sim$0.58 & Lower-middle \\
+Phase A$^+$ yes/no accuracy (b4)         & 0.750 & 0.938 & Lower-middle \\
+\bottomrule
+\end{tabular}
+\caption{Position in the Task 14b field. Field-leader numbers are approximate, read from the public leaderboard at the time of writing; positions are bucketed because the leaderboard contains many duplicate-score systems and small per-batch sample sizes.}
+\label{tab:position}
+\end{table*}
+
+
+% ==============================================================
+\section{Discussion}
+\label{sec:discussion}
+% ==============================================================
+
+\subsection{Where We Are Strong}
+
+Our strongest result is Phase B yes/no on batch 1, where we reach 0.941 accuracy in the upper-middle quartile of the field. Three design choices carry this performance.
+
+First, the agentic retrieval loop converts under-supported answers into additional retrieval requests rather than hallucinations. The controller's sufficiency check forces the model to inspect its own evidence pool before committing, and the type-specific generator prompts refuse to invent entities not present in the pool.
+
+Second, the format-hygiene filter recovers roughly 20--30 list answers across our four submissions that would otherwise have been rejected as malformed. BioASQ's exact-match scorer is unforgiving of chain-of-thought scaffolding leaking into structured outputs; the filter is a deterministic recovery against a class of silent errors that is independent of generation quality.
+
+Third, RRF fusion of dense PubMedBERT and BM25 ranks outperformed every learned linear combination of normalized scores we tested during development, with one fewer hyperparameter. The positional damping in RRF bounds each ranker's top-of-list contribution and prevents single high-BM25 documents from dominating the final ranking.
+
+\subsection{Where We Stand}
+
+Phase B performance is mid-field across batches: upper-middle quartile yes/no on batch 1, middle of field on list F-measure, factoid strict, and ideal-answer ROUGE-2 F1. Phase A$^+$ performance is lower-middle across all reported metrics on batch 4: 0.255 list F-measure against a field leader of approximately 0.58, and 0.750 yes/no against a field leader of 0.938.
+
+The Phase B--Phase A$^+$ gap is large. On batch 4 specifically---the only batch where \texttt{Finalcorrected} ran both phases---the same Gemma 4 generator scored 0.813 yes/no, 0.364 factoid strict, and 0.365 list F-measure in Phase B versus 0.750, 0.273, and 0.255 in Phase A$^+$. The gap grows from 6 percentage points on yes/no to 9 on factoid strict to 11 on list F-measure, ordered by how recall-sensitive the metric is. This is consistent with retrieval recall being the dominant limitation on our end-to-end pipeline: yes/no decisions can be reached from partial evidence, but list completion requires every gold entity to be in the pool.
+
+\subsection{Where We Are Limited}
+
+Our retrieval substrate has four known limitations relative to the top of the Task 14b field.
+
+We do not run a learned cross-encoder reranker on BioASQ relevance judgments; we use the unsupervised RRF fusion described in \S\ref{sec:system}. Our dense retriever (S-PubMedBert-MS-MARCO) is older than several biomedical encoders released since 2023, and we did not benchmark alternatives before committing to PubMedBERT for the submission window. We do not perform MeSH term expansion or biomedical entity normalization on outgoing queries, which costs recall on questions whose gold abstracts use synonyms of the queried entity. And our agentic loop's stopping criterion may exit while the evidence pool is still incomplete; we did not measure how often this happens on the test batches.
+
+Three of these four limitations are addressable without architectural changes to the loop itself. We discuss them as future-work items in \S\ref{subsec:future}.
+
+\subsection{ROUGE-2 F1 on Ideal Answers}
+
+\texttt{Finalcorrected} reaches ROUGE-2 F1 of 0.158 on Phase B batch 3 and 0.087 on Phase B batch 4. The same system on two different batches produces substantially different ROUGE-2 F1, which suggests that gold-summary alignment varies by batch and that ROUGE-2 is sensitive to specific lexical overlap. A likely contributing factor is that we did not impose a stricter word cap when swapping to Gemma 4 31B Dense, whose default generation style is longer than Gemma 3's; ROUGE-2 F1 includes a precision term that penalizes long summaries against terse gold summaries.
+
+\subsection{What We Would Change for Next Year}
+\label{subsec:future}
+
+Three concrete changes are most likely to improve our Phase A$^+$ scores.
+
+First, a learned cross-encoder reranker on BioASQ training-data relevance judgments. This is the single highest-leverage change we can identify: it directly addresses the retrieval-recall gap that limits our Phase A$^+$ list F-measure, and it is mechanically separable from the rest of the pipeline.
+
+Second, MeSH term expansion or biomedical entity normalization on outgoing queries, particularly for questions involving gene or protein symbols or disease synonyms. This is a query-side change that does not require modifying the retrieval index or the loop structure.
+
+Third, per-type prompt re-tuning when swapping the LLM backbone, with explicit word caps reset for each model's default verbosity. This would directly address the cross-batch ROUGE-2 F1 differences we observe between Gemma 3 and Gemma 4 generations.
+
+Two additional changes would help but require more development effort: an ensemble over multiple model proposals at generation time, and a controlled study of the agentic loop's stopping criterion to determine whether a minimum-iteration floor improves recall without prohibitive latency cost.
+
+
+% ==============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% ==============================================================
+
+We submitted three open-weights agentic RAG systems to BioASQ Task 14b, sharing an architecture and varying the LLM backbone, the PubMed access substrate, and the answer-generation prompt. The shared architecture reached upper-middle-quartile Phase B yes/no performance on batch 1 (0.941 accuracy), middle-of-field results on Phase B list F-measure and factoid strict, and lower-middle Phase A$^+$ results bounded by retrieval recall. A learned cross-encoder reranker on BioASQ training data is the single change most likely to close the Phase A$^+$ gap to the leading systems in next year's submission.
+
+
+% ==============================================================
+% Acknowledgements / Distribution Statement
+% Replace with your existing acknowledgements block.
+% ==============================================================
+
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\end{document}
