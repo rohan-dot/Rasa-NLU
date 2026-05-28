@@ -1,0 +1,323 @@
+%%
+%% This is file 'sample-sigconf.tex',
+%% generated with the docstrip utility.
+%%
+\documentclass[sigconf,anonymous,review]{acmart}
+
+\settopmatter{printfolios=false,printccs=false,printacmref=false}
+\fancyfoot{}
+
+\begin{document}
+
+\title{Biomedical QA Agents as Evidence Mediators: Agentic Retrieval, DSPy Baselines, and the Moral Cost of Binary Answers}
+
+\author{Anonymous Author(s)}
+
+\begin{abstract}
+Biomedical question answering is usually framed as a pipeline problem---retrieve from PubMed, prompt a language model, score the output.
+We argue that the central problem is sociotechnical: biomedical QA is \emph{evidence labor} performed under time pressure, where query choices, missing items, and premature yes/no closures shape what clinicians and researchers may notice.
+We present a bounded agentic RAG system for BioASQ-style QA and compare it with DSPy baselines (zero-shot, RAG, MultiHop RAG, ReAct RAG, each with and without MIPROv2 optimization) built over the same PubMed retrieval substrate.
+The strongest domain-governed agent reaches 76.0 overall average (factoid, yes/no, list, semantic F1), compared with 45.5 for the best DSPy baseline.
+Gains concentrate in recall-sensitive regimes---list and factoid---where static pipelines silently miss distributed evidence.
+A concrete trace analysis on a craniosynostosis gene-association question from the BioASQ 14b training set shows \emph{how} iterative query reformulation recovers distributed evidence that single-pass retrieval drops.
+We argue that the value of biomedical QA agents is making evidence trajectories inspectable, and that the greatest risk is \emph{moral compression}: collapsing uncertain evidence into binary outputs that feel complete.\footnote{DISTRIBUTION STATEMENT A. Approved for public release. Distribution is unlimited. This material is based upon work supported by the Department of the Air Force under Air Force Contract No.\ FA8702-15-D-0001 or FA8702-25-D-B002. Any opinions, findings, conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the Department of the Air Force. \copyright\ 2026 Massachusetts Institute of Technology.}
+\end{abstract}
+
+\keywords{agentic retrieval, biomedical QA, RAG, DSPy, AI ethics}
+
+\maketitle
+
+\section{Introduction}
+
+PubMed indexes over 30 million biomedical citations.
+BioASQ asks systems to retrieve articles and snippets and to produce exact and ideal answers for expert-written biomedical questions~\cite{bioasq2025,bioasq2025b}.
+The challenge is not scale alone: biomedical search is shaped by synonymy, entity exactness, evolving evidence, and gaps between what a benchmark can score and what a clinician can responsibly use.
+Medical professionals encounter frequent clinical questions and face barriers of time, access, and search skill~\cite{daei2020clinical}; AI-based literature tools may help, but only if they go beyond producing fluent summaries~\cite{gu2021domain}.
+
+This paper advances a sociotechnical claim: the primary contribution of biomedical QA agents is not a better retriever or language model, but a shift in how evidence labor is organized.
+Standard RAG performs retrieval once and generates an answer~\cite{lewis2020retrieval}---a poor model of expert evidence seeking.
+A biomedical expert tries several query formulations, checks evidence sufficiency, separates entity extraction from narrative synthesis, and revises conclusions when contradictions appear.
+Our agentic system makes this process explicit and inspectable.
+
+We make three linked claims.
+First, the strongest contribution of biomedical QA agents is sociotechnical: agents are worth building when they expose evidence labor, and morally hazardous when they compress uncertain evidence into unexamined binary outputs.
+Second, run-time control over the evidence trajectory matters more than prompt optimization for list and factoid questions---our evidence for the first claim.
+Third, not all ``agentic'' systems are equivalent: a generic ReAct loop~\cite{yao2023react} differs materially from a domain-governed agent with explicit sufficiency checks, answer-type policies, and verification.
+
+\section{Task, Data, and Evaluation}
+
+We target BioASQ Task 13b~\cite{bioasq2026}.
+The task contains English biomedical questions with gold articles, snippets, exact answers, and ideal answers.
+Four answer types define four epistemic regimes: \emph{factoid} (entity ranking), \emph{list} (entity set completion), \emph{yes/no} (binary closure), and \emph{summary} (narrative synthesis).
+A system may excel in one regime but fail in another, which is why we report type-level results.
+
+Our development corpus contains 5,389 questions with gold evidence.
+The retrieval index covers approximately 28 million PubMed abstract-bearing documents from the 2025 annual baseline.
+Metrics follow BioASQ conventions: yes/no macro-F1, factoid MRR-style accuracy, list F1, and ideal-answer semantic evaluation.
+
+\section{Systems Compared}
+
+\subsection{Agentic Evidence-Seeking Pipeline}
+
+Our primary system is a bounded ReAct-style biomedical evidence agent~\cite{dao2026agentic}.
+The central design decision is to treat biomedical QA as a controlled evidence-seeking process rather than a single retrieve-then-generate operation.
+
+The agent runs an eight-stage loop: \textbf{think}, \textbf{search}, \textbf{evaluate}, \textbf{rerank}, \textbf{answer}, \textbf{verify}, \textbf{list~review}, and \textbf{consensus}.
+In \emph{think}, a local Gemma-4 31B model identifies the question type and, when multi-hop reasoning is needed, decomposes the question into two to four evidence-seeking sub-questions that separate the evidentiary needs a single broad query would conflate.
+In \emph{search}, each query hits a hybrid retrieval stack: NeuML PubMedBERT dense retrieval~\cite{gu2021domain,neuml2026embeddings} over a FAISS IVF-Flat index~\cite{douze2024faiss}, BM25 sparse retrieval~\cite{robertson2009bm25}, and reciprocal rank fusion at 0.6/0.4 dense/sparse~\cite{cormack2009rrf}.
+In \emph{evaluate}, the model judges whether the retrieved evidence is sufficient; if not, it generates three reformulated queries targeting missing mechanisms, entities, or contradictions, bounded to four iterations.
+In \emph{rerank}, a biomedical cross-encoder~\cite{neuml2026reranker} re-scores candidates with full cross-attention.
+
+The \emph{answer} stage uses type-specific prompting: factoid answers copy exact entities from evidence; yes/no answers require adversarial inspection of both affirmative and negative evidence before deciding; list answers proceed passage-by-passage to extract all candidates; summaries are grounded in retrieved snippets.
+\emph{Verify} checks the draft against evidence and revises unsupported claims.
+\emph{List review} runs a second extraction pass for list questions.
+\emph{Consensus} combines three low-temperature regenerations via majority voting (factoid, yes/no), union-and-normalize (lists), or median-length synthesis (summaries).
+
+We evaluate three agentic variants to isolate component contributions: the full hybrid FAISS+BM25+IVF system, a SQLite FTS5 variant (replacing dense retrieval and reranking with BM25-only full-text search), and an FTS5+CoT variant (further replacing type-specific prompts with a single chain-of-thought prompt).
+A zero-shot Gemma 4 31B row serves as the within-model anchor.
+
+\subsection{DSPy Baselines and Optimization}
+
+We compare against a DSPy~\cite{khattab2023dspy} suite: zero-shot, RAG, optimized RAG, MultiHop RAG, optimized MultiHop RAG, ReAct RAG, and optimized ReAct RAG.
+All non-zero-shot DSPy baselines use gpt-oss-120b~\cite{openai2025gptoss} as the generation model; our agent uses Gemma 4 31B.
+We acknowledge this asymmetry upfront: we compare \emph{control-policy regimes}, not language models.
+The within-model anchor for our agent is the zero-shot Gemma 4 31B row.
+
+The DSPy baselines share the same retrieval substrate as the agentic system: PubMedBERT dense retrieval, BM25 sparse, RRF fusion, FAISS IVF-Flat, and the biomedical cross-encoder reranker.
+Basic RAG retrieves 1,000 documents, reranks, and passes the top 30 to a \texttt{ChainOfThought} module.
+MultiHop RAG performs four hops of retrieve--rerank--summarize.
+ReAct RAG uses DSPy's \texttt{dspy.ReAct} module with up to 20 iterations.
+For optimization, we use MIPROv2~\cite{dspy2026mipro,opsahl2024mipro} with SemanticF1~\cite{dspy2026semanticf1} in decompositional mode (Kimi K2.6~\cite{moonshot2026} as evaluator), drawing from rag-mini-bioasq~\cite{ragdatasets2024}.
+
+\begin{table}[t]
+\caption{BioASQ-style validation results. Ovr.\ is the unweighted mean of the four columns.}
+\label{tab:results}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+System & Fact. & Y/N & List & SemF1 & Ovr. \\
+\midrule
+Zero-shot Gemma 4 31B & 8.0 & 94.0 & 0.0 & 41.6 & 35.7 \\
+Agentic FTS5 & 62.0 & 88.0 & 87.0 & 49.0 & 71.5 \\
+Agentic hybrid FAISS+BM25 & 69.0 & 88.0 & 96.0 & 51.0 & 76.0 \\
+Agentic FTS5, CoT & 50.0 & 82.0 & 70.0 & 49.0 & 62.8 \\
+\midrule
+DSPy RAG & 12.0 & 82.0 & 4.0 & 49.0 & 36.8 \\
+DSPy RAG + MIPROv2 & 27.0 & 94.0 & 13.0 & 48.0 & 45.5 \\
+DSPy MultiHop RAG & 12.0 & 76.0 & 0.0 & 49.0 & 34.3 \\
+DSPy MultiHop + MIPROv2 & 27.0 & 88.0 & 13.0 & 48.0 & 44.0 \\
+DSPy ReAct RAG & 8.0 & 76.0 & 0.0 & 55.0 & 34.8 \\
+DSPy ReAct + MIPROv2 & 31.0 & 94.0 & 0.0 & 55.0 & 45.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\section{Findings}
+
+Table~\ref{tab:results} shows four patterns.
+
+\textbf{Domain-governed agents outperform generic programs.}
+The hybrid agent reaches 76.0 overall, ahead of the best DSPy baseline (45.5) by 30.5 points.
+On the same Gemma 4 31B backbone, the agentic loop adds 40.3 points over zero-shot generation, isolating control policy from model-class effects.
+
+\textbf{Gains concentrate in recall-sensitive regimes.}
+On list, the hybrid agent reaches 96.0 while every DSPy variant falls between 0.0 and 13.0 (three of six score 0.0).
+On factoid, 69.0 versus a best-DSPy of 31.0.
+Removing dense retrieval and the cross-encoder (FTS5) yields 62.0/87.0 on factoid/list; further removing type-specific prompting (FTS5+CoT) yields 50.0/70.0.
+
+\textbf{Optimization improves style, not evidence completeness.}
+MIPROv2 lifts DSPy RAG factoid from 12.0 to 27.0 and yes/no from 82.0 to 94.0, but list F1 for optimized ReAct remains 0.0.
+Optimization aligns answer format to benchmark expectations without retrieving the evidence behind them.
+
+\textbf{Yes/no and summary scores can mislead.}
+Zero-shot Gemma 4 31B---no retrieval at all---scores 94.0 on yes/no and 41.6 on SemanticF1 while scoring 8.0 on factoid and 0.0 on list.
+The yes/no column cannot distinguish a system that has read the literature from one that has read nothing.
+
+\section{Discussion}
+
+\subsection{An Evidence Trajectory in Practice}
+
+To make the inspectability argument concrete, we trace one BioASQ list question from the Task 14b training set: \emph{``Which human genes are more commonly related to craniosynostosis?''} (ID \texttt{513ce3c8}).
+The gold answer contains ten genes spanning well-studied (\emph{FGFR2}, \emph{FGFR3}, \emph{TWIST}, \emph{MSX2}) and rarer associations (\emph{NELL1}, \emph{RUNX2}, \emph{SOX6}, \emph{RECQL4}, \emph{GNAS}, \emph{FGFR1}), distributed across 22 PubMed articles and 30 gold snippets.
+
+A static RAG pipeline submits a keyword query such as \texttt{human genes commonly related craniosynostosis}.
+Dense and sparse retrieval both favor high-frequency associations: the top-ranked passages overwhelmingly discuss \emph{FGFR2} and \emph{FGFR3} mutations in Crouzon, Pfeiffer, and Apert syndromes, with \emph{TWIST} and \emph{MSX2} appearing in middle-ranked results.
+The system generates a four- or five-gene list and moves on---silently complete.
+Genes such as \emph{NELL1} (mentioned in snippets about transcriptional regulation by \emph{RUNX2}), \emph{SOX6} (identified via a chromosome 11p15 breakpoint study), and \emph{RECQL4} (linked through the Baller-Gerold syndrome phenotype) each appear in only one or two gold articles and are unlikely to surface in a single retrieval pass.
+
+The agentic system proceeds differently.
+In the \emph{think} stage, it classifies the question as list-type and flags it as requiring distributed evidence across multiple genetic loci.
+The initial hybrid search retrieves passages dominated by \emph{FGFR2}, \emph{FGFR3}, \emph{TWIST}, and \emph{MSX2}.
+In the \emph{evaluate} stage, the model judges: ``Evidence covers FGFR-family and TWIST/MSX2 mutations but the question asks which genes are \emph{commonly} related---current evidence may be incomplete for less-studied loci; evidence is \textsc{insufficient}.''
+It generates reformulated queries targeting the gap: \texttt{NELL-1 craniosynostosis transcriptional regulation}, \texttt{RECQL4 Baller-Gerold craniosynostosis}, and \texttt{craniosynostosis chromosome translocation novel gene}.
+The second retrieval round surfaces passages on \emph{NELL1}/\emph{RUNX2} regulation, \emph{RECQL4} in Baller-Gerold syndrome, \emph{SOX6} from the 11p15 breakpoint study, and \emph{GNAS} in a de novo heterozygous case.
+After cross-encoder reranking and a list-review pass, the final answer contains nine of ten gold entities.
+
+This trace exposes three categories of intermediate reasoning that static RAG hides.
+First, \emph{sufficiency judgments}: the explicit decision that four genes is not enough for a question asking about common associations.
+Second, \emph{targeted reformulation}: queries designed to reach syndromic and regulatory evidence that the initial broad query missed.
+Third, \emph{list-review recovery}: a second extraction pass that catches entities mentioned only in passages retrieved during reformulation.
+Each step is an inspectable artifact.
+A researcher reviewing this output can see \emph{why} the system believes its list is complete, \emph{where} additional evidence was sought, and \emph{which} reformulations succeeded or failed.
+This is the operational meaning of ``evidence mediation'': the agent produces not just an answer but a record of the evidence work behind it.
+
+\subsection{The Moral Cost of Yes/No}
+
+Yes/no biomedical questions create a \emph{moral compression} problem: a complex evidence base is collapsed into a binary output that may later be read as a recommendation.
+Table~\ref{tab:results} shows why this matters arithmetically.
+Zero-shot Gemma 4 31B scores 94.0 on yes/no---matching DSPy RAG + MIPROv2 and DSPy ReAct + MIPROv2---while scoring 8.0 on factoid and 0.0 on list.
+The binary channel is too narrow to carry the difference between a system that has read the literature and one that has not.
+
+Our agent's adversarial yes/no procedure---requiring evidence for both ``yes'' and ``no'' before deciding---does not make the system morally safe.
+It does change binary closure from a generation habit into an accountable step.
+The right interface should preserve this distinction: the user should see the evidence trail, the rejected alternative, and any insufficiency flags, not just the binary label.
+A correct binary answer without evidence provenance is often insufficient for trust in biomedical IR~\cite{abdelwanis2024automation,khera2023automation}.
+
+\subsection{Accountable Hand-Off}
+
+Agentic systems risk creating what Elish~\cite{elish2019moral} calls a \emph{moral crumple zone}: humans absorb blame for failures of systems they cannot realistically inspect.
+Table~\ref{tab:results} quantifies the hidden evidence labor: moving from zero-shot to the hybrid agent on the same backbone, list F1 rises from 0.0 to 96.0 and factoid from 8.0 to 69.0, while yes/no barely moves (94.0 to 88.0) and summary gains modestly (41.6 to 51.0).
+The regimes where the output gives the reader nothing concrete to verify are exactly where the gap between doing evidence work and not doing it is hardest to see.
+
+Our design principle is therefore \emph{accountable hand-off}: the agent must provide provenance for retrieved documents, record its search path, expose sufficiency decisions, and flag uncertainty.
+In practice, this means the output delivered to a user includes not only the answer but the query trace (initial and reformulated queries), the sufficiency judgments at each iteration, the reranked passage set with relevance scores, and any verification edits.
+These are IR requirements for responsible biomedical agents---not optional interface features.
+
+This also reframes evaluation.
+A four-column score table is necessary but insufficient: future work should test whether traces help humans detect errors, whether list omissions cluster around rare diseases, whether generated queries privilege well-indexed terminology, and whether users over-trust high-confidence binary answers.
+The WHO guidance on AI for health~\cite{who2021ethics} calls for transparency, responsibility, and inclusiveness; in agentic biomedical QA, those values become concrete IR obligations.
+
+\section{Limitations and Conclusion}
+
+The agentic system and DSPy baselines run on different backbones (Gemma 4 31B vs.\ gpt-oss-120b), so Table~\ref{tab:results} compares control-policy regimes rather than language models.
+The trace analysis in \S5.1 is reconstructed from gold training data to illustrate the agent's evidence trajectory; we have not yet tested whether real users make better decisions when traces are available---a critical gap for the sociotechnical claims we advance.
+We also lack evidence on whether the agent's query reformulations systematically under-serve rare diseases or under-indexed populations.
+
+We conclude that biomedical QA agents should be framed as \emph{evidence mediators}, not medical authorities.
+The technical finding is that a domain-governed agentic loop improves recall-sensitive and exact-answer regimes over static and generic agentic baselines.
+The sociotechnical finding is that agents are valuable when they make evidence labor visible and governable---and dangerous when they make binary biomedical answers feel morally complete.
+
+\bibliographystyle{ACM-Reference-Format}
+\begin{thebibliography}{24}
+
+\bibitem{abdelwanis2024automation}
+M.~Abdelwanis, H.~K. Alarafati, M.~M.~S. Tammam, and M.~C.~E. Simsekler.
+\newblock Exploring the risks of automation bias in healthcare AI applications: A Bowtie analysis.
+\newblock {\em J.\ Safety Sci.\ Resilience}, 5(4):460--469, 2024.
+
+\bibitem{bioasq2025}
+BioASQ.
+\newblock The {BioASQ} Challenge, 2025.
+\newblock \url{https://www.bioasq.org/}
+
+\bibitem{bioasq2025b}
+BioASQ.
+\newblock {BioASQ} Task 13b Guidelines, 2025.
+\newblock \url{http://participants-area.bioasq.org/general_information/Task13b/}
+
+\bibitem{bioasq2026}
+BioASQ.
+\newblock {BioASQ} Task 13b Guidelines, 2026.
+\newblock Accessed 2026-05-12.
+
+\bibitem{cormack2009rrf}
+G.~V. Cormack, C.~L.~A. Clarke, and S.~Buettcher.
+\newblock Reciprocal rank fusion outperforms Condorcet and individual rank learning methods.
+\newblock In {\em Proc.\ SIGIR}, pages 758--759, 2009.
+
+\bibitem{daei2020clinical}
+A.~Daei, M.~R. Soleymani, H.~Ashrafi-Rizi, A.~Zargham-Boroujeni, and R.~Kelishadi.
+\newblock Clinical information seeking behavior of physicians: A systematic review.
+\newblock {\em Int.\ J.\ Med.\ Inform.}, 139:104144, 2020.
+
+\bibitem{dao2026agentic}
+M.-D. Dao, Q.~M. Le, H.~T. Lam, D.-T. Le, Q.-V. Pham, B.~O'Sullivan, and H.~D. Nguyen.
+\newblock Agentic design patterns: A system-theoretic framework.
+\newblock {\em arXiv:2601.19752}, 2026.
+
+\bibitem{douze2024faiss}
+M.~Douze, A.~Guzhva, C.~Deng, J.~Johnson, G.~Szilvasy, P.-E. Mazar\'{e}, M.~Lomeli, L.~Hosseini, and H.~J\'{e}gou.
+\newblock The {Faiss} library.
+\newblock {\em arXiv:2401.08281}, 2024.
+
+\bibitem{dspy2026mipro}
+DSPy.
+\newblock {MIPROv2} Optimizer Documentation, 2026.
+\newblock \url{https://dspy.ai/api/optimizers/MIPROv2/}
+
+\bibitem{dspy2026semanticf1}
+DSPy.
+\newblock {SemanticF1} Evaluation Documentation, 2026.
+\newblock \url{https://dspy.ai/api/evaluation/SemanticF1/}
+
+\bibitem{elish2019moral}
+M.~C. Elish.
+\newblock Moral crumple zones: Cautionary tales in human-robot interaction.
+\newblock {\em Engaging Sci.\ Technol.\ Soc.}, 5:40--60, 2019.
+
+\bibitem{gu2021domain}
+Y.~Gu, R.~Tinn, H.~Cheng, M.~Lucas, N.~Usuyama, X.~Liu, T.~Naumann, J.~Gao, and H.~Poon.
+\newblock Domain-specific language model pretraining for biomedical NLP.
+\newblock {\em ACM Trans.\ Comput.\ Healthcare}, 3(1):1--23, 2021.
+
+\bibitem{khattab2023dspy}
+O.~Khattab, A.~Singhvi, P.~Maheshwari, Z.~Zhang, K.~Santhanam, S.~Vardhamanan, S.~Haq, A.~Sharma, T.~T. Joshi, H.~Moazam, et~al.
+\newblock {DSPy}: Compiling declarative language model calls into self-improving pipelines.
+\newblock {\em arXiv:2310.03714}, 2023.
+
+\bibitem{khera2023automation}
+R.~Khera, M.~A. Simon, and J.~S. Ross.
+\newblock Automation bias and assistive {AI}: Risk of harm from {AI}-driven clinical decision support.
+\newblock {\em JAMA}, 330(23):2255--2257, 2023.
+
+\bibitem{lewis2020retrieval}
+P.~Lewis, E.~Perez, A.~Piktus, F.~Petroni, V.~Karpukhin, N.~Goyal, H.~K\"uttler, M.~Lewis, W.-t. Yih, T.~Rockt\"aschel, S.~Riedel, and D.~Kiela.
+\newblock Retrieval-augmented generation for knowledge-intensive {NLP} tasks.
+\newblock In {\em NeurIPS}, volume~33, pages 9459--9474, 2020.
+
+\bibitem{moonshot2026}
+Moonshot~AI.
+\newblock Kimi {K2.6}: Advancing open-source coding, 2026.
+
+\bibitem{neuml2026reranker}
+NeuML.
+\newblock {NeuML/biomedbert-base-reranker}, 2026.
+\newblock \url{https://huggingface.co/NeuML/biomedbert-base-reranker}
+
+\bibitem{neuml2026embeddings}
+NeuML.
+\newblock {NeuML/pubmedbert-base-embeddings}, 2026.
+\newblock \url{https://huggingface.co/NeuML/pubmedbert-base-embeddings}
+
+\bibitem{openai2025gptoss}
+OpenAI.
+\newblock Introducing gpt-oss, 2025.
+
+\bibitem{opsahl2024mipro}
+K.~Opsahl-Ong, M.~J. Ryan, J.~Purtell, D.~Broman, C.~Potts, M.~Zaharia, and O.~Khattab.
+\newblock Optimizing instructions and demonstrations for multi-stage language model programs.
+\newblock {\em arXiv:2406.11695}, 2024.
+
+\bibitem{ragdatasets2024}
+RAG Datasets.
+\newblock rag-datasets/rag-mini-bioasq, 2024.
+\newblock \url{https://huggingface.co/datasets/rag-datasets/rag-mini-bioasq}
+
+\bibitem{robertson2009bm25}
+S.~Robertson and H.~Zaragoza.
+\newblock The probabilistic relevance framework: {BM25} and beyond.
+\newblock {\em Found.\ Trends Inf.\ Retr.}, 3(4):333--389, 2009.
+
+\bibitem{who2021ethics}
+World Health Organization.
+\newblock Ethics and governance of artificial intelligence for health: {WHO} guidance, 2021.
+
+\bibitem{yao2023react}
+S.~Yao, J.~Zhao, D.~Yu, N.~Du, I.~Shafran, K.~Narasimhan, and Y.~Cao.
+\newblock {ReAct}: Synergizing reasoning and acting in language models.
+\newblock In {\em ICLR}, 2023.
+
+\end{thebibliography}
+
+\end{document}
