@@ -1,1 +1,9 @@
-uv run oss-crs build-target --compose-file example/discver/compose.yaml --fuzz-proj-path ../oss-fuzz-aixcc/projects/libxml2 uv run oss-crs run --compose-file example/discver/compose.yaml --fuzz-proj-path ../oss-fuzz-aixcc/projects/libxml2 --target-harness xml --timeout 900
+def __init__(self, llm, call_graph, src_dir, output_dir,
+                 fuzz_seconds=120, main_binary=None, tool_context=""):
+        self.scanner = ScannerAgent(llm, max_workers=3)
+
+
+def __init__(self, llm, call_graph, src_dir, output_dir,
+                 fuzz_seconds=120, main_binary=None, tool_context=""):
+        self.llm = llm
+        self.scanner = ScannerAgent(llm, max_workers=3)
