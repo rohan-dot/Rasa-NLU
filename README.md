@@ -1,10 +1,8 @@
-choice = resp.choices[0]
-raw = choice.message.content or ""
-try:
-    return json.loads(raw)
-except json.JSONDecodeError:
-    print(f"[DEBUG] finish_reason={choice.finish_reason}  len={len(raw)} chars")
-    print("[DEBUG] raw output >>>")
-    print(raw[:1200])
-    print("[DEBUG] <<<")
-    raise
+# Phase 1.5: sink-driven ensemble hunt (additive)
+    from integrate import run_sink_hunt
+    run_sink_hunt(
+        llm, call_graph, args.src_dir, args.output_dir, binary_path,
+        language=plugin.name, plugin=plugin,
+        n_targets=8, n_agents=3,
+        fuzz_seconds=min(90, args.fuzz_timeout // 4),
+    )
