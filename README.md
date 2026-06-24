@@ -1,7 +1,6 @@
 
-cat > _t.py <<'EOF'
-import asyncio, airport_extract_new1 as a
+import asyncio, importlib, airport_extract_new1 as a
+importlib.reload(a)
 t = a.slice_sections(a.clean_html('airports/FRA.cfm.html'))
-print(asyncio.run(a.call_model(t))[0].get('diplomatic_lead_time_raw'))
-EOF
-python _t.py
+data, note = await a.call_model(t)
+print("LEAD:", data.get('diplomatic_lead_time_raw'))
