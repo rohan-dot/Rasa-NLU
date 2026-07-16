@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=1 python agentic_planner.py "hog to dur on 2026-09-15"
+python country_route_planner.py "fra to afg" --date 2026-09-15
