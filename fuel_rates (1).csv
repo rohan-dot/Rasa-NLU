@@ -1,0 +1,22 @@
+code,description,usd_per_gallon
+JP8,Turbine Fuel Aviation JP-8,4.66
+JA1,Turbine Fuel Aviation Jet A-1,4.66
+JAA,Turbine Fuel Aviation Jet A,4.64
+JP5,Turbine Fuel Aviation JP-5,4.69
+JTS,Turbine Fuel Aviation Thermally Stable,5.75
+F34,Turbine Fuel Aviation Kerosene Type NATO F-34,4.66
+AN8,Turbine Fuel Aviation Freeze Point -72F,5.97
+J50,Turbine Fuel Aviation Freeze Point -50F,4.66
+TS1,Turbine Fuel Aviation Grade TS-1,5.69
+CA1,Turbine Fuel Aviation Canadian JA1,4.66
+IA1,Into-Plane Jet Fuel Jet A-1,5.31
+IAA,Into-Plane Jet Fuel Jet A,5.31
+IP8,Into-Plane Jet Fuel JP-8,5.31
+NA1,Local Purchase Jet Fuel Jet A-1 (non-contract airport),5.7
+NAA,Local Purchase Jet Fuel Jet A (non-contract airport),5.7
+NNJ,Local Purchase NATO F-34,5
+KS1,Kerosene Grade No 1-K,4.58
+130,AVGAS 100LL CONUS,5.31
+100LL-OCONUS,AVGAS 100LL OCONUS,20.82
+DF2,Diesel Fuel Grade 2-D (ground),4.18
+NLS,Local Purchase Ground Fuel,4.88
