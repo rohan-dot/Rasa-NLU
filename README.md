@@ -1,4 +1,1 @@
-gitgit format-patch master --stdout > discver-toolcalling.patch
-
-
-ls -lh discver-toolcalling.patch
+git format-patch 9f5bd21 --stdout > discver-toolcalling.patch
