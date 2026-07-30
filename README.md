@@ -1,1 +1,1 @@
-Read ARCHITECTURE.md and README.md, then map the actual code under src/: list the main modules, what each does, and where tool calls to the GLM-5 (vLLM) model are dispatched. Do NOT edit any logic. Append your findings as a "## Agent Status" section to the existing README.md, add a CHANGELOG.md entry, and commit. Report the real src/ module layout back to me.
+
