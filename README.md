@@ -1,2 +1,2 @@
-git add -A 
-git commit -m "update agent docs with verified src/ map and drifts"
+python microagent.py --repo $(pwd)
+Per skills/tool-calling-reliability.md, harden the action-JSON handling in src/agent_tools.py only. Wrap _extract_json and the tool dispatch ladder with a validate->repair step: when the model's action JSON is malformed or missing required fields, feed the specific error back to the model once and let it retry before falling through to the current behavior. Keep behavior identical for valid input. Add a small unit test for the repair path. Do NOT touch llm_client.py yet. Verify with py_compile and the test, then commit per the self-management rules.
