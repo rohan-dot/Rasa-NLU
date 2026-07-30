@@ -1,3 +1,4 @@
-export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1
-export LITELLM_API_KEY=sk-your-actual-copied-key
-export AGENT_MODEL=claude-opus-4-8
+curl $LITELLM_BASE_URL/chat/completions \
+  -H "Authorization: Bearer $LITELLM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"claude-opus-4-8","messages":[{"role":"user","content":"ping"}],"max_tokens":10}'
