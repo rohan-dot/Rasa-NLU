@@ -1,2 +1,1 @@
-git checkout agent/scaffold-improvements
-python -m py_compile src/agent_tools.py && echo "confirmed good"
+grep -i "reliability\|guided_json_calls\|repairs_needed" /var/log/discver/report_run_20260731-182525.md
