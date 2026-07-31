@@ -1,4 +1,2 @@
-git am --abort
-git checkout -b toolcalling-reliability
-git apply --3way discver-full.patch
-git add -A && git commit -m "tool-calling reliability + instrumentation"
+git checkout agent/scaffold-improvements
+python -m py_compile src/agent_tools.py && echo "confirmed good"
