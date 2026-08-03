@@ -1,34 +1,63 @@
-Priority #3 is triage precision: too many low-confidence LLM candidates reach the final report mixed with confirmed crashes. In triage.py, crash_analyzer.py, crash_dedup.py, strengthen separation so unverified model leads are clearly demoted below fuzzer-confirmed reproduced crashes — behind a flag defaulting to current behavior. Never touch the confirmed-crash/PoV path. Add tests, verify, update docs, commit.
+Good — my way it is, and zip instead of patch is genuinely the cleaner handoff here since Ashok kept hitting `git am` problems. Here's the whole thing, copy-paste on your box.
 
-
-
-
-Priority #2 is fuzzer coverage. Last run came back WEAK: fuzzer barely ran (523 execs on X509Fuzzer), coverage never increased on any harness, no new corpus units. Diagnose the root cause from the code and the run evidence in ./run-evidence/ (report_run_*.md has the findings + WEAK health warnings, health.json has per-harness execs/coverage deltas, crash-summary.txt has the crash). discver generates harnesses and seeds at runtime via harness_agent.py, java_harness_agent.py, seed_generator.py, harness_templates.py. Read those plus fuzzer.py and run_health.py. Determine WHY coverage stays flat — too few harnesses, shallow/wrong entry points, or seeds not reaching interesting paths — citing evidence from the run files. Then implement ONE bounded fix targeting the biggest lever, behind a flag (env DISCVER_*) defaulting to current behavior so it can't make the WEAK problem worse. Add tests. Verify with py_compile and tests. Update CHANGELOG/README. Report the diagnosis and what you changed. Commit.
-
-
-
-Before I give you the plan — one honest flag, because it changes whether "priority 2 and 3 now" is even the right move.
-
-You still haven't confirmed your instrumentation ran. The grep came up empty again. Your theory — that branch-switching meant your changes never actually ran — is very plausible and worth taking seriously. But here's the problem it creates: **if you don't know whether your priority-1 changes work, piling priority 2 and 3 on top means you'd be shipping three layers of unverified changes to Ashok at once.** If something's broken (and the WEAK run suggests something might be), you won't know which layer caused it. That's the opposite of the clean, measurable approach that got you this far.
-
-So let me split your request into "yes, do this now" and "wait, verify first."
-
-**Step 1 — get to solid ground (do this first, it's the thing you actually need).** Confirm which branch has your real, complete work and that it's intact:
+**Step 1 — make sure you're on the right branch with everything:**
 ```bash
 cd /panfs/g52-panfs/exp/FY26/AIxCC/ro31337/discver-java-dev
 git checkout agent/scaffold-improvements
-git log --oneline
-grep -n "reliability_metrics\|_rel" src/agent_tools.py
-python -m py_compile src/agent_tools.py src/llm_client.py src/reliability_metrics.py && echo "GOOD"
+git log --oneline | head -8      # confirm 30a802a, f2ff6c2, 4affea8 are all there
 ```
-`git log` should show all 7 commits ending in the telemetry one. The grep should print lines. If both do, **this branch is your source of truth** — this is "the original place where we're sure your changes are." Everything else (the `toolcalling-reliability` branch, the aborted `git am`) was scratch.
 
-**Step 2 — resolve the WEAK regression before adding anything.** This matters: it was strong before your files, weak after. That's a possible performance regression *in your priority-1 code*. If you build priority 2 and 3 on top of a priority-1 change that throttles the fuzzer, you inherit and compound the bug. The revert test (old files → is it strong again?) tells you if your code caused it. **I'd strongly resist doing 2 and 3 until you know whether 1 regressed the fuzzer.** Adding code is the wrong move when you have an unexplained slowdown in the code you already have.
+**Step 2 — see the flag list and the changed files (so you know what to tell him):**
+```bash
+grep -rho "DISCVER_[A-Z_]*" src/*.py | sort -u
+git diff --name-only 9f5bd21 -- '*.py'
+```
 
-**Step 3 — then priority 2 and 3, on the verified branch, one at a time.** Once you're on `agent/scaffold-improvements` and the WEAK question is resolved, yes — do coverage (2) then triage (3) as agent tasks, committing each. Then send Ashok *only* the changed `.py` files, no patching. That part of your plan is exactly right and I'll draft both tasks.
+**Step 3 — collect the changed .py files into a folder that keeps their paths, then zip it:**
+```bash
+rm -rf for-ashok discver-changes.zip
+mkdir -p for-ashok
+git diff --name-only 9f5bd21 -- '*.py' | while read f; do
+  mkdir -p "for-ashok/$(dirname "$f")"
+  cp "$f" "for-ashok/$f"
+done
+cd for-ashok && zip -r ../discver-changes.zip . && cd ..
+unzip -l discver-changes.zip     # confirm the files + their src/ paths are inside
+```
 
-But honestly — the sequence you proposed skips the two things that are actually blocking you: *is priority 1 even running*, and *did priority 1 make the fuzzer weak*. Racing ahead to 2 and 3 doesn't fix those; it buries them under more unverified code.
+The `for-ashok/` folder preserves the `src/...` structure, so when Ashok unzips it, the files land in the right subfolders — he just extracts it over his discver checkout.
 
-So my counter-proposal: **run Step 1 now** (confirm the branch), paste me the `git log` + grep output, and tell me the result of the revert test if Ashok can do it. The moment we know (a) your changes are intact on this branch and (b) whether they caused the WEAK run, I'll give you the priority-2 and priority-3 tasks and the clean "send just the .py files" handoff. That's maybe 5 minutes of verification that saves you from shipping a compounded mess.
+**Step 4 — download `discver-changes.zip`** from the Jupyter file browser (right-click → Download) and send it to Ashok.
 
-Run the Step 1 commands and show me the output — that's the fastest way to get you to solid ground.
+**Step 5 — the note to send with it:**
+
+> Zip of the changed Python files — unzip it into `example/discver/` (it keeps the `src/` paths, so files land in the right place, overwriting).
+>
+> Before running, confirm you're on my version:
+> ```
+> grep -n reliability_metrics src/agent_tools.py    # should print a line
+> python -m py_compile src/*.py                       # should be silent
+> ```
+>
+> In `compose.yaml`, under the `discver` service's `environment:` block, set all four:
+> ```
+> - DISCVER_GUIDED_JSON=1
+> - DISCVER_SINGLE_ACTION=1
+> - DISCVER_WIRE_SEEDS=1
+> - DISCVER_TRIAGE_MIN_CONFIDENCE=0.5
+> ```
+> **`DISCVER_WIRE_SEEDS=1` is the important one** — last run came back WEAK because generated seeds were never handed to the fuzzers (empty corpus on all harnesses). This wires them in and should flip WEAK→HEALTHY.
+>
+> Run your usual `uv run oss-crs run --compose-file example/discver/compose.yaml ...`
+>
+> After the run: `grep -ri reliability /var/log/discver/` — the `discver.reliability` summary line will now show up (I fixed the logging that was suppressing it before).
+
+That's the complete handoff. Run steps 1–3, and if `unzip -l` shows the files with their `src/` paths, you're good to download and send.
+
+Two last honest reminders:
+
+**Have him run the two verify commands** (grep + py_compile) *before* the run. That's the check that would've caught every corrupted-transfer problem you hit earlier. One minute, saves a wasted run.
+
+**The measurement you've been chasing all day arrives with this run.** With the logging fix in, `DISCVER_WIRE_SEEDS` on, and the run hopefully going HEALTHY, that `discver.reliability` line finally tells you how often GLM-5 flubbed JSON — the number that says whether the whole tool-calling effort mattered. When Ashok sends it back, that's your result. And if it comes back HEALTHY, that's the completeness you wanted — a working, measured pipeline — and the entry-point coverage fix becomes your clean next step on top of it.
+
+Run steps 1–3 and tell me what `unzip -l` shows.
