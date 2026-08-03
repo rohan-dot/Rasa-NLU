@@ -1,3 +1,8 @@
+Priority #3 is triage precision: too many low-confidence LLM candidates reach the final report mixed with confirmed crashes. In triage.py, crash_analyzer.py, crash_dedup.py, strengthen separation so unverified model leads are clearly demoted below fuzzer-confirmed reproduced crashes — behind a flag defaulting to current behavior. Never touch the confirmed-crash/PoV path. Add tests, verify, update docs, commit.
+
+
+
+
 Priority #2 is fuzzer coverage. Last run came back WEAK: fuzzer barely ran (523 execs on X509Fuzzer), coverage never increased on any harness, no new corpus units. Diagnose the root cause from the code and the run evidence in ./run-evidence/ (report_run_*.md has the findings + WEAK health warnings, health.json has per-harness execs/coverage deltas, crash-summary.txt has the crash). discver generates harnesses and seeds at runtime via harness_agent.py, java_harness_agent.py, seed_generator.py, harness_templates.py. Read those plus fuzzer.py and run_health.py. Determine WHY coverage stays flat — too few harnesses, shallow/wrong entry points, or seeds not reaching interesting paths — citing evidence from the run files. Then implement ONE bounded fix targeting the biggest lever, behind a flag (env DISCVER_*) defaulting to current behavior so it can't make the WEAK problem worse. Add tests. Verify with py_compile and tests. Update CHANGELOG/README. Report the diagnosis and what you changed. Commit.
 
 
