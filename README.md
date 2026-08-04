@@ -1,11 +1,13 @@
-Go ahead with the probe, with these changes:
-1. Don't build an ICAO-prefix table. Map ICAO→country via OurAirports
-   airports.csv (ident → iso_country alpha-2) then alpha-2→alpha-3 via
-   countries_codes_and_coordinates.csv — same join country_route_planner.py
-   already does. Copy those two files into the repo if not present.
-2. For udl_notifications: slice per country by the exact ICAO idents
-   belonging to that country (from the airports.csv join), not FIR prefix.
-   Also note the newest timestamp per country — teammate says this data is
-   very old, so each dossier slice should be labeled with its date range.
-3. Probe output I want to see: for CHE, list its ICAOs found in each of the
-   three sources, with counts.
+Good probe. Decisions:
+1. Keep the broad airport-type ident set for slicing (don't match the
+   planner's filter).
+2. NOTAM=0 is a matching gap, not ground truth: NOTAMs are often filed
+   against the FIR (LSAS), not an airfield. Match NOTAMs by exact ident
+   OR by 2-letter prefix derived from that country's own ident set
+   (CHE -> {LS}). Mark prefix-matched blocks as scope=FIR in the slice.
+   Exception: for USA don't prefix-match on single-K ICAOs' prefixes
+   beyond K/PA/PH etc as derived — derive strictly from the ident set,
+   never hand-code.
+3. Then build country_index.py as you proposed and show me the 7-country
+   table: MEIS records / SVC rows / NOTAM blocks (exact vs FIR) / date
+   range per country. Go.
