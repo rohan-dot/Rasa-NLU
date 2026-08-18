@@ -1,0 +1,648 @@
+[
+ {
+  "id": "Diplomatic Clearance Lead Time / HazMat Requirements",
+  "question": "Aircraft/diplomatic clearance lead time(s) and validity \u2014 every value with its category/qualifier (blanket/annual, DV, HAZMAT, military, unmanned, other) \u2014 plus HAZMAT/dangerous-goods clearance requirements",
+  "type": "extract",
+  "scope": [
+   "aircraft",
+   "civilContractAircraft"
+  ],
+  "route": [
+   "apacsClrRequest",
+   "leadTime",
+   "validity",
+   "clearance",
+   "clr",
+   "permissionRequest",
+   "rteFlgtOprtInfo",
+   "hazmat",
+   "dangerous"
+  ]
+ },
+ {
+  "id": "Aircraft Entry / Exit Airfield Restrictions",
+  "question": "Airports/airfields authorized for aircraft entry and exit with ICAO codes, entry/exit restrictions at specific airfields, authorized tech stops and alternates",
+  "type": "extract",
+  "scope": [
+   "aircraft",
+   "civilContractAircraft"
+  ],
+  "route": [
+   "enterDepart",
+   "airportDetails",
+   "authTechStopAndAltAirport",
+   "additionalAirportInfo",
+   "airport$",
+   "entryExitReq"
+  ],
+  "list": true
+ },
+ {
+  "id": "Ops Hrs / Holiday Closures",
+  "question": "Operating hours, holiday closures, weekend or after-hours limitations for aviation operations",
+  "type": "extract",
+  "route": [
+   "hour",
+   "holiday",
+   "closure",
+   "curfew",
+   "quiet"
+  ]
+ },
+ {
+  "id": "Customs / Ag / Immigration",
+  "question": "Customs, agriculture/quarantine, and immigration requirements and procedures for aircraft and crews",
+  "type": "extract",
+  "route": [
+   "customsImmInspect",
+   "customs",
+   "immigration",
+   "agricult",
+   "quarantine",
+   "healthMedical"
+  ]
+ },
+ {
+  "id": "Country Specific Forms",
+  "question": "Country-specific forms, declarations, or documents required (names/numbers of forms and when required)",
+  "type": "extract",
+  "route": [
+   "form",
+   "declaration",
+   "apacsReqInst"
+  ]
+ },
+ {
+  "id": "AIR Card / Cash Payment Requirement",
+  "question": "Fuel purchase arrangements: AIR Card acceptance, cash-only requirements, payment methods, fuel vendor constraints",
+  "type": "extract",
+  "route": [
+   "airCard",
+   "cash",
+   "payment",
+   "fuel",
+   "fee"
+  ]
+ },
+ {
+  "id": "AMC Policy Matrix (Overseas Msns)",
+  "question": "AMC Policy Matrix (Overseas Msns)",
+  "type": "workflow"
+ },
+ {
+  "id": "Airfield Detail Aircraft Suitability / Destinations AND Alternates",
+  "question": "Aircraft suitability of airfields, suitable destination and alternate airfields and any suitability exceptions",
+  "type": "extract",
+  "route": [
+   "suitab",
+   "authTechStopAndAltAirport",
+   "alternate",
+   "destination",
+   "airportDetails"
+  ],
+  "scope": [
+   "aircraft",
+   "civilContractAircraft"
+  ]
+ },
+ {
+  "id": "Runway / Taxiway / Apron Weight Bearing Capacity (WBC), Length and Width",
+  "question": "Runway, taxiway, and apron weight bearing capacity (WBC/PCN), runway length and width, surface details",
+  "type": "extract",
+  "route": [
+   "runway",
+   "taxiway",
+   "apron",
+   "weightBearing",
+   "pcn",
+   "pavement"
+  ]
+ },
+ {
+  "id": "Aircraft Tow Bar Requirement",
+  "question": "Tow bar requirement or availability for aircraft ground handling",
+  "type": "extract",
+  "route": [
+   "towBar",
+   "tow"
+  ]
+ },
+ {
+  "id": "Station Coordinator Details",
+  "question": "Station coordinator, points of contact, phone/DSN numbers and contact details for coordination",
+  "type": "extract",
+  "route": [
+   "poc",
+   "contactTypes",
+   "organization",
+   "lodging",
+   "coordinator"
+  ]
+ },
+ {
+  "id": "Ops Hrs, Quiet Hrs, Holiday / Weekend Ops, Servicing Hours, TA",
+  "question": "Airfield operating hours, quiet hours, holiday/weekend operations limits, servicing hours, transient alert (TA) availability",
+  "type": "extract",
+  "route": [
+   "hour",
+   "quiet",
+   "servic",
+   "holiday",
+   "transient"
+  ]
+ },
+ {
+  "id": "Customs",
+  "question": "Customs procedures, clearance locations and availability for arriving/departing aircraft",
+  "type": "extract",
+  "route": [
+   "customsImmInspect",
+   "customs"
+  ]
+ },
+ {
+  "id": "Terminal Instrument Procedures (TERPS) Review",
+  "question": "Terminal instrument procedures (TERPS) review status and reviewed procedures",
+  "type": "extract",
+  "route": [
+   "terps",
+   "instrumentProc"
+  ]
+ },
+ {
+  "id": "Check DOD Approach and Departure",
+  "question": "Check DOD Approach and Departure",
+  "type": "workflow"
+ },
+ {
+  "id": "Check DoD Accepted Host Nation List",
+  "question": "Check DoD Accepted Host Nation List",
+  "type": "workflow"
+ },
+ {
+  "id": "Check TERPS Expiration Date",
+  "question": "TERPS review or procedure expiration dates",
+  "type": "extract",
+  "route": [
+   "terps",
+   "expir"
+  ]
+ },
+ {
+  "id": "Approach and Departure Information",
+  "question": "Approach and departure procedures information, restrictions and notes",
+  "type": "extract",
+  "route": [
+   "navAndOtherOpsInfo",
+   "approach",
+   "departure",
+   "rteFlgtOprtInfo"
+  ],
+  "scope": [
+   "aircraft",
+   "civilContractAircraft"
+  ]
+ },
+ {
+  "id": "Daylight Only / VFR Only Restrictions",
+  "question": "Daylight-only or VFR-only operating restrictions",
+  "type": "extract",
+  "route": [
+   "daylight",
+   "vfr",
+   "night"
+  ]
+ },
+ {
+  "id": "Aircraft Rescue and Firefighting (ARFF)",
+  "question": "Aircraft rescue and firefighting (ARFF) category, level of service, and availability",
+  "type": "extract",
+  "route": [
+   "rescue",
+   "firefight",
+   "arff",
+   "crash"
+  ]
+ },
+ {
+  "id": "NOTAMs",
+  "question": "Current NOTAMs or notices affecting operations",
+  "type": "extract",
+  "route": [
+   "notam"
+  ]
+ },
+ {
+  "id": "BASH Phase II Schedule",
+  "question": "BASH (bird/wildlife aircraft strike hazard) condition, phases, schedule or bird hazard warnings",
+  "type": "extract",
+  "route": [
+   "bash",
+   "bird",
+   "wildlife"
+  ]
+ },
+ {
+  "id": "MOG and HazMat Requirements",
+  "question": "Maximum on ground (MOG) for aircraft and HAZMAT handling requirements/restrictions on the ground",
+  "type": "extract",
+  "route": [
+   "mog",
+   "maximumOnGround",
+   "hazmat",
+   "dangerous"
+  ]
+ },
+ {
+  "id": "IMR Scratchpad",
+  "question": "IMR Scratchpad",
+  "type": "workflow"
+ },
+ {
+  "id": "Enter / Confirm / Update Standard Departure Procedures (SDPs)",
+  "question": "Enter / Confirm / Update Standard Departure Procedures (SDPs)",
+  "type": "workflow"
+ },
+ {
+  "id": "Calculate Fuels",
+  "question": "Calculate Fuels",
+  "type": "workflow"
+ },
+ {
+  "id": "C-17 Extended Range (ER) Aircraft Requirement",
+  "question": "C-17 Extended Range (ER) aircraft requirement or restrictions",
+  "type": "extract",
+  "route": [
+   "extendedRange",
+   "c17",
+   "c-17"
+  ]
+ },
+ {
+  "id": "Build Itinerary in GDSS",
+  "question": "Build Itinerary in GDSS",
+  "type": "workflow"
+ },
+ {
+  "id": "General Msn Information",
+  "question": "General Msn Information",
+  "type": "workflow"
+ },
+ {
+  "id": "Itinerary Information",
+  "question": "Itinerary Information",
+  "type": "workflow"
+ },
+ {
+  "id": "Msn Number",
+  "question": "Msn Number",
+  "type": "workflow"
+ },
+ {
+  "id": "Msn Remarks",
+  "question": "Msn Remarks",
+  "type": "workflow"
+ },
+ {
+  "id": "Misc Tab",
+  "question": "Misc Tab",
+  "type": "workflow"
+ },
+ {
+  "id": "ULN Tab",
+  "question": "ULN Tab",
+  "type": "workflow"
+ },
+ {
+  "id": "HazMat Tab",
+  "question": "HazMat Tab",
+  "type": "workflow"
+ },
+ {
+  "id": "Ground Times / Crew Rest / FDP",
+  "question": "Ground Times / Crew Rest / FDP",
+  "type": "workflow"
+ },
+ {
+  "id": "Augmented FDP Requirements",
+  "question": "Augmented FDP Requirements",
+  "type": "workflow"
+ },
+ {
+  "id": "56 Flight Hours - 7 Day Limit",
+  "question": "56 Flight Hours - 7 Day Limit",
+  "type": "workflow"
+ },
+ {
+  "id": "OPSEC Review",
+  "question": "OPSEC Review",
+  "type": "workflow"
+ },
+ {
+  "id": "AvORM Preview",
+  "question": "AvORM Preview",
+  "type": "workflow"
+ },
+ {
+  "id": "Release Msn",
+  "question": "Release Msn",
+  "type": "workflow"
+ },
+ {
+  "id": "Ensure Prev / Next Msns are Linked",
+  "question": "Ensure Prev / Next Msns are Linked",
+  "type": "workflow"
+ },
+ {
+  "id": "A-FDP Codes",
+  "question": "A-FDP Codes",
+  "type": "workflow"
+ },
+ {
+  "id": "Input Msn / Info Remarks",
+  "question": "Input Msn / Info Remarks",
+  "type": "workflow"
+ },
+ {
+  "id": "Crew Type Tasked",
+  "question": "Crew Type Tasked",
+  "type": "workflow"
+ },
+ {
+  "id": "Special Msn Qualifications",
+  "question": "Special Msn Qualifications",
+  "type": "workflow"
+ },
+ {
+  "id": "C-17 Extended Range (ER) Aircraft Requirement (dup)",
+  "question": "C-17 Extended Range (ER) aircraft requirement or restrictions",
+  "type": "extract",
+  "route": [
+   "extendedRange",
+   "c17",
+   "c-17"
+  ]
+ },
+ {
+  "id": "ATGL / Seat Pallet Requirements",
+  "question": "ATGL / Seat Pallet Requirements",
+  "type": "workflow"
+ },
+ {
+  "id": "Tow Bar Requirement",
+  "question": "Tow bar requirement or availability for aircraft ground handling",
+  "type": "extract",
+  "route": [
+   "towBar",
+   "tow"
+  ]
+ },
+ {
+  "id": "Chapter 2 and/or 3 Approval (as required)",
+  "question": "Chapter 2 and/or 3 Approval (as required)",
+  "type": "workflow"
+ },
+ {
+  "id": "Paying Agent (Purser) / Landing Fee Requirements (as required)",
+  "question": "Landing fees, handling fees, paying agent/purser or cash payment requirements",
+  "type": "extract",
+  "route": [
+   "payingAgent",
+   "landingFee",
+   "fee",
+   "purser",
+   "handling",
+   "cash"
+  ]
+ },
+ {
+  "id": "Daylight Only / VFR Only Restrictions (dup)",
+  "question": "Daylight-only or VFR-only operating restrictions",
+  "type": "extract",
+  "route": [
+   "daylight",
+   "vfr",
+   "night"
+  ]
+ },
+ {
+  "id": "ARFF Reduced or Critical Level of Service (RLS, CLS)",
+  "question": "ARFF reduced or critical level of service (RLS/CLS) notices",
+  "type": "extract",
+  "route": [
+   "arff",
+   "rescue",
+   "firefight",
+   "levelOfService",
+   "rls",
+   "cls"
+  ]
+ },
+ {
+  "id": "BASH Phase II Active Locations",
+  "question": "BASH Phase II active locations or elevated bird/wildlife hazard periods",
+  "type": "extract",
+  "route": [
+   "bash",
+   "bird",
+   "wildlife"
+  ]
+ },
+ {
+  "id": "Positive Launch Locations",
+  "question": "Positive Launch Locations",
+  "type": "workflow"
+ },
+ {
+  "id": "Other Pertinent Notes / Msn or Info Remarks",
+  "question": "Other pertinent operational notes, cautions, or remarks affecting missions",
+  "type": "extract",
+  "route": [
+   "notes",
+   "restriction",
+   "prohibition",
+   "attention",
+   "advisory",
+   "classifiedNotice"
+  ],
+  "scope": [
+   "aircraft",
+   "civilContractAircraft"
+  ]
+ },
+ {
+  "id": "Score Msn in AVORM",
+  "question": "Score Msn in AVORM",
+  "type": "workflow"
+ },
+ {
+  "id": "Link Msns (if applicable)",
+  "question": "Link Msns (if applicable)",
+  "type": "workflow"
+ },
+ {
+  "id": "Graph- Check Sleep/Work Mission Effectiveness Model",
+  "question": "Graph- Check Sleep/Work Mission Effectiveness Model",
+  "type": "workflow"
+ },
+ {
+  "id": "Add Msn Detail PDF to IMR File Attachments",
+  "question": "Add Msn Detail PDF to IMR File Attachments",
+  "type": "workflow"
+ },
+ {
+  "id": "Update IMR Msn Information",
+  "question": "Update IMR Msn Information",
+  "type": "workflow"
+ },
+ {
+  "id": "Link Msn Between GDSS and IMR",
+  "question": "Link Msn Between GDSS and IMR",
+  "type": "workflow"
+ },
+ {
+  "id": "Recalculate Alt BO and BO Fuel Values",
+  "question": "Recalculate Alt BO and BO Fuel Values",
+  "type": "workflow"
+ },
+ {
+  "id": "Enter / Confirm / Update SDPs",
+  "question": "Enter / Confirm / Update SDPs",
+  "type": "workflow"
+ },
+ {
+  "id": "Submit Dips Request",
+  "question": "Submit Dips Request",
+  "type": "workflow"
+ },
+ {
+  "id": "Submit HazMat (DIP Cargo)",
+  "question": "Submit HazMat (DIP Cargo)",
+  "type": "workflow"
+ },
+ {
+  "id": "Add Articles of War List (Iraq Msns ONLY)",
+  "question": "Add Articles of War List (Iraq Msns ONLY)",
+  "type": "workflow"
+ },
+ {
+  "id": "Add / Verify A2I Comment to Lock Load Listing (Iraq Msns ONLY)",
+  "question": "Add / Verify A2I Comment to Lock Load Listing (Iraq Msns ONLY)",
+  "type": "workflow"
+ },
+ {
+  "id": "Review Flight Times",
+  "question": "Review Flight Times",
+  "type": "workflow"
+ },
+ {
+  "id": "Notify Barrel via IMR",
+  "question": "Notify Barrel via IMR",
+  "type": "workflow"
+ },
+ {
+  "id": "Enter Call Sign in GDSS",
+  "question": "Enter Call Sign in GDSS",
+  "type": "workflow"
+ },
+ {
+  "id": "Enter Call Sign in IMR",
+  "question": "Enter Call Sign in IMR",
+  "type": "workflow"
+ },
+ {
+  "id": "Msn Coordination",
+  "question": "Msn Coordination",
+  "type": "workflow"
+ },
+ {
+  "id": "User / POC / Customer",
+  "question": "User / POC / Customer",
+  "type": "workflow"
+ },
+ {
+  "id": "618 AOC/GADC Aerial Port Coordination for MHE and/or Joint Inspection (JI) of Cargo (as required)",
+  "question": "618 AOC/GADC Aerial Port Coordination for MHE and/or Joint Inspection (JI) of Cargo (as required)",
+  "type": "workflow"
+ },
+ {
+  "id": "GAMSS DO (DSN 779-0371) for short notice missions within 96 hours of execution",
+  "question": "GAMSS DO (DSN 779-0371) for short notice missions within 96 hours of execution",
+  "type": "workflow"
+ },
+ {
+  "id": "Msn Director (618 AEG Only)",
+  "question": "Msn Director (618 AEG Only)",
+  "type": "workflow"
+ },
+ {
+  "id": "Ravens (as required)",
+  "question": "Ravens (as required)",
+  "type": "workflow"
+ },
+ {
+  "id": "Paying Agent (Purser) (as required)",
+  "question": "Paying Agent (Purser) (as required)",
+  "type": "workflow"
+ },
+ {
+  "id": "Waiver(s)",
+  "question": "Waiver(s)",
+  "type": "workflow"
+ },
+ {
+  "id": "Request Waiver(s)",
+  "question": "Request Waiver(s)",
+  "type": "workflow"
+ },
+ {
+  "id": "Waiver(s) Granted - Update GDSS Waiver Tab",
+  "question": "Waiver(s) Granted - Update GDSS Waiver Tab",
+  "type": "workflow"
+ },
+ {
+  "id": "AvORM Approval(s)",
+  "question": "AvORM Approval(s)",
+  "type": "workflow"
+ },
+ {
+  "id": "Request Approval via MatterMost",
+  "question": "Request Approval via MatterMost",
+  "type": "workflow"
+ },
+ {
+  "id": "Approval(s) Granted / Update AvORM",
+  "question": "Approval(s) Granted / Update AvORM",
+  "type": "workflow"
+ },
+ {
+  "id": "FBO Coordination",
+  "question": "FBO Coordination",
+  "type": "workflow"
+ },
+ {
+  "id": "Request PPRs (as required)",
+  "question": "Request PPRs (as required)",
+  "type": "workflow"
+ },
+ {
+  "id": "Update PPR Manager (as required)",
+  "question": "Update PPR Manager (as required)",
+  "type": "workflow"
+ },
+ {
+  "id": "PPRs Granted / Update GDSS",
+  "question": "PPRs Granted / Update GDSS",
+  "type": "workflow"
+ },
+ {
+  "id": "Upload PPR Forms in IMR",
+  "question": "Upload PPR Forms in IMR",
+  "type": "workflow"
+ },
+ {
+  "id": "Snapshot IMR Checklist",
+  "question": "Snapshot IMR Checklist",
+  "type": "workflow"
+ }
+]
