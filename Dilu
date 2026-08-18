@@ -1,1 +1,1 @@
-LITELLM_BASE_URL=http://hnode02.llan.ll.mit.edu:8000/v1 LITELLM_API_KEY=dummy AGENT_MODEL=meta-models/Muse-Glimmer-30B FCG_MAX_TOKENS=6000 FCG_CONCURRENCY=2 python fcg_extract.py --checklist checklist.json --fcg-dir data/fcg --svc data/svc_rmk.txt --meis data/meis1.json data/meis2.json data/meis3.json --airports data/airports.csv --codes data/countries_codes_and_coordinates.csv --out fcg_extract_local.csv
+
