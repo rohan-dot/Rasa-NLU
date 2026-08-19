@@ -1,3 +1,8 @@
+LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=sk-YOUR-KEY AGENT_MODEL=claude-opus-4-8 AGENT_TLS_VERIFY=false FCG_MAX_TOKENS=6000 FCG_CONCURRENCY=2 python fcg_extract.py --checklist checklist_enriched.json --fcg-dir data/fcg --svc data/svc_rmk.txt --meis data/meis1.json data/meis2.json data/meis3.json --airports data/airports.csv --codes data/countries_codes_and_coordinates.csv --out gold.csv
+
+
+
+
 Replace src/patch_generator.py with a tool-using patch pipeline. It runs in the final phase, only on confirmed PoV-backed crashes, behind env flag DISCVER_GENERATE_PATCHES (default OFF). For each such crash it tries to produce a fix that (1) stops the crash and (2) doesn't break existing tests, then writes the fix out for a human to apply. Never emit a fix that hasn't passed both checks.
 
 Build it as a loop of small steps, each a separate call to VLLMClient.chat, and give every step the SAME code-navigation tools that agent_tools.py already exposes (read_file, grep, list_files) so the model can look things up in the real source itself instead of being handed a big pre-built context string. This matters: fixes usually fail to compile because the model couldn't see a type definition, a helper, or a caller it depended on — so the model must be able to grep/read for those itself.
