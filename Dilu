@@ -1,13 +1,29 @@
-Add a patch-generation capability to discver so that each PoV-backed confirmed crash also gets a validated fix. Follow the AIxCC de-facto pipeline: root-cause analysis -> generate -> validate -> emit. Requirements:
+Replace src/patch_generator.py with a tool-using patch pipeline. It runs in the final phase, only on confirmed PoV-backed crashes, behind env flag DISCVER_GENERATE_PATCHES (default OFF). For each such crash it tries to produce a fix that (1) stops the crash and (2) doesn't break existing tests, then writes the fix out for a human to apply. Never emit a fix that hasn't passed both checks.
 
-SCOPE: Only operate on CONFIRMED, PoV-backed crashes (the reproduced ones with a PoV on disk — these are the ones with a real test oracle). Never attempt patches for unverified LLM leads or static-only findings; they have no oracle to validate against.
+Build it as a loop of small steps, each a separate call to VLLMClient.chat, and give every step the SAME code-navigation tools that agent_tools.py already exposes (read_file, grep, list_files) so the model can look things up in the real source itself instead of being handed a big pre-built context string. This matters: fixes usually fail to compile because the model couldn't see a type definition, a helper, or a caller it depended on — so the model must be able to grep/read for those itself.
 
-NEW MODULE src/patch_generator.py, invoked in the final-analysis phase after crash confirmation/dedup, behind a flag (env DISCVER_GENERATE_PATCHES, default OFF so nothing changes unless enabled). Per confirmed crash:
-1. ROOT CAUSE: assemble context for the LLM — the crash trace/ASAN output, the crashing function AND its surrounding code (imports, types, helpers it depends on — not just the crashing line; missing context is the #1 cause of non-compiling patches), the sink location, and the taint/data-flow path if available. Ask the model for a root-cause analysis first, then a minimal fix that addresses the ROOT CAUSE across all affected locations (may be multi-hunk / multi-file), not a band-aid at the crash site.
-2. GENERATE: produce the fix as concrete edited file(s). Keep it minimal — smallest change that fixes the root cause while preserving intended behavior.
-3. VALIDATE IN-CONTAINER (this is the gate — a patch is only emitted if it PASSES): apply the patch to a copy of the source, REBUILD the target in the container, then require BOTH: (a) re-running the PoV no longer triggers the crash/sanitizer, AND (b) the project's existing tests/build still pass (no regressions). If build fails or either check fails, feed the exact error back to the model and retry, bounded (e.g. max 3 attempts). Never emit an unvalidated patch.
-4. EMIT (only on pass): write to output/patches/<crash-id>/ the FULL patched file(s) alongside the ORIGINAL file(s) for side-by-side manual review, plus a short PATCH_NOTES.md stating: the vulnerability, root cause, what changed and why, and the validation result (PoV neutralized + tests pass). Do NOT auto-apply to the source tree — human applies manually.
+STEP 1 — understand the bug. Input: the crash trace/ASAN output, the PoV input, the sink file:line. The model uses read_file to open the crashing function, then uses grep/read_file to pull in what that code depends on — the types it uses, helper functions it calls, and who calls it. Output: a short structured root-cause description (what the bug is, where, why it triggers).
 
-RECORD: for each confirmed crash, log whether a validated patch was produced, failed after retries, or was skipped — via the discver.reliability logger and the run report, so we can measure patch success rate.
+STEP 2 — decide the fix. From the root cause, the model states the minimal change that fixes the underlying cause (not just the crash site). It may span multiple locations/files if the root cause does. It must preserve existing behavior — no functional changes beyond closing the vulnerability.
 
-SAFETY: never emit a patch that wasn't validated; never touch the confirmed-crash/PoV detection path; default-off flag. Add tests (patch-context assembly, the pass/fail gate logic with a stubbed builder, retry-on-failure, emit-only-on-pass). Verify with py_compile and tests. Update CHANGELOG/README Agent Status. Report the design and how validation hooks into the container build. Commit.
+STEP 3 — write the fix. The model produces the complete edited contents of each file it changes (full file, not a diff — so we can render side-by-side later).
+
+STEP 4 — self-check. The model re-reads its own edited files against the root cause and confirms the fix addresses it and doesn't obviously break the file (syntax, removed logic). If it finds a problem, loop back to step 3.
+
+VALIDATE (the gate — code, not LLM): take the edited files, copy the source tree, apply them, REBUILD the target the same way discver builds it for fuzzing, then check BOTH:
+  (a) re-run the PoV input against the rebuilt target — the crash/sanitizer must NOT trigger.
+  (b) run the project's existing test/build the same way discver already does — it must still pass.
+If the build fails or either check fails, capture the exact stderr/test output, feed it back to the model as a new step ("your patch produced this error, fix it"), and retry from step 3. Cap at 3 total attempts. If still failing after 3, record failure and emit nothing for this crash.
+
+SECOND STRATEGY (separate flag DISCVER_PATCH_CODING_AGENT, default OFF): if the loop above fails all 3 attempts, run a fuller free-form attempt — give the model an open read/grep/edit loop over a copy of the repo (more turns, less structure) and let it iterate toward a fix, then run the SAME validation gate on its result. Take whichever strategy first produces a patch that passes validation. If this flag is off or its backend isn't available, skip it cleanly — strategy 1 alone must still work.
+
+EMIT (only after validation passes): write to output/patches/<crash-id>/ the full patched file(s) AND the original file(s) side-by-side, plus PATCH_NOTES.md containing: the vulnerability, the root cause, what changed and why, which strategy produced it, and the validation result (PoV neutralized, tests pass). Do NOT modify the real source tree — a human applies it manually.
+
+RECORD via the discver.reliability logger and the run report, per crash: patch produced (which strategy) / failed after retries / skipped — so we can measure patch success rate.
+
+IMPLEMENTATION NOTES:
+- Find how discver builds the target and re-runs a PoV during fuzzing (look in fuzzer.py, run_health.py, the harness code) and REUSE that exact mechanism for the rebuild + PoV-rerun in VALIDATE. Do not invent a new build path. If you cannot find a programmatic rebuild-and-rerun-PoV path, STOP and report that — validation is the whole point and can't be faked.
+- Reuse the tool-dispatch machinery from agent_tools.py rather than reimplementing read_file/grep/list_files.
+- Keep steps as separate chat calls with focused instructions, not one giant prompt.
+
+Add tests: step-1 RCA with stubbed tools returns a root cause; the validation gate with a stubbed builder passes only when both checks pass; retry feeds errors back; emit happens only on pass; strategy-2 is skipped cleanly when its flag is off. Verify with py_compile and tests. Update CHANGELOG/README. Report the design, how tools are wired into each step, and exactly how VALIDATE hooks into discver's real build/PoV-rerun. Commit.
