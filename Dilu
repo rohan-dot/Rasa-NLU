@@ -1,10 +1,1 @@
-Read the discver run-output files in ./run-evidence/ (bug-candidates/ [json+txt], crashes/<harness>/ [each confirmed crash has a no-extension input file AND a .txt ASAN trace], crash-summary.txt, crashreport.md, REPORT.md, report.json, report_run_*.md, health.json, static_findings.json, unique_bugs/). Do NOT edit anything. Produce OUTPUT_GUIDE.md answering, with evidence quoted from the actual files:
 
-1. bug-candidates/: open several .json and several .txt. What's in each? What field correlates a .json to its .txt AUTONOMOUSLY (the filename hash, or an id field inside)? Why do some candidates have BOTH json+txt while others have only json — what distinguishes them (e.g. reproduced-crash vs unverified lead)? State the rule.
-2. crashes/: two harness subdirs (SinkFuzzer1, X509Fuzzer), each with a crash input + .txt trace. Why only these two — does it mean only two crashes reproduced? How does each crash correlate to a bug-candidate (by the crash-id hash / input hash / sink)? Show the actual shared field.
-3. Report files (crashreport.md, REPORT.md, report.json, report_run_*.md): what is each, why do they differ, and why does the summary list ~13 bugs when ~40 candidates exist — what filtering (confirmed vs unverified vs demoted) happens? Cite the real counts.
-4. unique_bugs/ vs crash-summary.txt: what's in each, how do they differ, what's the dedup key for "unique"?
-
-THEN a "Reproducing confirmed crashes" section: for each confirmed crash, tabulate crash-id, exact input file path under crashes/<harness>/, input size (is it empty?), sink location (file:line from the .txt), sanitizer/crash type, and harness. Give the literal command to replay that input against that harness manually.
-
-Quote real fields/counts. If a clean correlation field does NOT exist, say so plainly — that answers "how can we autonomously correlate these?".
