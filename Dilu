@@ -1,34 +1,10 @@
-LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=sk-YOUR-KEY AGENT_MODEL=claude-opus-4-8 AGENT_TLS_VERIFY=false FCG_MAX_TOKENS=6000 FCG_CONCURRENCY=2 python fcg_extract.py --checklist checklist_enriched.json --fcg-dir data/fcg --svc data/svc_rmk.txt --meis data/meis1.json data/meis2.json data/meis3.json --airports data/airports.csv --codes data/countries_codes_and_coordinates.csv --out gold.csv
+Read the discver run-output files in ./run-evidence/ (bug-candidates/ [json+txt], crashes/<harness>/ [each confirmed crash has a no-extension input file AND a .txt ASAN trace], crash-summary.txt, crashreport.md, REPORT.md, report.json, report_run_*.md, health.json, static_findings.json, unique_bugs/). Do NOT edit anything. Produce OUTPUT_GUIDE.md answering, with evidence quoted from the actual files:
 
+1. bug-candidates/: open several .json and several .txt. What's in each? What field correlates a .json to its .txt AUTONOMOUSLY (the filename hash, or an id field inside)? Why do some candidates have BOTH json+txt while others have only json — what distinguishes them (e.g. reproduced-crash vs unverified lead)? State the rule.
+2. crashes/: two harness subdirs (SinkFuzzer1, X509Fuzzer), each with a crash input + .txt trace. Why only these two — does it mean only two crashes reproduced? How does each crash correlate to a bug-candidate (by the crash-id hash / input hash / sink)? Show the actual shared field.
+3. Report files (crashreport.md, REPORT.md, report.json, report_run_*.md): what is each, why do they differ, and why does the summary list ~13 bugs when ~40 candidates exist — what filtering (confirmed vs unverified vs demoted) happens? Cite the real counts.
+4. unique_bugs/ vs crash-summary.txt: what's in each, how do they differ, what's the dedup key for "unique"?
 
+THEN a "Reproducing confirmed crashes" section: for each confirmed crash, tabulate crash-id, exact input file path under crashes/<harness>/, input size (is it empty?), sink location (file:line from the .txt), sanitizer/crash type, and harness. Give the literal command to replay that input against that harness manually.
 
-
-Replace src/patch_generator.py with a tool-using patch pipeline. It runs in the final phase, only on confirmed PoV-backed crashes, behind env flag DISCVER_GENERATE_PATCHES (default OFF). For each such crash it tries to produce a fix that (1) stops the crash and (2) doesn't break existing tests, then writes the fix out for a human to apply. Never emit a fix that hasn't passed both checks.
-
-Build it as a loop of small steps, each a separate call to VLLMClient.chat, and give every step the SAME code-navigation tools that agent_tools.py already exposes (read_file, grep, list_files) so the model can look things up in the real source itself instead of being handed a big pre-built context string. This matters: fixes usually fail to compile because the model couldn't see a type definition, a helper, or a caller it depended on — so the model must be able to grep/read for those itself.
-
-STEP 1 — understand the bug. Input: the crash trace/ASAN output, the PoV input, the sink file:line. The model uses read_file to open the crashing function, then uses grep/read_file to pull in what that code depends on — the types it uses, helper functions it calls, and who calls it. Output: a short structured root-cause description (what the bug is, where, why it triggers).
-
-STEP 2 — decide the fix. From the root cause, the model states the minimal change that fixes the underlying cause (not just the crash site). It may span multiple locations/files if the root cause does. It must preserve existing behavior — no functional changes beyond closing the vulnerability.
-
-STEP 3 — write the fix. The model produces the complete edited contents of each file it changes (full file, not a diff — so we can render side-by-side later).
-
-STEP 4 — self-check. The model re-reads its own edited files against the root cause and confirms the fix addresses it and doesn't obviously break the file (syntax, removed logic). If it finds a problem, loop back to step 3.
-
-VALIDATE (the gate — code, not LLM): take the edited files, copy the source tree, apply them, REBUILD the target the same way discver builds it for fuzzing, then check BOTH:
-  (a) re-run the PoV input against the rebuilt target — the crash/sanitizer must NOT trigger.
-  (b) run the project's existing test/build the same way discver already does — it must still pass.
-If the build fails or either check fails, capture the exact stderr/test output, feed it back to the model as a new step ("your patch produced this error, fix it"), and retry from step 3. Cap at 3 total attempts. If still failing after 3, record failure and emit nothing for this crash.
-
-SECOND STRATEGY (separate flag DISCVER_PATCH_CODING_AGENT, default OFF): if the loop above fails all 3 attempts, run a fuller free-form attempt — give the model an open read/grep/edit loop over a copy of the repo (more turns, less structure) and let it iterate toward a fix, then run the SAME validation gate on its result. Take whichever strategy first produces a patch that passes validation. If this flag is off or its backend isn't available, skip it cleanly — strategy 1 alone must still work.
-
-EMIT (only after validation passes): write to output/patches/<crash-id>/ the full patched file(s) AND the original file(s) side-by-side, plus PATCH_NOTES.md containing: the vulnerability, the root cause, what changed and why, which strategy produced it, and the validation result (PoV neutralized, tests pass). Do NOT modify the real source tree — a human applies it manually.
-
-RECORD via the discver.reliability logger and the run report, per crash: patch produced (which strategy) / failed after retries / skipped — so we can measure patch success rate.
-
-IMPLEMENTATION NOTES:
-- Find how discver builds the target and re-runs a PoV during fuzzing (look in fuzzer.py, run_health.py, the harness code) and REUSE that exact mechanism for the rebuild + PoV-rerun in VALIDATE. Do not invent a new build path. If you cannot find a programmatic rebuild-and-rerun-PoV path, STOP and report that — validation is the whole point and can't be faked.
-- Reuse the tool-dispatch machinery from agent_tools.py rather than reimplementing read_file/grep/list_files.
-- Keep steps as separate chat calls with focused instructions, not one giant prompt.
-
-Add tests: step-1 RCA with stubbed tools returns a root cause; the validation gate with a stubbed builder passes only when both checks pass; retry feeds errors back; emit happens only on pass; strategy-2 is skipped cleanly when its flag is off. Verify with py_compile and tests. Update CHANGELOG/README. Report the design, how tools are wired into each step, and exactly how VALIDATE hooks into discver's real build/PoV-rerun. Commit.
+Quote real fields/counts. If a clean correlation field does NOT exist, say so plainly — that answers "how can we autonomously correlate these?".
