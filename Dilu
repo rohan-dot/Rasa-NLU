@@ -1,19 +1,4 @@
-Replace src/patch_generator.py with a single-agent, tool-using patcher. Design (a proven architecture): one LLM agent, given a confirmed PoV-backed crash, works in an iterative loop using a fixed set of tools to inspect code, edit it, and validate — reasoning, editing, and validation interleaved in one continuous loop, not a rigid pipeline. Flag-gated DISCVER_GENERATE_PATCHES (default OFF). Only PoV-backed confirmed crashes.
-
-Give the agent these tools (reuse read_file/grep/list_files from agent_tools.py for the search ones; add the editor+test ones):
-- SEARCH: read_source(file, range), read_definition(symbol), find_references(symbol)  [navigate/understand code]
-- EDIT (must be undo-able — apply to a scratch COPY of the source, never the real tree; track every edit so it can be reverted):
-    apply_edit(file, old_code, new_code)  — replace a unique region
-    undo_last_edit()
-    list_edits()  — show accumulated changes
-- VALIDATE: test_patch() — this is the ORACLE. It rebuilds the target the same way discver builds it for fuzzing, re-runs the PoV (must NOT crash), and runs the existing tests (must pass). Returns structured result: build ok?, crash gone?, tests pass?, plus any error output. REUSE discver's real build + PoV-rerun path (find it in fuzzer.py/run_health.py/harness code — do NOT invent one; if you can't find a programmatic rebuild+PoV-rerun, STOP and report).
-
-LOOP: the agent reasons about the crash (stack trace, PoV, sink), searches to understand the code and its dependencies (types, helpers, callers — missing context is the top cause of bad patches), makes a minimal root-cause edit, calls test_patch, and — on failure — reads the error and revises. Feedback is an observation in its ongoing context, not a restart. Bounded: cap total loop iterations (e.g. 15) and test_patch calls so it can't run forever.
-
-CRITICAL — independent acceptance (do NOT trust the agent's self-report): a patch is ACCEPTED only when test_patch returns build-ok AND crash-gone AND tests-pass. The agent claiming success is not enough; the system's own last test_patch result is the gate. Reject anything where the agent modified test files or the harness — only source files under the project source root may change.
-
-EMIT (only on accepted patch): output/patches/<finding-id>/ with full patched file(s) + original file(s) side-by-side, plus PATCH_NOTES.md (vulnerability, root cause, what changed/why, and the validation result: build ok, PoV neutralized, tests pass). Do NOT auto-apply to the real source.
-
-RECORD via discver.reliability logger + run report, per crash: accepted patch / failed after max iterations / skipped. Track loop iterations and test_patch calls so we can measure cost.
-
-Add tests: each tool works on a scratch copy (apply/undo/list); test_patch gate returns pass only when all three conditions hold (stub the builder); the loop stops on accept and on max-iterations; only-source-files rule rejects test/harness edits; emit-only-on-accept. Verify with py_compile and tests. Update CHANGELOG/README. Report the design, the tool set, the loop control, and exactly how test_patch hooks into discver's real build/PoV-rerun. Commit.
+rm -rf for-ashok discver-all.zip && mkdir -p for-ashok
+git diff --name-only 9f5bd21 | while read f; do [ -f "$f" ] && mkdir -p "for-ashok/$(dirname "$f")" && cp "$f" "for-ashok/$f"; done
+cd for-ashok && zip -r ../discver-all.zip . && cd ..
+unzip -l discver-all.zip
