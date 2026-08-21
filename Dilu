@@ -1,7 +1,9 @@
-git diff --name-only 9f5bd21 -- 'src/*.py' 'tests/*.py'
-
-
-rm -rf for-ashok discver-all.zip && mkdir -p for-ashok
-git diff --name-only 9f5bd21 | while read f; do [ -f "$f" ] && mkdir -p "for-ashok/$(dirname "$f")" && cp "$f" "for-ashok/$f"; done
-cd for-ashok && zip -r ../discver-all.zip . && cd ..
-unzip -l discver-all.zip
+rm -rf send-ashok discver-edits.zip
+mkdir -p send-ashok
+git diff --name-only 9f5bd21 -- 'src/*.py' 'tests/*.py' | while read f; do
+  [ -f "$f" ] || continue
+  mkdir -p "send-ashok/$(dirname "$f")"
+  cp "$f" "send-ashok/$f"
+done
+cd send-ashok && zip -r ../discver-edits.zip . && cd ..
+unzip -l discver-edits.zip
