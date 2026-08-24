@@ -1,1 +1,1 @@
-python compare_extracts.py --gold gold.csv --candidate gemma.csv --out diffs.csv
+python compare_extracts.py --gold gold.csv --candidate gemma.csv
