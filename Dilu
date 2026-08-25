@@ -1,1 +1,21 @@
 
+Integrate src/pb_seeds.py (just added — read it first) into discver's seed generation. Goal: instead of asking the LLM for individual seed bytes, ask it ONCE per harness for a parameter space + a generator function, then sample that space locally into hundreds of structurally-valid seeds. One LLM call becomes many guided inputs.
+
+Flag: DISCVER_PB_SEEDS (default OFF — current seed generation unchanged unless enabled).
+
+WIRING in src/seed_generator.py:
+1. When the flag is on, make ONE LLM call per harness asking for JSON with three keys:
+   - "parameter_space": typed knobs. Allowed types EXACTLY: int_range {min,max}, float_range {min,max}, categorical {values:[...]}, bool, segments {count_range:{min,max}, segment_params:{...}}, base_seed {seed_file_path}. Prefer base_seed pointing at an existing reaching seed from the corpus when one exists — mutating a known-good template beats building from scratch.
+   - "generator_code": Python defining `def generate(**params) -> (bytes, used_params_dict)`. CRITICAL contract: each params[k] arrives EITHER as a spec dict (has a "type" key) OR as an already-concrete scalar. When it's a spec dict the generator SAMPLES a concrete value; when scalar it uses it as-is. It must record the RESOLVED concrete values in used_params so a triggering config is reproducible. Seed randomness from params.get("seed"). Return bytes.
+   - "concrete_params": 5-10 concrete parameter sets — the model's hypothesised triggering configurations, prioritising malformed/boundary values over well-formed ones. These run FIRST.
+   Give the model the harness source, the sink/target location, and 1-2 example reaching seeds as context so it can infer the real input format.
+
+2. Call pb_seeds.generate_seeds(generator_code, parameter_space, concrete_params, max_iters=<default 200>) then pb_seeds.write_seeds(batch, <runner seed dir>). Write into the SAME seed dir that DISCVER_WIRE_SEEDS routes to the runners — find that resolution in main.py, do NOT construct a path. These two changes must compose; seeds are useless if no runner reads them.
+
+3. VALIDATE->REPAIR (reuse the pattern in agent_tools.py): pb_seeds.validate_param_space returns a problem list. If non-empty, or the batch returns generated==0 / high failures, feed the exact problems + generator errors back to the model ONCE and retry. Cap 2 attempts, then fall back to the existing seed path — NEVER leave a harness with zero seeds because this feature failed.
+
+4. RECORD via the discver.reliability logger and run report, per harness: seeds generated, duplicates skipped, generator failures, repair needed, LLM parse success.
+
+Do NOT modify pb_seeds.py's sampling or contract — it's tested. Wire around it.
+
+Add tests: LLM response parses into the three keys; malformed parameter_space triggers exactly one repair then falls back; seeds land in the runner's seed dir (stub it); fallback runs when flag is off; counters recorded. Verify with py_compile and tests. Update CHANGELOG/README. Report where the seed dir resolution came from and the exact LLM prompt you built. Commit.
