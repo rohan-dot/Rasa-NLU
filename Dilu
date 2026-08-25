@@ -1,10 +1,3 @@
-Three changes to patch generation and triage.
 
-(1) REVERT THE TRIAGE FLOOR. DISCVER_TRIAGE_MIN_CONFIDENCE default goes back to 0.0 (keep-everything, original behavior). It stays configurable but must not change report output by default. Update the tests that assumed 0.3.
-
-(2) EMIT A UNIFIED DIFF. In addition to the full patched file + original + PATCH_NOTES.md already written to output/patches/<finding-id>/, also write patch.diff — a standard unified diff (difflib.unified_diff) with correct relative paths so it can be applied with `git apply` or `patch -p1`. PATCH_NOTES.md should state the file(s) and line range(s) changed, so a human sees at a glance what to replace and where.
-
-(3) ALWAYS PRODUCE A PATCH WHEN A CRASH IS CONFIRMED — even with no build/test command available. Currently patching skips entirely when the builder isn't configured, so a run finds a crash and emits nothing. Change it: when the build/test commands ARE configured, behave exactly as now (full validation gate, only emit on PoV-neutralized + tests-pass, mark validated=true). When they are NOT configured, still run the full RCA + edit loop and EMIT the patch, but mark it clearly as UNVALIDATED: a prominent "UNVALIDATED - NOT BUILD-TESTED - HUMAN MUST VERIFY" header in PATCH_NOTES.md, unvalidated=true in the record, and it must sort/report separately from validated patches so the two can never be confused. FINAL RESULTS should report validated and unvalidated patch counts separately.
-Keep the safety rules unchanged: never modify the real source tree, never edit test files or fuzz harnesses, always only-source-files.
-
-Add tests: triage default is 0.0 and demotes nothing; patch.diff is a valid unified diff that applies cleanly to the original; with no builder configured a confirmed crash still produces an emitted patch marked unvalidated; with a builder configured behavior is unchanged and marked validated; counts reported separately. Verify with py_compile and the tests. Update CHANGELOG/README. Commit.
+cd /panfs/g52-panfs/exp/FY26/AIxCC/ro31337/discver-java-dev
+rm -rf send-ashok discver-edits.zip && mkdir -p send-ashok && for f in $(git diff --name-only 9f5bd21 -- 'src/*.py' 'tests/*.py'); do mkdir -p "send-ashok/$(dirname "$f")"; cp "$f" "send-ashok/$f"; done && (cd send-ashok && zip -r ../discver-edits.zip .) && unzip -l discver-edits.zip
