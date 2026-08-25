@@ -1,3 +1,1 @@
 
-cd /panfs/g52-panfs/exp/FY26/AIxCC/ro31337/discver-java-dev
-rm -rf send-ashok discver-edits.zip && mkdir -p send-ashok && for f in $(git diff --name-only 9f5bd21 -- 'src/*.py' 'tests/*.py'); do mkdir -p "send-ashok/$(dirname "$f")"; cp "$f" "send-ashok/$f"; done && (cd send-ashok && zip -r ../discver-edits.zip .) && unzip -l discver-edits.zip
