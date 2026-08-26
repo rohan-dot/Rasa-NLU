@@ -1,1 +1,2 @@
 
+python compare_extracts.py --gold gold.csv --candidate gold_v2.csv --out route_fix_diffs.csv
