@@ -1,2 +1,1 @@
 
-LITELLM_BASE_URL=http://127.0.0.1:8000/v1 LITELLM_API_KEY=dummy AGENT_MODEL=gemma-4-31B-it FCG_MAX_TOKENS=16000 FCG_BUDGET_FCG=150000 FCG_CONCURRENCY=2 python fcg_extract.py --checklist checklist_norouting.json --fcg-dir data/fcg --countries ITA --svc data/svc_rmk.txt --meis data/meis1.json data/meis2.json data/meis3.json --airports data/airports.csv --codes data/countries_codes_and_coordinates.csv --out italy_noroute.csv
