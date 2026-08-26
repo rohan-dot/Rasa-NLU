@@ -1,1 +1,1 @@
-
+LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=sk-YOUR-KEY AGENT_MODEL=claude-opus-4-8 AGENT_TLS_VERIFY=false python fix_routes.py
