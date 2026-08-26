@@ -1,1 +1,2 @@
 
+python -c "import json; d=json.load(open('checklist_enriched.json')); [i.update({'route':[],'scope':[]}) for i in d if i.get('type')=='extract']; json.dump(d,open('checklist_norouting.json','w'),indent=1); print('done')"
