@@ -1,1 +1,1 @@
-python -c "import json; d=json.load(open('checklist_enriched.json')); n=sum(1 for i in d if i.get('type')=='reference'); [i.update({'type':'extract'}) for i in d if i.get('type')=='reference']; json.dump(d,open('checklist_enriched.json','w'),indent=1); print(f'flipped {n} reference items back to extract')"
+
