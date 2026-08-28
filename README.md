@@ -1,1 +1,5 @@
-python merge_dedupe.py --in opus_all.csv --out opus_all_clean.csv
+Vulnerability Injection & Code Retrieval (AIxCC)
+Developed an in-house cyber reasoning system (DISCVER) with staff, combining LLMs, static analysis, agentic tool-calling, and coverage-guided fuzzing to autonomously discover, reproduce, and verify memory-safety vulnerabilities in large sponsor-directed codebases — producing fuzzer-confirmed crashes with proof-of-vulnerability inputs and ASAN stack traces on a codebase of significance. (Technical)
+System demonstrated strong alignment with USG deployment requirements and serves as a practical baseline for government cyber applications; PI noted, "If I had to pick a CRS to run today, it would be DISCVER." (Sponsor / Technical)
+Delivered technical brief to the sponsor and the full AIxCC team presenting DISCVER's capabilities, design decisions, and results — contributing lessons learned to parallel OSS-CRS and other CRS efforts across the program. (Sponsor / Technical)
+Initiated cross-group discussions for integration of DISCVER into other teams' systems and environments, positioning the in-house CRS as a reusable capability beyond its original program context. (Technical / Leadership)
