@@ -1,0 +1,1380 @@
+#!/usr/bin/env python3
+"""
+Agentic flight route planner — v3 (airport-precise stops).
+
+What v3 adds over v2:
+  * OurAirports airports.csv join: every airport code extracted from your FCG
+    `entry_exit_airports_summary` gets real lat/lon (ICAO `ident` join).
+  * STAGE-GRAPH OPTIMIZATION: for a query like "hog to dur to fleur", each
+    stop expands into ALL designated candidate airports for that country
+    (from YOUR FCG data). A dynamic program then picks one airport per stop
+    minimizing total great-circle distance. Alternates are shown with their
+    distance penalty so users see what they gave up.
+  * If the user types a specific airport (e.g. KCHS), that stop is pinned to
+    it (candidate set of one).
+  * Country-level overflight feasibility (LLM, plan-check-replan) unchanged.
+    LLM also vets each CHOSEN stop airport against the FCG text; a denied
+    airport is removed from the candidate set and the DP re-runs.
+  * --list mode: show designated airports for one country, with coordinates
+    and LLM-structured usable/restricted verdicts.
+
+Data files required (all in the working directory, all offline-friendly):
+  fcg_extract.csv                        your FCG constraints (country-level)
+  mapping.csv                            your code -> country name
+  countries_codes_and_coordinates.csv    tadast gist (alpha-2, alpha-3, lat/lon)
+  airports.csv                           OurAirports dump (ident, lat/lon)
+
+Usage:
+  python country_route_planner.py "hog to dur to fleur to hog"
+  python country_route_planner.py "kchs to sazb to scdl to segu to kvps to kchs"
+  python country_route_planner.py "usa to chl" --no-llm
+  python country_route_planner.py "dur" --list
+"""
+
+import argparse
+import heapq
+import json
+import math
+import re
+import sys
+from collections import OrderedDict
+
+import pandas as pd
+import requests
+
+# ----------------------------------------------------------------------------
+# CONFIG
+# ----------------------------------------------------------------------------
+FCG_CSV      = "fcg_extract.csv"
+MAPPING_CSV  = "mapping.csv"
+COORDS_CSV   = "countries_codes_and_coordinates.csv"
+AIRPORTS_CSV = "airports.csv"            # OurAirports dump
+FUEL_CSV     = "fuel_rates.csv"          # DLA standard prices (optional file)
+# Which DLA fuel codes to show in the per-stop fuel note
+FUEL_CODES_SHOWN = ["JP8", "JAA", "IA1", "NA1"]
+
+VLLM_URL     = "http://localhost:8000/v1/chat/completions"
+VLLM_MODEL   = "gemma-4-31B-it"
+LLM_TIMEOUT  = 120
+K_NEIGHBOURS = 8
+MAX_LEG_NM   = 2200.0                    # country-graph edge cap in NM; None = off
+MAX_ALTERNATES_SHOWN = 4                 # per stop, in the report
+
+# --- Ocean-preference routing ---
+# For each leg, a DIRECT great-circle corridor is compared against the
+# land (country-graph) route. Score = distance_nm + CLEARANCE_PENALTY_NM
+# per country needing overflight clearance. Lower score wins, so an
+# oceanic leg with 0-2 clearances beats a long land chain.
+CORRIDOR_SAMPLE_NM    = 50.0    # great-circle sampling step
+CORRIDOR_RADIUS_NM    = 250.0   # a country is "overflown" if its centroid
+                                # is within this distance of the track
+                                # (centroid approximation — see docs)
+# Large countries: a track can cross their territory far from the centroid,
+# so give them a bigger effective radius (~ half the sqrt of land area).
+# Precise answer needs boundary polygons (Natural Earth) — future upgrade.
+COUNTRY_RADIUS_NM = {
+    "RUS": 1500, "CAN": 1100, "USA": 950, "CHN": 950, "BRA": 900,
+    "AUS": 900, "GRL": 750, "IND": 600, "ARG": 650, "KAZ": 600,
+    "DZA": 550, "COD": 500, "SAU": 500, "MEX": 500, "IDN": 700,
+    "SDN": 450, "LBY": 450, "IRN": 450, "MNG": 450, "PER": 400,
+    "TCD": 400, "NER": 400, "AGO": 400, "MLI": 400, "ZAF": 400,
+    "COL": 350, "ETH": 350, "BOL": 350, "MRT": 350, "EGY": 350,
+    "TZA": 350, "NGA": 350, "VEN": 350, "PAK": 350, "MOZ": 350,
+    "TUR": 350, "CHL": 500, "ZMB": 300, "MMR": 350, "AFG": 300,
+    "SOM": 300, "UKR": 300, "MDG": 350, "KEN": 300, "FRA": 300,
+    "YEM": 300, "THA": 300, "ESP": 300, "TKM": 300, "CMR": 300,
+    "PNG": 300, "SWE": 350, "UZB": 300, "MAR": 300, "IRQ": 300,
+    "NOR": 400, "FIN": 350, "JPN": 350, "VNM": 300, "MYS": 300,
+    "PHL": 350, "NZL": 350, "DEU": 250,
+}
+CLEARANCE_PENALTY_NM  = 300.0   # detour NM one clearance is "worth"
+# Stepping-stone corridor search (routes via 1-2 intermediate countries,
+# e.g. USA -> JPN -> THA across the Pacific). Hops have NO length cap.
+STEPPING_STONES_MAX   = 40      # candidate intermediates to evaluate
+STEPPING_PAIR_POOL    = 12      # closest stones combined into 2-stone routes
+STEPPING_DETOUR_FACTOR = 1.6    # ignore stones making route > 1.6x direct
+
+# --- Geopolitical risk / avoid list ---
+RISK_CSV = "avoid_countries.csv"     # manual: code,action,reason,date
+                                     # action = block | avoid (penalty)
+RISK_AVOID_PENALTY_NM = 1500.0       # extra NM penalty for 'avoid' countries
+STATE_DEPT_RSS = "https://travel.state.gov/_res/rss/TAsTWs.xml"
+RISK_CACHE = "risk_cache.json"       # cached feed for offline runs
+RISK_LEVEL_ACTION = {4: "block", 3: "avoid"}   # State Dept levels -> action
+RISK_EXTRA = {}                      # filled at runtime: code -> extra NM
+USE_RISK_FEED = False                # set by --risk
+
+FCG_CODE_COL = "alpha3"     # new extract: ISO3 code column
+# Columns the agent scans for designated airport codes
+AIRPORT_COL  = "Country_Specific_Entry_Exit_Airfield_Restrictions"
+AIRPORT_COL_2 = "Airfield_Detail_Aircraft_Suitability_Destinations_AND_Alternates"
+# Columns whose text goes into the fuel/payment note per stop
+PAYMENT_COLS = ["AIR_Card_Acceptance", "Cash_Payment_Requirement",
+                "Paying_Agent_Requirement", "Landing_and_Handling_Fees"]
+# The judge reads these fields (new extract's checklist column names).
+FEASIBILITY_COLS = [
+    "overflight_raw",
+    "Diplomatic_Clearance_Lead_Time",
+    "Country_Specific_Entry_Exit_Airfield_Restrictions",
+    "Customs_Procedures",
+    "Immigration_Requirements",
+    "Agriculture_Quarantine",
+    "HazMat_Clearance_Requirements",
+    "HazMat_Ground_Handling",
+    "Operating_Hours",
+    "Ops_Hrs_Quiet_Hrs_Holiday_Weekend_Ops_Servicing_Hours_TA",
+    "Holiday_Closures",
+    "Airfield_Detail_Aircraft_Suitability_Destinations_AND_Alternates",
+    "Runway_Taxiway_Apron_Weight_Bearing_Capacity_WBC_Length_and_Width",
+    "Daylight_Only_VFR_Only_Restrictions",
+    "NOTAMs",
+    "Maximum_On_Ground_MOG",
+    "Other_Pertinent_Notes_Msn_or_Info_Remarks",
+]
+# Max characters of each field included in the LLM dossier. None = unlimited.
+DOSSIER_CHAR_CAP = 2500
+# Set by --verbose: print each country's full dossier as it is judged.
+VERBOSE = False
+# OurAirports rows to accept as landable candidates
+AIRPORT_TYPES_OK = {"large_airport", "medium_airport", "small_airport"}
+
+COORD_OVERRIDES = {
+    # "XKS": ("Kosovo", 42.6, 20.9),
+    # "DGA": ("Diego Garcia", -7.3, 72.4),
+}
+
+# ----------------------------------------------------------------------------
+# 1. LOADING (fail-fast)
+# ----------------------------------------------------------------------------
+
+def _clean(s):
+    return s.strip().strip('"').strip() if isinstance(s, str) else s
+
+
+def load_coords(path: str) -> pd.DataFrame:
+    """tadast gist: returns iso3, iso2, country, lat, lon (one row per iso3)."""
+    df = pd.read_csv(path)
+    df.columns = [c.strip().strip('"') for c in df.columns]
+    col_map = {}
+    for c in df.columns:
+        lc = c.lower()
+        if "alpha-3" in lc:
+            col_map[c] = "iso3"
+        elif "alpha-2" in lc:
+            col_map[c] = "iso2"
+        elif "latitude" in lc:
+            col_map[c] = "lat"
+        elif "longitude" in lc:
+            col_map[c] = "lon"
+        elif lc == "country":
+            col_map[c] = "country"
+    df = df.rename(columns=col_map)
+    missing = {"iso3", "iso2", "lat", "lon", "country"} - set(df.columns)
+    if missing:
+        sys.exit(f"[FATAL] coords CSV missing {missing}; found {list(df.columns)}")
+    for c in ("iso3", "iso2", "country"):
+        df[c] = df[c].map(_clean)
+    for c in ("lat", "lon"):
+        df[c] = pd.to_numeric(df[c].map(_clean), errors="coerce")
+    df["iso3"] = df["iso3"].str.upper()
+    df["iso2"] = df["iso2"].str.upper()
+    df = (df.dropna(subset=["lat", "lon"])
+            .drop_duplicates(subset="iso3", keep="first"))
+    df["lat"] = df["lat"].astype(float)
+    df["lon"] = df["lon"].astype(float)
+    if COORD_OVERRIDES:
+        extra = pd.DataFrame(
+            [{"iso3": k, "iso2": "", "country": v[0],
+              "lat": float(v[1]), "lon": float(v[2])}
+             for k, v in COORD_OVERRIDES.items() if k not in set(df["iso3"])])
+        if len(extra):
+            df = pd.concat([df, extra], ignore_index=True)
+    if df.empty:
+        sys.exit("[FATAL] coords CSV parsed to 0 usable rows.")
+    print(f"[load] coords: {len(df)} countries with lat/lon")
+    return df[["iso3", "iso2", "country", "lat", "lon"]]
+
+
+def load_mapping(path: str) -> dict:
+    mapping = {}
+    with open(path, encoding="utf-8-sig") as f:
+        for i, line in enumerate(f):
+            line = line.strip()
+            if not line or "," not in line:
+                continue
+            code, name = line.split(",", 1)
+            code = code.strip().strip('"').upper()
+            name = name.strip().strip('"')
+            if i == 0 and (code.lower() in ("code", "airport", "abbr")
+                           or name.lower() in ("name", "country")):
+                continue
+            mapping[code] = name
+    if not mapping:
+        sys.exit("[FATAL] mapping.csv parsed to 0 entries.")
+    print(f"[load] mapping: {len(mapping)} codes")
+    return mapping
+
+
+def load_fcg(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    if FCG_CODE_COL not in df.columns:
+        sys.exit(f"[FATAL] FCG CSV lacks '{FCG_CODE_COL}'; "
+                 f"found {list(df.columns)}")
+    df[FCG_CODE_COL] = (df[FCG_CODE_COL].astype(str)
+                        .str.strip().str.upper()
+                        .str.replace(r"_FCG.*$", "", regex=True))
+    print(f"[load] FCG: {len(df)} country rows")
+    return df
+
+
+def load_ourairports(path: str, coords: pd.DataFrame) -> pd.DataFrame:
+    """OurAirports airports.csv -> index of ICAO ident -> name/lat/lon/iso3."""
+    usecols = ["ident", "type", "name", "latitude_deg", "longitude_deg",
+               "iso_country"]
+    df = pd.read_csv(path, usecols=usecols)
+    df = df[df["type"].isin(AIRPORT_TYPES_OK)].copy()
+    df["ident"] = df["ident"].astype(str).str.strip().str.upper()
+    df["iso_country"] = df["iso_country"].astype(str).str.strip().str.upper()
+    df["latitude_deg"] = pd.to_numeric(df["latitude_deg"], errors="coerce")
+    df["longitude_deg"] = pd.to_numeric(df["longitude_deg"], errors="coerce")
+    df = df.dropna(subset=["latitude_deg", "longitude_deg"])
+    # alpha-2 -> alpha-3 bridge via the countries file
+    a2_to_a3 = dict(zip(coords["iso2"], coords["iso3"]))
+    df["iso3"] = df["iso_country"].map(a2_to_a3)
+    df = df.dropna(subset=["iso3"]).drop_duplicates(subset="ident",
+                                                    keep="first")
+    df = df.set_index("ident")
+    print(f"[load] OurAirports: {len(df)} usable airports "
+          f"({', '.join(sorted(AIRPORT_TYPES_OK))})")
+    return df
+
+
+AIRPORT_CODE_RE = re.compile(r"\b[A-Z0-9]{3,4}\b")
+AIRPORT_STOPWORDS = {
+    "THE", "AND", "FOR", "NOT", "ALL", "ANY", "PER", "VIA", "ICAO", "IATA",
+    "AOE", "N/A", "TBD", "UTC", "GMT", "VIP", "CIQ", "PPR", "NOTAM", "HRS",
+}
+
+
+def build_airport_index(fcg: pd.DataFrame, ourairports: pd.DataFrame):
+    """Two products:
+       airport_to_country : code -> FCG country code (for resolving input)
+       candidates         : country code -> [airport codes WITH coordinates]
+    """
+    airport_to_country, collisions = {}, set()
+    if AIRPORT_COL not in fcg.columns:
+        print(f"[airports] column '{AIRPORT_COL}' missing — airport features off")
+        return {}, {}
+    country_codes = set(fcg[FCG_CODE_COL])
+    extract_cols = [c for c in (AIRPORT_COL, AIRPORT_COL_2)
+                    if c in fcg.columns]
+    for _, row in fcg.iterrows():
+        text = " ".join(str(row.get(c, "") or "") for c in extract_cols)
+        for tok in AIRPORT_CODE_RE.findall(text.upper()):
+            if tok in AIRPORT_STOPWORDS or tok in country_codes:
+                continue
+            if tok.isdigit():
+                continue
+            if tok in airport_to_country and \
+                    airport_to_country[tok] != row[FCG_CODE_COL]:
+                collisions.add(tok)
+                continue
+            airport_to_country[tok] = row[FCG_CODE_COL]
+    for tok in collisions:
+        airport_to_country.pop(tok, None)
+
+    candidates, no_coords = {}, []
+    for ap, ctry in airport_to_country.items():
+        if ap in ourairports.index:
+            candidates.setdefault(ctry, []).append(ap)
+        else:
+            no_coords.append(ap)
+    print(f"[airports] {len(airport_to_country)} codes extracted from FCG; "
+          f"{sum(len(v) for v in candidates.values())} matched to OurAirports "
+          f"coords across {len(candidates)} countries")
+    if no_coords:
+        print(f"[airports] no coords (unusable for distance optimization, "
+              f"still listed): {sorted(no_coords)[:30]}"
+              f"{' ...' if len(no_coords) > 30 else ''}")
+    return airport_to_country, candidates
+
+
+def build_dataset():
+    coords = load_coords(COORDS_CSV)
+    mapping = load_mapping(MAPPING_CSV)
+    fcg = load_fcg(FCG_CSV)
+    ourairports = load_ourairports(AIRPORTS_CSV, coords)
+    fcg_codes = set(fcg[FCG_CODE_COL])
+    joined = fcg_codes & set(coords["iso3"])
+    unmatched = sorted(fcg_codes - set(coords["iso3"]))
+    print(f"[join] {len(joined)}/{len(fcg_codes)} FCG codes matched to coords")
+    if unmatched:
+        print(f"[join] unmatched: {unmatched}")
+    if len(joined) < 2:
+        sys.exit("[FATAL] fewer than 2 FCG countries have coordinates.")
+    nodes = coords[coords["iso3"].isin(joined)].set_index("iso3")
+    fcg_idx = fcg.drop_duplicates(FCG_CODE_COL).set_index(FCG_CODE_COL)
+    airport_to_country, candidates = build_airport_index(fcg, ourairports)
+    airport_to_country = {a: c for a, c in airport_to_country.items()
+                          if c in nodes.index}
+    candidates = {c: aps for c, aps in candidates.items() if c in nodes.index}
+    return nodes, fcg_idx, mapping, airport_to_country, candidates, ourairports
+
+# ----------------------------------------------------------------------------
+# 2. RESOLUTION (closed world; countries and airports)
+# ----------------------------------------------------------------------------
+
+def resolve_waypoint(user_token, mapping, nodes, airport_to_country, use_llm,
+                     ourairports=None):
+    tok = user_token.strip().upper()
+    if tok in nodes.index:
+        return tok, None
+    if tok in airport_to_country:
+        return airport_to_country[tok], tok
+    # Fallback: any airport in OurAirports is a valid user-typed waypoint,
+    # even if not listed in the FCG entry/exit text (e.g. home base KCHS).
+    if ourairports is not None and tok in ourairports.index:
+        ctry = str(ourairports.loc[tok, "iso3"])
+        if ctry in nodes.index:
+            print(f"[resolve] '{tok}' found in OurAirports -> {ctry} "
+                  f"({ourairports.loc[tok, 'name']}) "
+                  f"[not in FCG entry/exit list — flagged for review]")
+            return ctry, tok
+    name_to_code = {v.upper(): k for k, v in mapping.items()}
+    if tok in name_to_code and name_to_code[tok] in nodes.index:
+        return name_to_code[tok], None
+    hit = nodes[nodes["country"].str.upper() == tok]
+    if len(hit) == 1:
+        return hit.index[0], None
+    hit = nodes[nodes["country"].str.upper().str.contains(re.escape(tok))]
+    if len(hit) == 1:
+        return hit.index[0], None
+    if use_llm:
+        valid_countries = sorted(nodes.index)
+        sample_airports = sorted(airport_to_country)[:400]
+        ans = llm_json(
+            f"The user wrote '{user_token}'. Match to EITHER one ISO alpha-3 "
+            f"COUNTRY code from:\n{valid_countries}\nOR one AIRPORT code "
+            f"from:\n{sample_airports}\nCountry codes mean countries "
+            f"(FRA=France, never Frankfurt).\n"
+            f'Respond ONLY JSON: {{"kind": "country"|"airport"|null, '
+            f'"code": "XXX"|null}}') or {}
+        code = (ans.get("code") or "").upper()
+        if ans.get("kind") == "country" and code in nodes.index:
+            print(f"[resolve] LLM: '{user_token}' -> country {code} [validated]")
+            return code, None
+        if ans.get("kind") == "airport" and code in airport_to_country:
+            print(f"[resolve] LLM: '{user_token}' -> airport {code} [validated]")
+            return airport_to_country[code], code
+    sys.exit(f"[FATAL] cannot resolve '{user_token}' to any country or "
+             f"airport in your dataset.")
+
+# ----------------------------------------------------------------------------
+# 3. GEOMETRY
+# ----------------------------------------------------------------------------
+
+def haversine_nm(lat1, lon1, lat2, lon2):
+    r = 3440.065          # Earth radius in NAUTICAL MILES
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlmb = math.radians(lon2 - lon1)
+    a = (math.sin(dphi / 2) ** 2
+         + math.cos(p1) * math.cos(p2) * math.sin(dlmb / 2) ** 2)
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def airport_pt(ap, ourairports):
+    row = ourairports.loc[ap]
+    return float(row["latitude_deg"]), float(row["longitude_deg"])
+
+
+def build_graph(nodes, k=K_NEIGHBOURS, max_leg_nm=MAX_LEG_NM):
+    codes = list(nodes.index)
+    pts = {c: (float(nodes.loc[c, "lat"]), float(nodes.loc[c, "lon"]))
+           for c in codes}
+    graph = {c: {} for c in codes}
+    for c in codes:
+        dists = []
+        for o in codes:
+            if o == c:
+                continue
+            d = haversine_nm(*pts[c], *pts[o])
+            if max_leg_nm is None or d <= max_leg_nm:
+                dists.append((d, o))
+        dists.sort()
+        for d, o in dists[:k]:
+            graph[c][o] = d
+            graph[o][c] = d
+    print(f"[graph] {len(codes)} country nodes, "
+          f"{sum(len(v) for v in graph.values()) // 2} edges (k={k})")
+    return graph
+
+
+def dijkstra(graph, src, dst, blocked):
+    dist, prev, pq, seen = {src: 0.0}, {}, [(0.0, src)], set()
+    while pq:
+        d, u = heapq.heappop(pq)
+        if u in seen:
+            continue
+        seen.add(u)
+        if u == dst:
+            break
+        for v, w in graph[u].items():
+            if v in blocked and v != dst:
+                continue
+            nd = d + w
+            if nd < dist.get(v, float("inf")):
+                dist[v], prev[v] = nd, u
+                heapq.heappush(pq, (nd, v))
+    if dst not in dist:
+        return None, None
+    path = [dst]
+    while path[-1] != src:
+        path.append(prev[path[-1]])
+    return list(reversed(path)), dist[dst]
+
+
+def gc_sample(p1, p2, step_nm=CORRIDOR_SAMPLE_NM):
+    """Sample points along the great circle between (lat,lon) p1 and p2."""
+    lat1, lon1 = map(math.radians, p1)
+    lat2, lon2 = map(math.radians, p2)
+    v1 = (math.cos(lat1) * math.cos(lon1),
+          math.cos(lat1) * math.sin(lon1), math.sin(lat1))
+    v2 = (math.cos(lat2) * math.cos(lon2),
+          math.cos(lat2) * math.sin(lon2), math.sin(lat2))
+    dot = max(-1.0, min(1.0, sum(a * b for a, b in zip(v1, v2))))
+    ang = math.acos(dot)
+    total_nm = ang * 3440.065
+    n = max(2, int(total_nm / step_nm) + 1)
+    pts = []
+    for i in range(n + 1):
+        f = i / n
+        if ang < 1e-9:
+            w1, w2 = 1 - f, f
+        else:
+            w1 = math.sin((1 - f) * ang) / math.sin(ang)
+            w2 = math.sin(f * ang) / math.sin(ang)
+        x, y, z = (w1 * a + w2 * b for a, b in zip(v1, v2))
+        norm = math.sqrt(x * x + y * y + z * z)
+        x, y, z = x / norm, y / norm, z / norm
+        pts.append((math.degrees(math.asin(z)),
+                    math.degrees(math.atan2(y, x))))
+    return pts, total_nm
+
+
+def direct_corridor(p1, p2, nodes, endpoints):
+    """Countries whose centroid lies within CORRIDOR_RADIUS_NM of the direct
+    great-circle track (centroid approximation). Endpoint countries excluded
+    from the clearance count but included in the corridor list."""
+    samples, total_nm = gc_sample(p1, p2)
+    max_r = max([CORRIDOR_RADIUS_NM] + list(COUNTRY_RADIUS_NM.values()))
+    # bounding-box prefilter (radius in degrees, generous) for speed
+    pad = max_r / 60.0 + 1.0
+    lat_min = min(s[0] for s in samples) - pad
+    lat_max = max(s[0] for s in samples) + pad
+    lons = [s[1] for s in samples]
+    wraps = (max(lons) - min(lons)) > 180   # crosses antimeridian
+    near = {}   # code -> first sample index where the track is within radius
+    for c in nodes.index:
+        clat, clon = float(nodes.loc[c, "lat"]), float(nodes.loc[c, "lon"])
+        radius = max(CORRIDOR_RADIUS_NM, COUNTRY_RADIUS_NM.get(c, 0))
+        if not (lat_min <= clat <= lat_max):
+            continue
+        if not wraps and not (min(lons) - pad <= clon <= max(lons) + pad):
+            continue
+        for idx, (slat, slon) in enumerate(samples):
+            if haversine_nm(clat, clon, slat, slon) <= radius:
+                near[c] = idx
+                break
+    ordered = sorted(near, key=near.get)              # along-track order
+    clearances = [c for c in ordered if c not in endpoints]
+    corridor = [endpoints[0]] + clearances + [endpoints[1]]
+    return corridor, clearances, total_nm
+
+
+def corridor_score(nm, clearances):
+    """distance + per-country clearance cost (+ geopolitical risk extra)."""
+    return nm + sum(CLEARANCE_PENALTY_NM + RISK_EXTRA.get(c, 0.0)
+                    for c in clearances)
+
+
+# ----------------------------------------------------------------------------
+# GEOPOLITICAL RISK: manual avoid list + US State Dept advisories (free RSS)
+# ----------------------------------------------------------------------------
+
+def load_manual_risk(path=RISK_CSV):
+    """avoid_countries.csv -> {code: (action, reason)}"""
+    try:
+        df = pd.read_csv(path)
+    except FileNotFoundError:
+        return {}
+    out = {}
+    for _, r in df.iterrows():
+        code = str(r.get("code", "")).strip().upper()
+        action = str(r.get("action", "avoid")).strip().lower()
+        if code and action in ("block", "avoid"):
+            out[code] = (action, f"manual list: {r.get('reason', '')}")
+    print(f"[risk] manual avoid list: {len(out)} countries")
+    return out
+
+
+def fetch_state_dept_risk(nodes, mapping, use_feed):
+    """Parse 'Country - Level N: ...' titles from the State Dept RSS.
+    Returns {code: (action, reason)} for levels in RISK_LEVEL_ACTION.
+    Uses/refreshes a local cache so offline runs still get the last fetch."""
+    import datetime as _dt
+    titles, source = None, None
+    if use_feed:
+        try:
+            r = requests.get(STATE_DEPT_RSS, timeout=20)
+            r.raise_for_status()
+            titles = re.findall(r"<title>(.*?)</title>", r.text, re.DOTALL)
+            json.dump({"fetched": _dt.datetime.now().isoformat(),
+                       "titles": titles}, open(RISK_CACHE, "w"))
+            source = "live feed"
+        except Exception as e:
+            print(f"[risk] State Dept feed unavailable: {e}")
+    if titles is None:
+        try:
+            cache = json.load(open(RISK_CACHE))
+            titles, source = cache["titles"], f"cache from {cache['fetched'][:16]}"
+        except Exception:
+            print("[risk] no advisory data (no feed, no cache)")
+            return {}
+    name_to_code = {str(nodes.loc[c, "country"]).upper(): c
+                    for c in nodes.index}
+    name_to_code.update({v.upper(): k for k, v in mapping.items()})
+    out = {}
+    for t in titles:
+        m = re.match(r"\s*(.+?)\s*[-–]\s*Level\s*(\d)", t)
+        if not m:
+            continue
+        name, level = m.group(1).strip().upper(), int(m.group(2))
+        action = RISK_LEVEL_ACTION.get(level)
+        if not action:
+            continue
+        code = name_to_code.get(name)
+        if not code:   # loose match: advisory name contained in dataset name
+            for nm, c in name_to_code.items():
+                if name in nm or nm in name:
+                    code = c
+                    break
+        if code:
+            out[code] = (action, f"State Dept Level {level} ({source})")
+    print(f"[risk] State Dept advisories: {len(out)} countries at Level 3/4 "
+          f"({source})")
+    return out
+
+
+def apply_risk(nodes, mapping, use_feed):
+    """Combine manual list (wins) + advisories. Returns (hard_block set,
+    notes dict code -> reason). Fills RISK_EXTRA for 'avoid' countries."""
+    risk = fetch_state_dept_risk(nodes, mapping, use_feed)
+    risk.update(load_manual_risk())          # manual overrides feed
+    hard, notes = set(), {}
+    RISK_EXTRA.clear()
+    for code, (action, reason) in risk.items():
+        if code not in nodes.index:
+            continue
+        notes[code] = f"{action.upper()} — {reason}"
+        if action == "block":
+            hard.add(code)
+        else:
+            RISK_EXTRA[code] = RISK_AVOID_PENALTY_NM
+    if hard:
+        print(f"[risk] hard-blocked overflight: {sorted(hard)}")
+    if RISK_EXTRA:
+        print(f"[risk] penalized (avoid if possible): {sorted(RISK_EXTRA)}")
+    return hard, notes
+
+
+def stepping_stone_corridors(p_src, p_dst, src, dst, nodes, blocked,
+                             direct_nm, max_stones=STEPPING_STONES_MAX):
+    """Candidate corridors via 1 or 2 intermediate countries, each hop a
+    great circle with its own clearance count (no hop length cap: long
+    over-water hops are fine because nobody needs to clear them).
+    Returns list of (score, label, corridor_countries, total_nm, clearances)."""
+    cent = {c: (float(nodes.loc[c, "lat"]), float(nodes.loc[c, "lon"]))
+            for c in nodes.index}
+    # plausible stones: detour bounded, not blocked, not an endpoint
+    stones = []
+    for c, pc in cent.items():
+        if c in (src, dst) or c in blocked:
+            continue
+        d = haversine_nm(*p_src, *pc) + haversine_nm(*pc, *p_dst)
+        if d <= STEPPING_DETOUR_FACTOR * direct_nm:
+            stones.append((d, c))
+    stones.sort()
+    stones = [c for _, c in stones[:max_stones]]
+
+    hop_cache = {}
+    def hop(pa, pb, a, b):
+        key = (a, b)
+        if key not in hop_cache:
+            _, clear, nm = direct_corridor(pa, pb, nodes, (a, b))
+            hop_cache[key] = (list(clear), nm)     # in along-track order
+        return hop_cache[key]
+
+    def chain(*segments):
+        """Concatenate ordered hop clearance lists, dedup keeping order."""
+        seen, out_ = set(), []
+        for seg in segments:
+            for c in seg:
+                if c not in seen and c not in (src, dst):
+                    seen.add(c)
+                    out_.append(c)
+        return out_
+
+    out = []
+    # 1-stone
+    for x in stones:
+        c1, n1 = hop(p_src, cent[x], src, x)
+        c2, n2 = hop(cent[x], p_dst, x, dst)
+        clear = chain(c1, [x], c2)
+        if set(clear) & blocked:
+            continue
+        nm = n1 + n2
+        out.append((corridor_score(nm, clear), f"via {x}",
+                    [src] + clear + [dst], nm, clear))
+    # 2-stone (pairs among the closest stones only)
+    top = stones[:STEPPING_PAIR_POOL]
+    for i, x in enumerate(top):
+        for y in top[i + 1:]:
+            for a, b in ((x, y), (y, x)):
+                c1, n1 = hop(p_src, cent[a], src, a)
+                c2, n2 = hop(cent[a], cent[b], a, b)
+                c3, n3 = hop(cent[b], p_dst, b, dst)
+                clear = chain(c1, [a], c2, [b], c3)
+                if set(clear) & blocked:
+                    continue
+                nm = n1 + n2 + n3
+                out.append((corridor_score(nm, clear),
+                            f"via {a} -> {b}",
+                            [src] + clear + [dst], nm, clear))
+    out.sort(key=lambda t: t[0])
+    return out
+
+# ----------------------------------------------------------------------------
+# 4. STAGE-GRAPH AIRPORT SELECTION (dynamic program)
+# ----------------------------------------------------------------------------
+
+def choose_airports(stop_countries, pinned, candidates, ourairports, nodes,
+                    banned):
+    """Pick one airport per stop minimizing total consecutive-leg distance.
+
+    stop_countries : ordered country codes for the stops
+    pinned         : dict stage_index -> airport code the user typed
+    candidates     : country -> [airport codes with coords]
+    banned         : set of airport codes vetoed by the feasibility agent
+    Countries with no usable candidate fall back to a synthetic
+    'CENTROID:<code>' point at the country centroid.
+
+    Returns (chosen list, total_nm, per-stage candidate cost table).
+    """
+    def stage_options(i, ctry):
+        if i in pinned:
+            ap = pinned[i]
+            if ap in banned:
+                sys.exit(f"[FATAL] user-pinned airport {ap} was judged "
+                         f"infeasible; pick another.")
+            if ap in ourairports.index:
+                return [ap]
+            print(f"[stage] pinned {ap} has no coords; using centroid of {ctry}")
+            return [f"CENTROID:{ctry}"]
+        opts = [a for a in candidates.get(ctry, []) if a not in banned]
+        return opts or [f"CENTROID:{ctry}"]
+
+    def pt(opt):
+        if opt.startswith("CENTROID:"):
+            c = opt.split(":", 1)[1]
+            return float(nodes.loc[c, "lat"]), float(nodes.loc[c, "lon"])
+        return airport_pt(opt, ourairports)
+
+    stages = [stage_options(i, c) for i, c in enumerate(stop_countries)]
+
+    # DP over stages
+    INF = float("inf")
+    cost = [{opt: (0.0 if i == 0 else INF) for opt in stages[i]}
+            for i in range(len(stages))]
+    back = [dict() for _ in stages]
+    for i in range(1, len(stages)):
+        for cur in stages[i]:
+            pcur = pt(cur)
+            for prv in stages[i - 1]:
+                c_new = cost[i - 1][prv] + haversine_nm(*pt(prv), *pcur)
+                if c_new < cost[i][cur]:
+                    cost[i][cur] = c_new
+                    back[i][cur] = prv
+    last = min(cost[-1], key=cost[-1].get)
+    total = cost[-1][last]
+    chosen = [last]
+    for i in range(len(stages) - 1, 0, -1):
+        chosen.append(back[i][chosen[-1]])
+    chosen.reverse()
+
+    # Alternates report: best achievable total if stage i were forced to alt
+    alternates = []
+    for i, ctry in enumerate(stop_countries):
+        alts = []
+        for opt in stages[i]:
+            if opt == chosen[i]:
+                continue
+            # cheap estimate: swap the single stop, keep neighbours fixed
+            delta = 0.0
+            if i > 0:
+                delta += (haversine_nm(*pt(chosen[i - 1]), *pt(opt))
+                          - haversine_nm(*pt(chosen[i - 1]), *pt(chosen[i])))
+            if i < len(stages) - 1:
+                delta += (haversine_nm(*pt(opt), *pt(chosen[i + 1]))
+                          - haversine_nm(*pt(chosen[i]), *pt(chosen[i + 1])))
+            alts.append((delta, opt))
+        alts.sort()
+        alternates.append(alts[:MAX_ALTERNATES_SHOWN])
+    return chosen, total, alternates
+
+# ----------------------------------------------------------------------------
+# LLM plumbing
+# ----------------------------------------------------------------------------
+
+def llm_chat(prompt, system="You are a precise flight-clearance analyst. "
+             "Follow output format instructions exactly."):
+    payload = {"model": VLLM_MODEL,
+               "messages": [{"role": "system", "content": system},
+                            {"role": "user", "content": prompt}],
+               "temperature": 0.0, "max_tokens": 800}
+    r = requests.post(VLLM_URL, json=payload, timeout=LLM_TIMEOUT)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
+
+
+def llm_json(prompt):
+    try:
+        txt = llm_chat(prompt)
+    except Exception as e:
+        print(f"[llm] call failed: {e}")
+        return None
+    m = re.search(r"\{.*\}", txt, re.DOTALL)
+    if not m:
+        print(f"[llm] no JSON in reply: {txt[:200]!r}")
+        return None
+    try:
+        return json.loads(m.group(0))
+    except json.JSONDecodeError:
+        print(f"[llm] bad JSON: {m.group(0)[:200]!r}")
+        return None
+
+# ----------------------------------------------------------------------------
+# LIVE TRAFFIC (OpenSky Network) — optional, requires internet
+# ----------------------------------------------------------------------------
+OPENSKY_URL = "https://opensky-network.org/api/states/all"
+TRAFFIC_TIMEOUT = 20          # seconds per query
+TRAFFIC_PAD_DEG = 1.5         # corridor padding around each leg, degrees
+
+
+def leg_bbox(p1, p2, pad=TRAFFIC_PAD_DEG):
+    lamin = min(p1[0], p2[0]) - pad
+    lamax = max(p1[0], p2[0]) + pad
+    lomin = min(p1[1], p2[1]) - pad
+    lomax = max(p1[1], p2[1]) + pad
+    return (max(lamin, -90), max(lomin, -180),
+            min(lamax, 90), min(lomax, 180))
+
+
+def opensky_traffic(bbox):
+    """Return list of aircraft states in bbox, or None if unreachable."""
+    lamin, lomin, lamax, lomax = bbox
+    try:
+        r = requests.get(OPENSKY_URL,
+                         params={"lamin": lamin, "lomin": lomin,
+                                 "lamax": lamax, "lomax": lomax},
+                         timeout=TRAFFIC_TIMEOUT)
+        r.raise_for_status()
+        states = r.json().get("states") or []
+    except Exception as e:
+        print(f"[traffic] OpenSky unavailable: {e}")
+        return None
+    out = []
+    for s in states:
+        # OpenSky state vector indices:
+        # 1=callsign 2=origin_country 5=lon 6=lat 7=baro_alt 9=velocity
+        out.append({
+            "callsign": (s[1] or "").strip() or "?",
+            "origin_country": s[2],
+            "lon": s[5], "lat": s[6],
+            "alt_m": s[7], "vel_ms": s[9],
+        })
+    return out
+
+
+def traffic_report(chosen, corridors, nodes, ourairports):
+    """Query live traffic per leg; print a compact situation picture."""
+    def pt(opt):
+        if opt.startswith("CENTROID:"):
+            c = opt.split(":", 1)[1]
+            return float(nodes.loc[c, "lat"]), float(nodes.loc[c, "lon"])
+        return airport_pt(opt, ourairports)
+
+    print("\n=== LIVE TRAFFIC (OpenSky) ===")
+    print(f"  SNAPSHOT as of "
+          f"{__import__('datetime').datetime.now():%Y-%m-%d %H:%M local} — "
+          f"current airborne picture only, NOT a forecast for the mission "
+          f"date. Re-run with --traffic on launch day.")
+    any_data = False
+    for a, b in zip(chosen, chosen[1:]):
+        bbox = leg_bbox(pt(a), pt(b))
+        states = opensky_traffic(bbox)
+        if states is None:
+            print(f"  {a} -> {b}: traffic data unavailable")
+            continue
+        any_data = True
+        airborne = [s for s in states if s["alt_m"] and s["alt_m"] > 300]
+        high = [s for s in airborne if s["alt_m"] > 8000]
+        print(f"  {a} -> {b}: {len(states)} aircraft in corridor box "
+              f"({len(airborne)} airborne, {len(high)} above FL260)")
+        for s in sorted(airborne, key=lambda x: -(x['alt_m'] or 0))[:5]:
+            print(f"      {s['callsign']:<9} {s['origin_country']:<20} "
+                  f"alt {s['alt_m']:>7,.0f} m  "
+                  f"({(s['vel_ms'] or 0) * 1.94384:,.0f} kt)")
+    if not any_data:
+        print("  (no leg returned data — offline or rate-limited; "
+              "plan is unaffected)")
+    return any_data
+
+
+# ----------------------------------------------------------------------------
+# WEATHER (aviationweather.gov) — free, no API key, official NOAA/FAA source
+# ----------------------------------------------------------------------------
+AWC_METAR_URL = "https://aviationweather.gov/api/data/metar"
+AWC_TAF_URL   = "https://aviationweather.gov/api/data/taf"
+WX_TIMEOUT    = 20
+
+
+def fetch_wx(icao):
+    """Return (metar_text, taf_text) for an ICAO, None entries on failure."""
+    metar = taf = None
+    try:
+        r = requests.get(AWC_METAR_URL,
+                         params={"ids": icao, "format": "raw"},
+                         timeout=WX_TIMEOUT)
+        if r.ok and r.text.strip():
+            metar = r.text.strip().splitlines()[0]
+    except Exception as e:
+        print(f"[wx] METAR fetch failed for {icao}: {e}")
+    try:
+        r = requests.get(AWC_TAF_URL,
+                         params={"ids": icao, "format": "raw"},
+                         timeout=WX_TIMEOUT)
+        if r.ok and r.text.strip():
+            taf = r.text.strip()
+    except Exception as e:
+        print(f"[wx] TAF fetch failed for {icao}: {e}")
+    return metar, taf
+
+
+def weather_report(chosen, use_llm):
+    """METAR/TAF per chosen stop airport; optional LLM plain-language gist."""
+    print("\n=== WEATHER (aviationweather.gov) ===")
+    print(f"  SNAPSHOT as of "
+          f"{__import__('datetime').datetime.now():%Y-%m-%d %H:%M local} — "
+          f"METAR = current conditions, TAF = next ~24-30h only. NOT valid "
+          f"for the mission date; re-run with --wx on launch day.")
+    collected = []
+    for ap in dict.fromkeys(chosen):          # unique, order-preserving
+        if ap.startswith("CENTROID:"):
+            print(f"  {ap}: no airport chosen — skipping wx")
+            continue
+        metar, taf = fetch_wx(ap)
+        if not metar and not taf:
+            print(f"  {ap}: no weather data (not a reporting station, "
+                  f"or offline)")
+            continue
+        if metar:
+            print(f"  {ap} METAR: {metar}")
+        if taf:
+            print(f"  {ap} TAF:   {taf.splitlines()[0]}"
+                  + ("  [...]" if len(taf.splitlines()) > 1 else ""))
+        collected.append((ap, metar, taf))
+    if use_llm and collected:
+        gist = llm_chat(
+            "Decode these aviation weather reports for a flight crew in "
+            "plain language (<=120 words total). Highlight anything "
+            "operationally significant (low ceilings/visibility, strong "
+            "wind, thunderstorms, icing); say 'benign' where nothing "
+            "stands out.\n" + "\n".join(
+                f"{ap}:\nMETAR: {m or '(none)'}\nTAF: {t or '(none)'}"
+                for ap, m, t in collected))
+        print("\n  Plain-language summary:\n  " + gist.replace("\n", "\n  "))
+    return bool(collected)
+
+# ----------------------------------------------------------------------------
+# 5. FEASIBILITY AGENT
+# ----------------------------------------------------------------------------
+
+def country_dossier(code, fcg):
+    if code not in fcg.index:
+        return "(no FCG data for this country)"
+    row = fcg.loc[code]
+    cap = DOSSIER_CHAR_CAP or 10 ** 9
+    parts = [f"[{c}]\n{str(row[c]).strip()[:cap]}"
+             for c in FEASIBILITY_COLS
+             if c in row.index and pd.notna(row[c]) and str(row[c]).strip()]
+    return "\n\n".join(parts) if parts else \
+        "(FCG row present but all fields empty)"
+
+
+def judge_country(code, name, role, travel_date, fcg, airport=None,
+                  airport_in_fcg=True):
+    if airport and not str(airport).startswith("CENTROID:"):
+        if airport_in_fcg:
+            via = (f" The plan lands at airport '{airport}' here; confirm it "
+                   f"is listed/permitted in the entry-exit data.")
+        else:
+            via = (f" The plan lands at airport '{airport}' here. This "
+                   f"airport was chosen by the user and is NOT in the "
+                   f"entry-exit list; do not deny for that reason alone — "
+                   f"judge only the country-level rules and flag caution if "
+                   f"the data requires using designated airports of entry.")
+    else:
+        via = ""
+    dossier = country_dossier(code, fcg)
+    if VERBOSE:
+        print(f"\n----- DOSSIER {code} ({name}) [{role}"
+              + (f", airport {airport}" if airport else "") + "] -----")
+        print(dossier)
+        print("----- END DOSSIER -----\n")
+    ans = llm_json(
+        f"Planned mission date: {travel_date}.\n"
+        f"Country: {name} ({code}). Role: {role} "
+        f"({'overflight only' if role == 'overflight' else 'landing/departure'})."
+        f"{via}\nOfficial clearance data:\n---\n{dossier}"
+        f"\n---\nBased ONLY on the data above, can we use this country in "
+        f"this role? Consider overflight permission, lead times vs mission "
+        f"date, entry/exit and customs rules if landing. If data is missing "
+        f"or ambiguous, allow but flag caution.\n"
+        f'Respond ONLY JSON: {{"allowed": true/false, "caution": true/false, '
+        f'"airport_ok": true/false, "reason": "<one sentence>"}}')
+    if not ans or "allowed" not in ans:
+        return {"allowed": True, "caution": True, "airport_ok": True,
+                "reason": "LLM verdict unavailable; unverified."}
+    ans.setdefault("airport_ok", True)
+    return ans
+
+# ----------------------------------------------------------------------------
+# FUEL (DLA standard prices, offline file; optional)
+# ----------------------------------------------------------------------------
+
+def load_fuel_rates(path=FUEL_CSV):
+    """Optional fuel_rates.csv: code,description,usd_per_gallon."""
+    try:
+        df = pd.read_csv(path)
+    except FileNotFoundError:
+        print(f"[fuel] {path} not found — fuel notes disabled")
+        return {}
+    df["code"] = df["code"].astype(str).str.strip().str.upper()
+    rates = {r["code"]: (r["description"], float(r["usd_per_gallon"]))
+             for _, r in df.iterrows()}
+    print(f"[fuel] {len(rates)} DLA fuel rates loaded")
+    return rates
+
+
+def make_fuel_notes(stop_countries, fcg, fuel_rates):
+    """One note per stop: DLA rates + that country's AIR Card / cash text."""
+    if not fuel_rates:
+        return []
+    rate_line = ", ".join(
+        f"{c} ${fuel_rates[c][1]:.2f}/gal"
+        for c in FUEL_CODES_SHOWN if c in fuel_rates)
+    notes = []
+    for ctry in stop_countries:
+        pay = ""
+        if ctry in fcg.index:
+            bits = []
+            for col in PAYMENT_COLS:
+                if col in fcg.columns and pd.notna(fcg.loc[ctry].get(col)) \
+                        and str(fcg.loc[ctry][col]).strip():
+                    bits.append(f"{col}: "
+                                f"{str(fcg.loc[ctry][col]).strip()[:150]}")
+            pay = " | ".join(bits)[:400]
+        notes.append(f"DLA rates: {rate_line}"
+                     + (f" | payment ({ctry}): {pay}" if pay
+                        else f" | payment ({ctry}): no AIR Card/cash data "
+                             f"in FCG"))
+    return notes
+
+
+def plan(query, travel_date, use_llm):
+    (nodes, fcg, mapping, airport_to_country,
+     candidates, ourairports) = build_dataset()
+
+    tokens = [t for t in re.split(r"\s+to\s+", query.strip(),
+                                  flags=re.IGNORECASE) if t.strip()]
+    if len(tokens) < 2:
+        sys.exit('[FATAL] query must be "A to B" or "A to B to C [to A]"')
+
+    stop_countries, pinned = [], {}
+    for i, t in enumerate(tokens):
+        ctry, ap = resolve_waypoint(t, mapping, nodes,
+                                    airport_to_country, use_llm, ourairports)
+        stop_countries.append(ctry)
+        if ap:
+            pinned[i] = ap
+    round_trip = (stop_countries[0] == stop_countries[-1]
+                  and len(stop_countries) > 2)
+    print("[route] stops: " + " -> ".join(
+        f"{c}({pinned[i]})" if i in pinned else c
+        for i, c in enumerate(stop_countries))
+        + ("  [round trip]" if round_trip else ""))
+
+    graph = build_graph(nodes)
+    fuel_notes = make_fuel_notes(stop_countries, fcg, load_fuel_rates())
+    risk_block, risk_notes = apply_risk(nodes, mapping, USE_RISK_FEED)
+    for c in risk_block & set(stop_countries):
+        print(f"[risk] WARNING: stop country {c} is on the block list "
+              f"({risk_notes[c]}) — landing there is the user's call")
+    verdicts, blocked, banned_airports = OrderedDict(), set(), set()
+    blocked |= (risk_block - set(stop_countries))   # never overfly these
+    overridden_stages = {}   # stage idx -> (user airport, original objection)
+    for c, why in risk_notes.items():
+        verdicts[(c, "risk", None)] = {"allowed": c not in risk_block,
+                                       "caution": True, "reason": why}
+
+    # Outer loop: choose airports -> validate stops+corridors -> ban/block ->
+    # re-choose. Each iteration permanently removes something, so it converges.
+    for outer in range(1, 11):
+        chosen, total_nm, alternates = choose_airports(
+            stop_countries, pinned, candidates, ourairports, nodes,
+            banned_airports)
+        print(f"[opt {outer}] chosen airports: "
+              + " -> ".join(chosen) + f"  ({total_nm:,.0f} NM direct)")
+
+        # corridors per leg: compare DIRECT great-circle (ocean-preferring)
+        # vs land country-graph route, scored by distance + clearance burden
+        def stop_pt(opt):
+            if opt.startswith("CENTROID:"):
+                c = opt.split(":", 1)[1]
+                return float(nodes.loc[c, "lat"]), float(nodes.loc[c, "lon"])
+            return airport_pt(opt, ourairports)
+
+        corridors = []
+        for i, (a, b) in enumerate(zip(stop_countries, stop_countries[1:])):
+            if a == b:
+                corridors.append([a])
+                continue
+            pa, pb = stop_pt(chosen[i]), stop_pt(chosen[i + 1])
+            cands = []   # (score, label, corridor, nm, clearances)
+            # Option 1: direct great circle between the chosen airports
+            d_corr, d_clear, d_nm = direct_corridor(pa, pb, nodes, (a, b))
+            d_blocked = [c for c in d_clear if c in blocked]
+            if not d_blocked:
+                cands.append((corridor_score(d_nm, d_clear),
+                              "DIRECT", d_corr, d_nm, d_clear))
+            # Option 2: land route through the country graph, with
+            # clearance-penalized edge weights (minimizes countries, not miles)
+            pgraph = {u: {v: w + CLEARANCE_PENALTY_NM + RISK_EXTRA.get(v, 0.0)
+                          for v, w in nb.items()}
+                      for u, nb in graph.items()}
+            l_path, _ = dijkstra(pgraph, a, b, blocked)
+            if l_path:
+                l_clear = [c for c in l_path if c not in (a, b)]
+                l_nm = sum(graph[u][v] for u, v in zip(l_path, l_path[1:]))
+                cands.append((corridor_score(l_nm, l_clear),
+                              "LAND graph", l_path, l_nm, l_clear))
+            # Option 3: stepping stones (1-2 intermediates, uncapped hops,
+            # e.g. USA -> JPN -> THA across the Pacific)
+            cands.extend(stepping_stone_corridors(
+                pa, pb, a, b, nodes, blocked, d_nm))
+            if not cands:
+                sys.exit(f"[FATAL] no corridor {a}->{b}: direct crosses "
+                         f"blocked {d_blocked} and no land/stepping-stone "
+                         f"route avoids {sorted(blocked)}.")
+            cands.sort(key=lambda t: t[0])
+            best = cands[0]
+            corridors.append(best[2])
+            print(f"    [corridor {a}->{b}] {best[1]}: {best[3]:,.0f} NM, "
+                  f"{len(best[4])} clearances "
+                  f"({', '.join(best[4]) or 'none - international waters'})")
+            for alt in cands[1:4]:
+                print(f"        alt {alt[1]}: {alt[3]:,.0f} NM, "
+                      f"{len(alt[4])} clearances")
+            if d_blocked:
+                print(f"        (direct rejected: crosses blocked "
+                      f"{d_blocked})")
+
+        if not use_llm:
+            return (chosen, total_nm, alternates, stop_countries,
+                    corridors, verdicts, nodes, ourairports, [],
+                    fuel_notes)
+
+        changed = False
+        pinned_set = set(pinned.values())
+        # judge stop countries (+ their chosen airports)
+        for i, (ctry, ap) in enumerate(zip(stop_countries, chosen)):
+            key = (ctry, "stop", ap)
+            if key not in verdicts:
+                v = judge_country(ctry, nodes.loc[ctry, "country"], "stop",
+                                  travel_date, fcg, ap,
+                                  airport_in_fcg=(ap in airport_to_country))
+                # Deterministic guard: a USER-PINNED airport outside the FCG
+                # designated list must not be denied merely for being
+                # unlisted. Downgrade any denial of such an airport to a
+                # caution — the user chose it (e.g. home base) deliberately.
+                if ap in pinned_set and ap not in airport_to_country and \
+                        not (v["allowed"] and v.get("airport_ok", True)):
+                    print(f"    [OVERRIDE] {ctry}/{ap}: user-pinned, "
+                          f"non-designated airport — denial downgraded to "
+                          f"caution ({v['reason']})")
+                    overridden_stages[i] = (ap, v["reason"])
+                    v = {"allowed": True, "airport_ok": True, "caution": True,
+                         "reason": f"User-pinned non-designated airport; "
+                                   f"review: {v['reason']}"}
+                verdicts[key] = v
+                ok = v["allowed"] and v.get("airport_ok", True)
+                print(f"    [{'OK ' if ok else 'DENY'}] stop {ctry}/{ap}: "
+                      f"{v['reason']}")
+                if not v["allowed"]:
+                    sys.exit(f"[FATAL] stop country {ctry} infeasible: "
+                             f"{v['reason']}")
+                if not v.get("airport_ok", True) \
+                        and not ap.startswith("CENTROID:") \
+                        and ap not in pinned_set:
+                    banned_airports.add(ap)
+                    changed = True
+        # judge overflight countries in corridors
+        for path in corridors:
+            for code in path:
+                if code in stop_countries:
+                    continue
+                key = (code, "overflight", None)
+                if key in verdicts:
+                    v = verdicts[key]
+                else:
+                    v = judge_country(code, nodes.loc[code, "country"],
+                                      "overflight", travel_date, fcg)
+                    verdicts[key] = v
+                    print(f"    [{'OK ' if v['allowed'] else 'DENY'}] "
+                          f"overflight {code}: {v['reason']}")
+                if not v["allowed"] and code not in blocked:
+                    blocked.add(code)
+                    changed = True
+        if not changed:
+            suggestions = suggest_compliant_alternatives(
+                overridden_stages, stop_countries, pinned, candidates,
+                ourairports, nodes, banned_airports, chosen, total_nm,
+                travel_date, fcg, verdicts, airport_to_country)
+            return (chosen, total_nm, alternates, stop_countries,
+                    corridors, verdicts, nodes, ourairports, suggestions,
+                    fuel_notes)
+        print(f"    replanning (banned airports: {sorted(banned_airports)}; "
+              f"blocked countries: {sorted(blocked)})")
+    sys.exit("[FATAL] plan did not stabilise within 10 iterations.")
+
+
+def suggest_compliant_alternatives(overridden_stages, stop_countries, pinned,
+                                   candidates, ourairports, nodes,
+                                   banned_airports, chosen, total_nm,
+                                   travel_date, fcg, verdicts,
+                                   airport_to_country):
+    """For each user-pinned airport the judge objected to, compute the best
+    fully-compliant alternative route (that stage unpinned, restricted to
+    FCG-designated candidates) and judge the substitute airport."""
+    suggestions = []
+    for i, (user_ap, objection) in overridden_stages.items():
+        ctry = stop_countries[i]
+        if not candidates.get(ctry):
+            suggestions.append({
+                "stage": i, "country": ctry, "user_airport": user_ap,
+                "objection": objection, "alt": None,
+                "note": "no FCG-designated airport with coordinates in this "
+                        "country — no compliant alternative exists"})
+            continue
+        pinned2 = {k: v for k, v in pinned.items() if k != i}
+        alt_chosen, alt_total, _ = choose_airports(
+            stop_countries, pinned2, candidates, ourairports, nodes,
+            banned_airports)
+        alt_ap = alt_chosen[i]
+        key = (ctry, "stop", alt_ap)
+        if key not in verdicts:
+            v = judge_country(ctry, nodes.loc[ctry, "country"], "stop",
+                              travel_date, fcg, alt_ap,
+                              airport_in_fcg=(alt_ap in airport_to_country))
+            verdicts[key] = v
+        v = verdicts[key]
+        suggestions.append({
+            "stage": i, "country": ctry, "user_airport": user_ap,
+            "objection": objection, "alt": alt_ap,
+            "alt_route": alt_chosen, "alt_total_nm": alt_total,
+            "delta_nm": alt_total - total_nm,
+            "alt_verdict": v})
+    return suggestions
+
+
+def narrate(chosen, total_nm, alternates, stop_countries, corridors,
+            verdicts, nodes, ourairports, suggestions, fuel_notes,
+            travel_date, use_llm):
+    def ap_name(ap):
+        if ap.startswith("CENTROID:"):
+            c = ap.split(":", 1)[1]
+            return f"{nodes.loc[c, 'country']} centroid (no designated " \
+                   f"airport with coords)"
+        return f"{ap} ({ourairports.loc[ap, 'name']})"
+
+    print("\n=== FINAL PLAN ===")
+    for i, (ctry, ap) in enumerate(zip(stop_countries, chosen)):
+        print(f"Stop {i + 1}: {nodes.loc[ctry, 'country']} ({ctry}) — "
+              f"{ap_name(ap)}")
+        if fuel_notes:
+            print(f"        fuel: {fuel_notes[i]}")
+        alts = alternates[i]
+        if alts:
+            for delta, alt in alts:
+                print(f"        alt: {ap_name(alt)}  ({delta:+,.0f} NM)")
+    print("\nLegs:")
+    for i, ((a, b), corridor) in enumerate(
+            zip(zip(chosen, chosen[1:]), corridors)):
+        def pt(opt):
+            if opt.startswith("CENTROID:"):
+                c = opt.split(":", 1)[1]
+                return float(nodes.loc[c, "lat"]), float(nodes.loc[c, "lon"])
+            return airport_pt(opt, ourairports)
+        d = haversine_nm(*pt(a), *pt(b))
+        print(f"  {a} -> {b}: {d:,.0f} NM | overflight corridor: "
+              f"{' -> '.join(corridor)}")
+    print(f"Total direct distance: {total_nm:,.0f} NM")
+    cautions = {k: v for k, v in verdicts.items() if v.get("caution")}
+    if cautions:
+        print("Cautions:")
+        for (code, role, ap), v in cautions.items():
+            tag = f"{code}/{ap}" if ap else code
+            print(f"  - {tag} ({role}): {v['reason']}")
+    if suggestions:
+        print("\n=== COMPLIANT ALTERNATIVES (your requested airport drew "
+              "objections) ===")
+        for s in suggestions:
+            print(f"Stop {s['stage'] + 1} ({s['country']}): you requested "
+                  f"{s['user_airport']}")
+            print(f"    objection: {s['objection']}")
+            if s.get("alt") is None:
+                print(f"    {s['note']}")
+                continue
+            av = s["alt_verdict"]
+            status = ("compliant" if av["allowed"]
+                      and av.get("airport_ok", True) else "also objected")
+            print(f"    suggested: {ap_name(s['alt'])} [{status}] — "
+                  f"{av['reason']}")
+            print(f"    revised route: {' -> '.join(s['alt_route'])} "
+                  f"({s['alt_total_nm']:,.0f} NM, "
+                  f"{s['delta_nm']:+,.0f} NM vs your request)")
+        print("Your requested route above remains the primary plan; the "
+              "alternatives are ready if the cautions are disqualifying.")
+    if use_llm:
+        summary = llm_chat(
+            f"Mission date {travel_date}.\nStops and chosen airports:\n"
+            + "\n".join(f"{c}: {a}" for c, a in zip(stop_countries, chosen))
+            + "\nOverflight corridors per leg:\n"
+            + "\n".join(" -> ".join(p) for p in corridors)
+            + "\nVerdicts:\n"
+            + json.dumps({f"{c}/{r}/{a}": v
+                          for (c, r, a), v in verdicts.items()}, indent=1)
+            + ("\nCompliant alternative suggestions (user-requested airports "
+               "drew objections):\n"
+               + json.dumps([{k: v for k, v in s.items()
+                              if k != "alt_verdict"} for s in suggestions],
+                            indent=1)
+               if suggestions else "")
+            + "\nCorridor country lists are in flight order.\n"
+              "Write a short operational briefing (<=220 words) in PLAIN "
+              "TEXT: no LaTeX, no markdown symbols, use '->' for arrows. "
+              "Cover: per-leg "
+              "rationale, why each airport was chosen, required lead-time "
+              "actions, cautions, and if alternatives exist, a one-line "
+              "recommendation on requested-vs-alternative airports.")
+        print("\n=== BRIEFING ===\n" + summary)
+
+# ----------------------------------------------------------------------------
+# --list MODE
+# ----------------------------------------------------------------------------
+
+def list_airports(country_query, use_llm):
+    (nodes, fcg, mapping, airport_to_country,
+     candidates, ourairports) = build_dataset()
+    code, _ = resolve_waypoint(country_query, mapping, nodes,
+                               airport_to_country, use_llm, ourairports)
+    name = nodes.loc[code, "country"]
+    print(f"\n=== ENTRY/EXIT AIRPORTS: {name} ({code}) ===")
+    extracted = sorted(a for a, c in airport_to_country.items() if c == code)
+    for ap in extracted:
+        if ap in ourairports.index:
+            r = ourairports.loc[ap]
+            print(f"  {ap}: {r['name']}  "
+                  f"({r['latitude_deg']:.3f}, {r['longitude_deg']:.3f})")
+        else:
+            print(f"  {ap}: (no coordinates in OurAirports)")
+    if not extracted:
+        print("  (none extracted from FCG text)")
+    print(f"\n=== FULL FCG DOSSIER: {name} ({code}) ===")
+    print(country_dossier(code, fcg))
+    raw = ""
+    if code in fcg.index and AIRPORT_COL in fcg.columns:
+        raw = str(fcg.loc[code].get(AIRPORT_COL, "") or "").strip()
+    restr = ""
+    if code in fcg.index and AIRPORT_COL_2 in fcg.columns:
+        restr = str(fcg.loc[code].get(AIRPORT_COL_2, "") or "").strip()
+    if use_llm and (raw or restr):
+        ans = llm_json(
+            f"Country: {name} ({code}). Official entry/exit airport data:\n"
+            f"---\n{raw}\n---\nAirfield restrictions:\n---\n"
+            f"{restr or '(none)'}\n---\nBased ONLY on this text, list the "
+            f"designated airports and their status. Use ONLY airports "
+            f"mentioned in the text — never invent.\n"
+            f'Respond ONLY JSON: {{"usable": [{{"code": "...", '
+            f'"conditions": "<short or empty>"}}], '
+            f'"restricted_or_prohibited": [{{"code": "...", '
+            f'"reason": "<short>"}}], "notes": "<one sentence>"}}')
+        if ans:
+            print("\n=== STRUCTURED VERDICT (LLM, grounded in text above) ===")
+            for a in ans.get("usable", []):
+                cond = f" — {a['conditions']}" if a.get("conditions") else ""
+                print(f"  USABLE     {a.get('code', '?')}{cond}")
+            for a in ans.get("restricted_or_prohibited", []):
+                print(f"  RESTRICTED {a.get('code', '?')} — "
+                      f"{a.get('reason', '')}")
+            if ans.get("notes"):
+                print(f"  Notes: {ans['notes']}")
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("query",
+                    help='route "A to B to C" — or one country with --list')
+    ap.add_argument("--date", default="2026-09-15")
+    ap.add_argument("--no-llm", action="store_true")
+    ap.add_argument("--list", action="store_true",
+                    help="list designated entry/exit airports for a country")
+    ap.add_argument("--verbose", action="store_true",
+                    help="print each country's full FCG dossier as judged")
+    ap.add_argument("--traffic", action="store_true",
+                    help="query OpenSky for live aircraft along each leg "
+                         "(requires internet; failures are non-fatal)")
+    ap.add_argument("--risk", action="store_true",
+                    help="fetch US State Dept travel advisories (free RSS) "
+                         "and block/penalize Level 4/3 countries; the manual "
+                         "avoid_countries.csv is always applied")
+    ap.add_argument("--wx", action="store_true",
+                    help="fetch METAR/TAF for each stop airport from "
+                         "aviationweather.gov (free, no key; non-fatal)")
+    args = ap.parse_args()
+    use_llm = not args.no_llm
+    if args.verbose:
+        VERBOSE = True
+    if args.risk:
+        USE_RISK_FEED = True
+    if args.list:
+        list_airports(args.query, use_llm)
+        sys.exit(0)
+    result = plan(args.query, args.date, use_llm)
+    narrate(*result, args.date, use_llm)
+    chosen_, _, _, _, corridors_, _, nodes_, ourairports_, _, _ = result
+    if args.traffic:
+        traffic_report(chosen_, corridors_, nodes_, ourairports_)
+    if args.wx:
+        weather_report(chosen_, use_llm)
