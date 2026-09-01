@@ -1,7 +1,9 @@
-cd /path/to/his-new-repo
-git checkout -b agent/patch-survey
-cp /path/to/microagent.py .          # the runner — safe to add
-# do NOT copy your AGENT.md over his. Read his first.
+export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1
+export LITELLM_API_KEY=sk-...
+export AGENT_MODEL=claude-opus-4-8
+export AGENT_TLS_VERIFY=false
+python microagent.py --repo $(pwd) --verify
+python microagent.py --repo $(pwd)
 
 This is an unfamiliar codebase — a coworker's version of the discver cyber reasoning system, with his own recent commits including a patch-generation attempt that is NOT working. Do a READ-ONLY investigation. Make NO code edits. Your job is to understand the whole system from the code and diagnose why patching fails.
 
