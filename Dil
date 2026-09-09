@@ -1,8 +1,1 @@
-# 1. planner run — the judge reads FCG, denies what it denies, writes last_run_blocks.json
-python country_route_planner.py "kchs to segu" --date 2026-10-20 --risk
 
-# 2. replay the routing math under exactly those FCG-derived blocks
-python eval_routes.py --geometry --routing --pairs "KCHS:SEGU" --blocks-file last_run_blocks.json
-
-# 3. (already have it) the unconstrained baseline
-python eval_routes.py --geometry --routing --pairs "KCHS:SEGU"
