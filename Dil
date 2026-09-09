@@ -1,5 +1,8 @@
-# 1. planner: LLM judge reads FCG for every country on this mission, exports its denials
-python country_route_planner.py "kchs to sazb to scel to segu" --date 2026-10-20 --risk
+# the planner, choosing its own stops
+python country_route_planner.py "ksuu to fkkl" --aircraft C-17 --auto-stops --date 2026-10-20 --risk
+mv last_run_blocks.json blocks_m1.json
 
-# 2. compare against the real route under exactly those FCG verdicts
-python eval_plots.py --reference "KCHS,SAZB,SCEL,SEGU" --blocks-file last_run_blocks.json
+# fixed-stops test (Way 1) and endpoints-only test (Way 2)
+python eval_plots.py --reference "KSUU,TKPK,DGAA,FKKD,FKKL" --blocks-file blocks_m1.json
+python eval_plots.py --reference "KSUU,TKPK,DGAA,FKKD,FKKL" --endpoints-only --aircraft C-17 --blocks-file blocks_m1.json
+python eval_explain.py --llm
