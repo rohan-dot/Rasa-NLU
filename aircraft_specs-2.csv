@@ -1,0 +1,11 @@
+type,range_nm,min_runway_ft,notes
+C-17,4700,3500,Globemaster III; ER variants extend range; verify C-17 ER FCG fields
+C-130,2800,3000,Hercules (J approx); short/unimproved field capable
+C-5,5500,6000,Super Galaxy; heavy WBC requirement
+KC-135,8000,7000,Stratotanker
+KC-46,6500,7000,Pegasus
+C-12,1500,3000,Huron; light utility
+C-40,5000,5500,Clipper (737-based)
+C-21,2000,4000,Learjet 35
+P-8,4500,6000,Poseidon (737-based)
+E-3,4000,7000,Sentry AWACS
