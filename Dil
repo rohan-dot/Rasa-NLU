@@ -1,5 +1,14 @@
-rm -rf send-ashok discver-patch-fix.zip && mkdir -p send-ashok && for f in $(git diff --name-only 7faf01c | grep -E '^(src|tests)/.*\.py$'); do mkdir -p "send-ashok/$(dirname "$f")"; cp "$f" "send-ashok/$f"; done && (cd send-ashok && zip -r ../discver-patch-fix.zip .) && unzip -l discver-patch-fix.zip
+Survey first, then fix, one commit, no flags. Findings whose id starts with "static-" have no PoV, cannot be validated by replay, and currently burn the full 15-iteration patch loop. Change: for exact id prefix "static-", skip the agent loop entirely and write a patch_index.json entry with status "UNVALIDATED", reason "no reproducer (static finding)", attempts 0. PoV-backed findings must be completely unaffected — match the id prefix only, never substrings elsewhere. Log one INFO line per finding at patcher start: "[patch-route] id=<id> route=<pov|static-skip>". Add a test for each route. py_compile + pytest tests/ + commit. Report the diff stat and final pytest line.
 
+cd /exp/FY26/AIxCC/ro31337 && git clone --depth 1 https://github.com/trailofbits/buttercup && git clone --depth 1 https://github.com/Team-Atlanta/aixcc-afc-atlantis
+
+
+
+Read-only survey, no edits, no commits. Compare src/patch_generator.py against the patch-generation code in ../buttercup and ../aixcc-afc-atlantis (find the modules that generate and validate patches). For each: how the model's action/patch is parsed (structured vs freeform), how a candidate is validated (PoV replay, tests, both), iteration and token budgets, how non-JSON or truncated output is handled, and what context the model gets (stack trace, source window, prior-attempt diff). Output a table plus a ranked list of at most 5 changes discver should adopt, each naming the reference file and function. Nothing else.
+
+
+
+after run 
 
 New zip attached. Same as before: unzip into example/discver/ (overwrite src/ + tests/), python -m py_compile src/*.py, then run. Send me only the output of:
 grep -E "llm-call|patch-turn" orchestrator.log | head -60
