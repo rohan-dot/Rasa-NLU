@@ -1,18 +1,8 @@
-cd /exp/FY26/AIxCC/ro31337/discver-patchengineer01
-export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1
-export LITELLM_API_KEY=sk-GhojGlZcfXdeDOG7syHKEQ
-export AGENT_MODEL=claude-opus-4-8
-export AGENT_TLS_VERIFY=false
-git checkout -q HEAD~1 && echo "HEAD~1 suite:" && python -m pytest -q 2>&1 | tail -1; git checkout -q -
-git show --stat HEAD | grep -E "send-ashok|\.zip|README \(1\)" || echo "commit clean"
-git rm -r -q --cached --ignore-unmatch send-ashok discver-patch-fix.zip
-git diff --cached --quiet || git commit -q --amend --no-edit
-printf 'send-ashok/\n*.zip\n' >> .gitignore
 AGENT_MAX_TURNS=500 python microagent.py --repo $(pwd)
 
 
 
-
+First run: rm -rf send-ashok discver-patch-fix.zip. For item 3: HEAD~1 gives "12 errors in 2.18s" (collection interrupted, nothing ran); HEAD gives 185 passed / 18 errors. Explain the difference by file. Fix only what the previous commit introduced; list pre-existing errors and leave them alone.
 
 Survey first, then fix, one commit, no flags.
 
