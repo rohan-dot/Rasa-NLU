@@ -1,8 +1,27 @@
-# the planner, choosing its own stops
-python country_route_planner.py "ksuu to fkkl" --aircraft C-17 --auto-stops --date 2026-10-20 --risk
-mv last_run_blocks.json blocks_m1.json
+cd /exp/FY26/AIxCC/ro31337/discver-patchengineer01
+export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1
+export LITELLM_API_KEY=sk-GhojGlZcfXdeDOG7syHKEQ
+export AGENT_MODEL=claude-opus-4-8
+export AGENT_TLS_VERIFY=false
+git checkout -q HEAD~1 && echo "HEAD~1 suite:" && python -m pytest -q 2>&1 | tail -1; git checkout -q -
+git show --stat HEAD | grep -E "send-ashok|\.zip|README \(1\)" || echo "commit clean"
+git rm -r -q --cached --ignore-unmatch send-ashok discver-patch-fix.zip
+git diff --cached --quiet || git commit -q --amend --no-edit
+printf 'send-ashok/\n*.zip\n' >> .gitignore
+AGENT_MAX_TURNS=500 python microagent.py --repo $(pwd)
 
-# fixed-stops test (Way 1) and endpoints-only test (Way 2)
-python eval_plots.py --reference "KSUU,TKPK,DGAA,FKKD,FKKL" --blocks-file blocks_m1.json
-python eval_plots.py --reference "KSUU,TKPK,DGAA,FKKD,FKKL" --endpoints-only --aircraft C-17 --blocks-file blocks_m1.json
-python eval_explain.py --llm
+
+
+
+
+Survey first, then fix, one commit, no flags.
+
+1. src/patch_generator.py: report how each LLM call is classified rca/turn/repair/judge. There are two call sites; RCA and repair are not separate calls. Collapse rca/turn/repair into one stage "turn": timeout 300s, max_tokens 1500. Judge stays max_tokens 300 / timeout 120s. No call that can emit apply_edit may have fewer than 1500 output tokens.
+
+2. Every [llm-call] after-line must include: stage, attempt, elapsed_s, prompt_tokens, completion_tokens, finish_reason, reasoning_present=<true|false> (true if the response carried non-empty reasoning_content). If finish_reason == "length", also log WARNING "[llm-call] truncated at max_tokens stage=<stage>" on the same logger.
+
+3. The suite reports 18 tmpdir_path fixture errors. Check whether they exist at HEAD~1 (git stash -u; git checkout HEAD~1; pytest -q; git checkout -; git stash pop). If they do not, the previous commit broke a fixture: restore it so the suite has 0 errors.
+
+4. Add CHANGELOG entries for the previous commit and this one.
+
+py_compile + full suite + commit. Report the diff stat and the final pytest line.
