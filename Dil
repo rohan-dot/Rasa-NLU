@@ -1,17 +1,5 @@
-AGENT_MAX_TURNS=500 python microagent.py --repo $(pwd)
+rm -rf send-ashok discver-patch-fix.zip && mkdir -p send-ashok && for f in $(git diff --name-only 7faf01c | grep -E '^(src|tests)/.*\.py$'); do mkdir -p "send-ashok/$(dirname "$f")"; cp "$f" "send-ashok/$f"; done && (cd send-ashok && zip -r ../discver-patch-fix.zip .) && unzip -l discver-patch-fix.zip
 
 
-
-First run: rm -rf send-ashok discver-patch-fix.zip. For item 3: HEAD~1 gives "12 errors in 2.18s" (collection interrupted, nothing ran); HEAD gives 185 passed / 18 errors. Explain the difference by file. Fix only what the previous commit introduced; list pre-existing errors and leave them alone.
-
-Survey first, then fix, one commit, no flags.
-
-1. src/patch_generator.py: report how each LLM call is classified rca/turn/repair/judge. There are two call sites; RCA and repair are not separate calls. Collapse rca/turn/repair into one stage "turn": timeout 300s, max_tokens 1500. Judge stays max_tokens 300 / timeout 120s. No call that can emit apply_edit may have fewer than 1500 output tokens.
-
-2. Every [llm-call] after-line must include: stage, attempt, elapsed_s, prompt_tokens, completion_tokens, finish_reason, reasoning_present=<true|false> (true if the response carried non-empty reasoning_content). If finish_reason == "length", also log WARNING "[llm-call] truncated at max_tokens stage=<stage>" on the same logger.
-
-3. The suite reports 18 tmpdir_path fixture errors. Check whether they exist at HEAD~1 (git stash -u; git checkout HEAD~1; pytest -q; git checkout -; git stash pop). If they do not, the previous commit broke a fixture: restore it so the suite has 0 errors.
-
-4. Add CHANGELOG entries for the previous commit and this one.
-
-py_compile + full suite + commit. Report the diff stat and the final pytest line.
+New zip attached. Same as before: unzip into example/discver/ (overwrite src/ + tests/), python -m py_compile src/*.py, then run. Send me only the output of:
+grep -E "llm-call|patch-turn" orchestrator.log | head -60
