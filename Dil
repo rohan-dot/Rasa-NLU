@@ -1,3 +1,13 @@
-python plot_deck_agent.py eval_plots/ -o eval_deck.pptx --limit 2 \
-    --title "FCG route planner — evaluation" \
-    --context "P/R/F1 vs Natural Earth; routing ablation; miles-vs-clearances Pareto; judge kappa"
+python country_route_planner.py "ksuu to fkkl" --aircraft C-17 --auto-stops --date 2026-10-20 --risk
+mv last_run_blocks.json blocks_m1.json
+
+python eval_plots.py --reference "KSUU,TKPK,DGAA,FKKD,FKKL" --endpoints-only --aircraft C-17 --blocks-file blocks_m1.json
+python eval_plots.py --reference "KSUU,TKPK,DGAA,FKKD,FKKL" --blocks-file blocks_m1.json
+
+
+python eval_routes.py --geometry --routing --n 60
+python eval_plots.py
+
+
+
+python build_eval_deck.py --blocks-file blocks_m1.json --reference "KSUU,TKPK,DGAA,FKKD,FKKL" --aircraft C-17 -o fcg_planner_eval.pptx --llm
