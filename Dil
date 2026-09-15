@@ -3,5 +3,8 @@ python eval_plots.py --reference "KSUU,TKPK,DGAA,FKKD,FKKL" --endpoints-only --a
 python eval_explain.py --llm
 
 
+python country_route_planner.py "ksuu to fkkl" --aircraft C-17 --auto-stops --date 2026-10-20 --risk
+mv last_run_blocks.json blocks_m1.json
+
 python country_route_planner.py "ksuu to tkpk to dgaa to fkkd to fkkl" --date 2026-10-20 --risk
 mv last_run_blocks.json blocks_m1_fixed.json
