@@ -1,21 +1,6 @@
-**Slide 4 — "How it works" — add the data source to each bullet:**
+**
 
-Deterministic code:
-- Great-circle geometry — *airport coordinates from OurAirports (public database, ~47k airports); country centroids from ISO 3166 reference data*
-- Exact overflight detection against country borders — *Natural Earth admin-0 boundaries (public domain)*
-- Dijkstra over countries as stepping stones — *same border and centroid data; clearance denials from the FCG judge; geopolitical avoid list (manual + US State Dept travel advisories)*
-- Dijkstra over designated airports for fuel stops — *entry/exit airports extracted from the FCG; aircraft range from an aircraft specification table*
-- Dynamic program for the best entry airport per stop — *FCG designated-airport lists; OurAirports coordinates*
-- Lead-time arithmetic — *minimum lead days extracted from FCG text by the judge; mission date from the user*
-
-Local LLM:
-- Resolves user input — *ISO country codes, FCG country list, OurAirports ICAO codes*
-- Reads each country's raw FCG text — *the Foreign Clearance Guide extract (country-level rows: overflight, diplomatic clearance lead time, entry/exit airfields, customs, HazMat, operating hours, NOTAMs)*
-- Fuel and payment notes — *DLA Energy standard fuel prices (public) + FCG AIR Card / cash fields*
-
-One-line footer: *Live layers (optional): OpenSky Network for current air traffic, aviationweather.gov for METAR/TAF — snapshots, not forecasts.*
-
----
+The 300 NM clearance penalty is a design parameter, not a measured constant. At ~430 kt it equals about 40 minutes of flying — the detour a planner would plausibly accept to avoid one clearance request (APACS submission, lead-time exposure, embassy coordination, risk of refusal). The penalty sweep shows sensitivity to this choice; it can be calibrated by fitting to routes human planners actually chose.
 
 **Slide 22 — "Is the FCG judge trustworthy?" — replace the body:**
 
