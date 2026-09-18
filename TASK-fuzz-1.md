@@ -1,0 +1,30 @@
+# TASK — fuzzing only, one run to get it right: fuzz past the known shallow crash
+
+Scope: fuzzing, seeds and the health checker only. Do not touch the patch loop. Backlog items must have area "fuzzing" or "observability". Two items, in this order, unless the run output contradicts the evidence below.
+
+## Evidence (verify in the run output before planning)
+The primary harness (X509Fuzzer) is WEAK: a few hundred executions, coverage flat from its first stats line, corpus 0→4, and the health checker's own verdict "SATURATED by a shallow crash (throws on ~every input; each fork restart dominates runtime)". SinkFuzzer0 shows the same. The crash is real and reproduced (X509Utils.getCnFromDn, index-out-of-bounds; PoV = the empty input). The fuzzer is not broken; the target crashes at the front door, and every crash terminates the process, so the fuzzer never gets past it.
+
+## The outcome that matters
+On the next run the primary harness executes millions of inputs, its coverage grows well past the first stats line, the known crash is still reported exactly once with its PoV, and any new distinct crash found while fuzzing past it gets a PoV through the existing pipeline. The health verdict must describe this truthfully ("saturated by <sink>; continuing past it — coverage growing"), not be softened.
+
+## Item 1 — probe, then deep phase with keep-going (the change that decides the run)
+First establish, read-only and with file:line, where discver builds the fuzzer command line for a harness (search src/ for jazzer, -fork, -max_total_time, artifact_prefix, corpus, the runs/<harness> directory, and the stats-line parser). If the command is built outside src/ (an OSS-CRS run script), say so in SURVEY.md and plan the change as environment/options passed by discver to that script instead — but the change must still ship in src/.
+
+Design (keep the working crash pipeline exactly as it is):
+- Probe phase: run each harness as today for a short slice of its budget (a few minutes or a fixed execution count). Crash capture, PoV files, dedup and replay stay untouched.
+- Saturation check after the probe, from the stats and crash artifacts already collected: execs below a small threshold with at least one crash, or crashes per execution near 1, or fork restarts dominating. Log the decision either way: "harness X509Fuzzer: probe 299 execs, 1 crash — SATURATED → deep phase with keep_going" / "harness GenFuzzer1: probe healthy — continuing normally".
+- Deep phase for a saturated harness: relaunch for the remainder of the budget with Jazzer keep-going (Jazzer deduplicates findings by stack-trace hash and continues fuzzing; use a large limit so the run is not stopped by repeated known findings), same corpus directory, same seeds, same stats parsing. Confirm from Jazzer's documentation in the repo or from the harness driver how the flag is passed in this setup (Jazzer flag on the command line, or its environment-variable form if the driver does not forward flags) and log the exact flag used at launch.
+- Findings during the deep phase: parse Jazzer's finding output for new distinct stack-trace hashes and record them as leads with their stack traces; do not rely on crash artifacts being written in keep-going mode. At the end of the deep phase, replay the deep-phase corpus through the harness in normal (non-keep-going) mode so any input that crashes is captured as a regular crash artifact and flows through the existing dedup/PoV pipeline. New PoV-backed crashes from this replay are reported like any other; leads without a reproducing input are reported as UNVERIFIED leads, never as confirmed crashes.
+- Health reporting: the harness's health block shows both phases (probe execs/crashes, deep-phase execs/coverage growth, replay results) and the verdict text names the sink it is fuzzing past. HEALTHY only if coverage actually grew in the deep phase.
+
+Acceptance tests (fakes, no Jazzer, no network): a fake runner whose probe stats show N execs and N crashes triggers the deep phase and the exact log line; a fake runner with healthy probe stats does not; the deep-phase command contains the keep-going flag and the same corpus/seed paths; a fake deep-phase log with two finding blocks of different hashes yields two leads and one of the same hash yields one; the replay step turns a crashing corpus input into a crash artifact through the existing path; the health block renders both phases and never says HEALTHY with flat coverage.
+
+## Item 2 — seeds that get past the crash
+Make sure the property-based seeds for the primary harness include inputs that do not trigger the known crash (for this target: DN strings that contain a CN component, plus other well-formed variants), and that they reach that harness's corpus directory before the probe starts; log the seed count per harness and the specific reason when it is zero. Acceptance test: in a fake run the primary harness's corpus dir is non-empty before launch; a seed that reproduces the known crash is excluded with a logged reason; the count and reason appear in the log.
+
+## Hand-off (the reviewer checks HANDOFF.md says this)
+For the colleague running the container, HANDOFF.md must list: the startup line to look for in the first five minutes ("probe … SATURATED → deep phase with keep_going", with the exact flag), what the first stats lines after it should show (executions climbing into the tens of thousands within minutes, coverage moving), what it looks like if the flag did not reach Jazzer (executions still in the hundreds), and the one grep for each.
+
+## Invariants — the reviewer blocks any violation
+No feature flags or env switches for Ashok; discver auto-detects and logs the path it chose. Fail loud with a specific cause. Health verdicts are made more accurate, never more lenient. Never modify real target source. Do not modify the PoV replay oracle (crash_dedup._get_crash_signature) or the builder-sidecar wiring. One behavioural change per item with tests that run here. Never claim an outcome you did not run and see in a tool output.
