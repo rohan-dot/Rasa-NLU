@@ -1,1 +1,1 @@
-python build_eval_deck.py --blocks-file last_run_blocks.json --reference "KSUU,TKPK,DGAA,FKKD,FKKL" --aircraft C-17 -o fcg_planner_eval.pptx --gateway
+CREW_MAX_TURNS=150 nohup python microcrew.py --repo $(pwd) --task TASK-fuzz.md --max-items 2 > crew-fuzz.log 2>&1 &
