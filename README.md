@@ -1,6 +1,5 @@
-export BASE=/exp/FY26/AIxCC/ro31337/chatgpt
-export AGENT_MODEL=gpt-5.6-sol
-cp "$BASE/discver-playbook/00_OBJECTIVE.md" "$BASE/discver/00_OBJECTIVE.md"
-
-nohup python3 "$BASE/microagent_team.py" --model gpt-5.6-sol --research-model claude-opus-5 --repo "$BASE/discver-patchengineer02" --results "$BASE/discver" --reference "discver-playbook=$BASE/discver-playbook" --reference "buttercup-fuzzer=$BASE/buttercup/fuzzer" --reference "buttercup-patcher=$BASE/buttercup/patcher" --reference "atlantis-java=$BASE/atlantis/example-crs-webservice/" --rounds 5 > "$BASE/run.log" 2>&1 &
-tail -f "$BASE/run.log"
+Add a --research-model MODEL command-line argument to microagent_team.py. Behavior:
+When set, only the research engineer role uses that model. Every other role (manager, the implementation/coding specialists, reviewer) keeps using --model.
+When not set, it defaults to the value of --model, so existing behavior is unchanged.
+Use the same LLM client code, base URL, endpoint (/v1/responses), and API key for both — only the model field in the request differs per role.
+Keep everything else identical. Show me the full updated argparse section and the one place where the research role picks its model.
