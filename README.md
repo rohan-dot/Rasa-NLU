@@ -1,1 +1,2 @@
-
+nohup python3 "$BASE/microagent_team.py" --model gpt-5.6-sol --research-model claude-opus-5 --repo "$BASE/discver-patchengineer02" --results "$BASE/discver" --reference playbook="$BASE/discver-playbook" --reference buttercup-fuzzer="$BASE/buttercup/fuzzer" --reference buttercup-patcher="$BASE/buttercup/patcher" --reference atlantis="$BASE/atlantis/example-crs-webservice" --task-file "$BASE/discver-playbook/00_OBJECTIVE.md" --rounds 5 > "$BASE/run.log" 2>&1 &
+tail -f "$BASE/run.log"
