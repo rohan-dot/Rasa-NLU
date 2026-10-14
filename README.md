@@ -1,3 +1,9 @@
+
+
+python country_route_planner.py "KLRF to MPPA" --aircraft C-130 --auto-stops --date 2026-12-15 --risk --alternatives 3
+
+
+
 python country_route_planner.py "KXXX to KYYY" --aircraft C-17 --auto-stops \
     --date 2026-11-15 --risk --alternatives 3
 
