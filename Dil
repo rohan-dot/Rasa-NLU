@@ -1,2 +1,1 @@
-cd /exp/FY26/AIxCC/ro31337/campaign_work
-while read f; do [ -e "discver/$f" ] || echo "MISSING in tree: $f"; done < changed_files.txt
+
