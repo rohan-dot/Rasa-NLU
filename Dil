@@ -1,4 +1,9 @@
-nohup python3 campaign_work/campaign.py --work campaign_work --tasks campaign_work/tasks_auto --only 19,32,41 > campaign_work/campaign_b.log 2>&1 &
-tail -f campaign_work/campaign_b.log
-grep -c MAX_TOKENS_CAP campaign_work/microagent.py     # must print 4 — the fixed agent
-ls campaign_work/tasks_auto/                            # 19_, 28_, 29_, 32_, 41_
+export LITELLM_BASE_URL=https://<your-gateway>/v1
+export LITELLM_API_KEY=<your key>
+export AGENT_MODEL=gpt-5.6-sol
+export AGENT_TLS_VERIFY=false        # only if you needed it before
+
+python country_route_planner.py "KSUU to FKKD via stops in DGAA" \
+    --aircraft C-17 --auto-stops --date 2026-12-15 --risk --alternatives 3
+
+python compare_routes.py --human "KSUU,TJSJ,DGAA,FKKD"
