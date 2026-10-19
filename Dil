@@ -1,8 +1,4 @@
-cd /exp/FY26/AIxCC/ro31337
-cp microagent.py campaign_work/microagent.py                       # the fixed agent
-cp 32_post_patch_refuzz_shadow.md 41_check_run_new_lines.md campaign_work/tasks_auto/
-export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=<key> \
-       AGENT_MODEL=claude-opus-5-5 AGENT_REASONING_EFFORT=high AGENT_TLS_VERIFY=false
-nohup python3 campaign_work/campaign.py --work campaign_work --tasks campaign_work/tasks_auto --only 19,32,41 \
-      > campaign_work/campaign_b.log 2>&1 &
+nohup python3 campaign_work/campaign.py --work campaign_work --tasks campaign_work/tasks_auto --only 19,32,41 > campaign_work/campaign_b.log 2>&1 &
 tail -f campaign_work/campaign_b.log
+grep -c MAX_TOKENS_CAP campaign_work/microagent.py     # must print 4 — the fixed agent
+ls campaign_work/tasks_auto/                            # 19_, 28_, 29_, 32_, 41_
