@@ -1,4 +1,4 @@
-
-grep -nE "\[sidecar\]|patch_apply_failed|apply-patch-build|diff_error|diff_mismatch|source diff" orchestrator.log | head -30
-grep -nE "harness-gen|rejected|probe produced|reach=" orchestrator.log | head -20
-grep -nE "\[seeds\]|files in .* at launch|fuzzer reported|\[coverage\]|files found" orchestrator.log | head -20
+cd /exp/FY26/AIxCC/ro31337
+rm -f campaign_work/tasks_auto/*.md
+cp 28_patch_paths_relative.md 19_harness_entry_points.md campaign_work/tasks_auto/
+ls campaign_work/tasks_auto/        # exactly two files
