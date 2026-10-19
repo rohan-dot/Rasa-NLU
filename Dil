@@ -1,9 +1,6 @@
-export LITELLM_BASE_URL=https://<your-gateway>/v1
-export LITELLM_API_KEY=<your key>
-export AGENT_MODEL=gpt-5.6-sol
-export AGENT_TLS_VERIFY=false        # only if you needed it before
-
-python country_route_planner.py "KSUU to FKKD via stops in DGAA" \
-    --aircraft C-17 --auto-stops --date 2026-12-15 --risk --alternatives 3
-
-python compare_routes.py --human "KSUU,TJSJ,DGAA,FKKD"
+python transition_agent.py \
+    --template ./TransitionPackage_SemanticSearch-main \
+    --source   ./agentic_route_planning \
+    --run --dry-run \
+    --mission "KSUU to FKKD" --mission "round trip KSUU to FKKD via DGAA" \
+    --aircraft C-17 --date 2026-12-15 --human "KSUU,TJSJ,DGAA,FKKD"
