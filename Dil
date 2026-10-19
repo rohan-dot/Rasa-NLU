@@ -2,3 +2,11 @@ cd /exp/FY26/AIxCC/ro31337
 rm -f campaign_work/tasks_auto/*.md
 cp 28_patch_paths_relative.md 19_harness_entry_points.md campaign_work/tasks_auto/
 ls campaign_work/tasks_auto/        # exactly two files
+
+
+
+
+
+export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=<key> AGENT_MODEL=claude-opus-5-5 AGENT_REASONING_EFFORT=high AGENT_TLS_VERIFY=false
+nohup python3 campaign_work/autofix.py --work campaign_work --skip-rotate --skip-map --skip-plan > campaign_work/autofix.log 2>&1 &
+tail -f campaign_work/autofix.log
