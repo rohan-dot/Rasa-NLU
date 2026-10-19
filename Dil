@@ -1,7 +1,8 @@
 cd /exp/FY26/AIxCC/ro31337
-ls campaign_work/results/latest/patches/            # expect patch_index.json
-rm -f campaign_work/tasks_auto/*.md
-cp 28_patch_paths_relative.md 19_harness_entry_points.md 29_harness_sources_compile.md campaign_work/tasks_auto/
-export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=<key> AGENT_MODEL=claude-opus-5-5 AGENT_REASONING_EFFORT=high AGENT_TLS_VERIFY=false
-nohup python3 campaign_work/autofix.py --work campaign_work --skip-rotate --skip-plan > campaign_work/autofix.log 2>&1 &
-tail -f campaign_work/autofix.log
+cp microagent.py campaign_work/microagent.py                       # the fixed agent
+cp 32_post_patch_refuzz_shadow.md 41_check_run_new_lines.md campaign_work/tasks_auto/
+export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=<key> \
+       AGENT_MODEL=claude-opus-5-5 AGENT_REASONING_EFFORT=high AGENT_TLS_VERIFY=false
+nohup python3 campaign_work/campaign.py --work campaign_work --tasks campaign_work/tasks_auto --only 19,32,41 \
+      > campaign_work/campaign_b.log 2>&1 &
+tail -f campaign_work/campaign_b.log
