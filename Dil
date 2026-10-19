@@ -1,1 +1,4 @@
 
+grep -nE "\[sidecar\]|patch_apply_failed|apply-patch-build|diff_error|diff_mismatch|source diff" orchestrator.log | head -30
+grep -nE "harness-gen|rejected|probe produced|reach=" orchestrator.log | head -20
+grep -nE "\[seeds\]|files in .* at launch|fuzzer reported|\[coverage\]|files found" orchestrator.log | head -20
