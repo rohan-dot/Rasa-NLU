@@ -1,1 +1,5 @@
+grep -n "run-pov\|404\|libcrs-pov\|REBUILD\|crashes" campaign_work/MAP.md | head
 
+
+nohup python3 campaign_work/campaign.py --work campaign_work --tasks campaign_work/tasks_auto --only 33,34,35,36,37,38 > campaign_work/campaign_c.log 2>&1 &
+tail -f campaign_work/campaign_c.log
