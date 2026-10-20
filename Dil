@@ -1,3 +1,14 @@
+cd /exp/FY26/AIxCC/ro31337/campaign_work/results
+cp -r latest/run/LOG_DIR/auto/discver/crashes latest/run/LOG_DIR/auto/discver/generated_harnesses latest/run/LOG_DIR/auto/discver/patches latest/run/LOG_DIR/auto/discver/unique_bugs latest/
+ls latest/patches latest/generated_harnesses; grep -i x509utils latest/rebuild_out_listing.txt
+
+
+
+
+
+
+
+
 python transition_agent.py \
     --template ./TransitionPackage_SemanticSearch-main \
     --source   ./agentic_route_planning \
