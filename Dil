@@ -1,5 +1,4 @@
-scp -r ro31337@kumar-dev:/home/shared/llcrs/oss-crs/.oss-crs-workdir/crs_compose/c8a962993daf/address/runs/17925127475e/crs/discver/java-ant-byo_6354f78ca459 .\run_20261020
-tar czf run_20261020.tgz run_20261020        # Windows has tar built in; one file is easier to upload
+scp -r ro31337@kumar-dev:/home/shared/llcrs/oss-crs/.oss-crs-workdir/crs_compose/c8a962993daf/address/runs/17925127475e/crs/discver/java-ant-byo_6354f78ca459 results/raw_20261020
 
-
-scp -r ro31337@kumar-dev:<same path> campaign_work/results/raw_20261020
+mv results/latest results/prev_oct16 2>/dev/null
+bash ../stage_results.sh results/raw_20261020 results/latest && cat results/latest/STAGED.md
