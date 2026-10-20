@@ -1,10 +1,8 @@
-cd /exp/FY26/AIxCC/ro31337/campaign_work
-mv results/latest results/prev_oct16
-mkdir -p results/latest
-mv java-ant-byo_6354f78ca459 results/latest/run                 # everything, as unzipped
-cp results/latest/run/LOG_DIR/auto/discver/* results/latest/    # flat copies of the logs the tasks grep
-find results/latest/run -type f -printf '%s\t%TY-%Tm-%Td %TH:%TM\t%P\n' | sort -k3 > results/latest/INVENTORY.txt
-for d in REBUILD_OUT_DIR SUBMIT_DIR SHARED_DIR; do awk -F'\t' -v d="$d/" 'index($3,d)==1' results/latest/INVENTORY.txt > results/latest/$(echo $d | tr A-Z a-z)_listing.txt; done
-mv results/latest/rebuild_out_dir_listing.txt results/latest/rebuild_out_listing.txt
-wc -l results/latest/INVENTORY.txt; ls results/latest
-cd ..
+cd /exp/FY26/AIxCC/ro31337/campaign_work/results
+mkdir -p prev_oct16 && for f in latest/*; do [ "$(basename "$f")" != runs ] && mv "$f" prev_oct16/; done   # parks any Oct-16 leftovers; no-op if none
+mv latest/runs latest/run
+cp latest/run/LOG_DIR/auto/discver/* latest/
+find latest/run -type f -printf '%s\t%TY-%Tm-%Td %TH:%TM\t%P\n' | sort -k3 > latest/INVENTORY.txt
+for d in REBUILD_OUT_DIR SUBMIT_DIR SHARED_DIR; do awk -F'\t' -v d="$d/" 'index($3,d)==1' latest/INVENTORY.txt > latest/$(echo $d | tr A-Z a-z)_listing.txt; done
+mv latest/rebuild_out_dir_listing.txt latest/rebuild_out_listing.txt
+ls latest; head -2 latest/orchestrator.log; wc -l latest/INVENTORY.txt
