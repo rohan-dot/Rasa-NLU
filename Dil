@@ -1,8 +1,6 @@
-rm -rf agentic_route_planning_transitioned/{*,.[!.]*} 2>/dev/null; \
-mkdir -p agentic_route_planning_transitioned/_transition && \
-cp <old>/_transition/run_results.json agentic_route_planning_transitioned/_transition/ 2>/dev/null
-
 python transition_agent.py \
     --template ./TransitionPackage_SemanticSearch-main \
     --source   ./agentic_route_planning \
-    --reuse-runs --layout flat
+    --run --layout flat \
+    --mission "KSUU to FKKD" --mission "round trip KSUU to FKKD via DGAA" \
+    --aircraft C-17 --date 2026-12-15 --human "KSUU,TJSJ,DGAA,FKKD"
