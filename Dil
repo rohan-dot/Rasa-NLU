@@ -1,6 +1,5 @@
-python transition_agent.py \
-    --template ./TransitionPackage_SemanticSearch-main \
-    --source   ./agentic_route_planning \
-    --run --dry-run \
-    --mission "KSUU to FKKD" --mission "round trip KSUU to FKKD via DGAA" \
-    --aircraft C-17 --date 2026-12-15 --human "KSUU,TJSJ,DGAA,FKKD"
+R=/home/shared/llcrs/oss-crs/.oss-crs-workdir/crs_compose/c8a962993daf/address/runs/17925127475e/crs/discver/java-ant-byo_6354f78ca459
+ls -la $R/REBUILD_OUT_DIR/ $R/SUBMIT_DIR/                       # populated REBUILD_OUT_DIR = the patched build really happened
+grep -nE "patch-turn|SIDECAR|\[sidecar\]|candidate patch|candidates ranked|admitted|rejected|refuzz|\] failed:" $R/LOG_DIR/auto/discver/orchestrator.log
+tail -60 $R/LOG_DIR/auto/discver/libcrs-pov.log                 # the PoV run on the patched build, with its trace
+find $R -name candidate.patch -o -name patch_index.json -o -name "*26c9d33e*" 2>/dev/null
