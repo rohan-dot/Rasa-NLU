@@ -1,8 +1,7 @@
 cd /exp/FY26/AIxCC/ro31337/campaign_work/results
-mkdir -p prev_oct16 && for f in latest/*; do [ "$(basename "$f")" != runs ] && mv "$f" prev_oct16/; done   # parks any Oct-16 leftovers; no-op if none
-mv latest/runs latest/run
 cp latest/run/LOG_DIR/auto/discver/* latest/
 find latest/run -type f -printf '%s\t%TY-%Tm-%Td %TH:%TM\t%P\n' | sort -k3 > latest/INVENTORY.txt
 for d in REBUILD_OUT_DIR SUBMIT_DIR SHARED_DIR; do awk -F'\t' -v d="$d/" 'index($3,d)==1' latest/INVENTORY.txt > latest/$(echo $d | tr A-Z a-z)_listing.txt; done
 mv latest/rebuild_out_dir_listing.txt latest/rebuild_out_listing.txt
+rmdir ../prev_oct16 2>/dev/null
 ls latest; head -2 latest/orchestrator.log; wc -l latest/INVENTORY.txt
