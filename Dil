@@ -1,5 +1,5 @@
-R=/home/shared/llcrs/oss-crs/.oss-crs-workdir/crs_compose/c8a962993daf/address/runs/17925127475e/crs/discver/java-ant-byo_6354f78ca459
-ls -la $R/REBUILD_OUT_DIR/ $R/SUBMIT_DIR/                       # populated REBUILD_OUT_DIR = the patched build really happened
-grep -nE "patch-turn|SIDECAR|\[sidecar\]|candidate patch|candidates ranked|admitted|rejected|refuzz|\] failed:" $R/LOG_DIR/auto/discver/orchestrator.log
-tail -60 $R/LOG_DIR/auto/discver/libcrs-pov.log                 # the PoV run on the patched build, with its trace
-find $R -name candidate.patch -o -name patch_index.json -o -name "*26c9d33e*" 2>/dev/null
+scp -r ro31337@kumar-dev:/home/shared/llcrs/oss-crs/.oss-crs-workdir/crs_compose/c8a962993daf/address/runs/17925127475e/crs/discver/java-ant-byo_6354f78ca459 .\run_20261020
+tar czf run_20261020.tgz run_20261020        # Windows has tar built in; one file is easier to upload
+
+
+scp -r ro31337@kumar-dev:<same path> campaign_work/results/raw_20261020
