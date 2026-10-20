@@ -1,10 +1,1 @@
-cd /exp/FY26/AIxCC/ro31337
-unzip -o campaign-c.zip
-rm -f campaign_work/tasks_auto/*-[0-9].md
-ls campaign_work/tasks_auto/
-
-
-export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=<your key> AGENT_MODEL=claude-opus-5-5 AGENT_REASONING_EFFORT=high AGENT_TLS_VERIFY=false
-
-python3 campaign_work/campaign.py --work campaign_work --tasks campaign_work/tasks --only 00 --max-turns 200 > campaign_work/map.log 2>&1; tail -3 campaign_work/map.log
 
