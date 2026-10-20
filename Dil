@@ -1,7 +1,6 @@
-cd /exp/FY26/AIxCC/ro31337/campaign_work/results
-cp latest/run/LOG_DIR/auto/discver/* latest/
-find latest/run -type f -printf '%s\t%TY-%Tm-%Td %TH:%TM\t%P\n' | sort -k3 > latest/INVENTORY.txt
-for d in REBUILD_OUT_DIR SUBMIT_DIR SHARED_DIR; do awk -F'\t' -v d="$d/" 'index($3,d)==1' latest/INVENTORY.txt > latest/$(echo $d | tr A-Z a-z)_listing.txt; done
-mv latest/rebuild_out_dir_listing.txt latest/rebuild_out_listing.txt
-rmdir ../prev_oct16 2>/dev/null
-ls latest; head -2 latest/orchestrator.log; wc -l latest/INVENTORY.txt
+python transition_agent.py \
+    --template ./TransitionPackage_SemanticSearch-main \
+    --source   ./agentic_route_planning \
+    --run \
+    --mission "KSUU to FKKD" --mission "round trip KSUU to FKKD via DGAA" \
+    --aircraft C-17 --date 2026-12-15 --human "KSUU,TJSJ,DGAA,FKKD"
