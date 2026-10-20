@@ -1,17 +1,10 @@
-cd /exp/FY26/AIxCC/ro31337/campaign_work/results
-cp -r latest/run/LOG_DIR/auto/discver/crashes latest/run/LOG_DIR/auto/discver/generated_harnesses latest/run/LOG_DIR/auto/discver/patches latest/run/LOG_DIR/auto/discver/unique_bugs latest/
-ls latest/patches latest/generated_harnesses; grep -i x509utils latest/rebuild_out_listing.txt
+cd /exp/FY26/AIxCC/ro31337
+unzip -o campaign-c.zip
+rm -f campaign_work/tasks_auto/*-[0-9].md
+ls campaign_work/tasks_auto/
 
 
+export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=<your key> AGENT_MODEL=claude-opus-5-5 AGENT_REASONING_EFFORT=high AGENT_TLS_VERIFY=false
 
+python3 campaign_work/campaign.py --work campaign_work --tasks campaign_work/tasks --only 00 --max-turns 200 > campaign_work/map.log 2>&1; tail -3 campaign_work/map.log
 
-
-
-
-
-python transition_agent.py \
-    --template ./TransitionPackage_SemanticSearch-main \
-    --source   ./agentic_route_planning \
-    --run \
-    --mission "KSUU to FKKD" --mission "round trip KSUU to FKKD via DGAA" \
-    --aircraft C-17 --date 2026-12-15 --human "KSUU,TJSJ,DGAA,FKKD"
