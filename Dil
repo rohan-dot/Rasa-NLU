@@ -1,4 +1,10 @@
-scp -r ro31337@kumar-dev:/home/shared/llcrs/oss-crs/.oss-crs-workdir/crs_compose/c8a962993daf/address/runs/17925127475e/crs/discver/java-ant-byo_6354f78ca459 results/raw_20261020
-
-mv results/latest results/prev_oct16 2>/dev/null
-bash ../stage_results.sh results/raw_20261020 results/latest && cat results/latest/STAGED.md
+cd /exp/FY26/AIxCC/ro31337/campaign_work
+mv results/latest results/prev_oct16
+mkdir -p results/latest
+mv java-ant-byo_6354f78ca459 results/latest/run                 # everything, as unzipped
+cp results/latest/run/LOG_DIR/auto/discver/* results/latest/    # flat copies of the logs the tasks grep
+find results/latest/run -type f -printf '%s\t%TY-%Tm-%Td %TH:%TM\t%P\n' | sort -k3 > results/latest/INVENTORY.txt
+for d in REBUILD_OUT_DIR SUBMIT_DIR SHARED_DIR; do awk -F'\t' -v d="$d/" 'index($3,d)==1' results/latest/INVENTORY.txt > results/latest/$(echo $d | tr A-Z a-z)_listing.txt; done
+mv results/latest/rebuild_out_dir_listing.txt results/latest/rebuild_out_listing.txt
+wc -l results/latest/INVENTORY.txt; ls results/latest
+cd ..
