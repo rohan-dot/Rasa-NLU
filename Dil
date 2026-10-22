@@ -1,6 +1,3 @@
-python transition_agent.py \
-    --template ./TransitionPackage_SemanticSearch-main \
-    --source   ./agentic_route_planning \
-    --run --layout flat \
-    --mission "KSUU to FKKD" --mission "round trip KSUU to FKKD via DGAA" \
-    --aircraft C-17 --date 2026-12-15 --human "KSUU,TJSJ,DGAA,FKKD"
+pip install openai python-pptx
+export LLM_BASE_URL=http://localhost:8000/v1 LLM_MODEL=google/gemma-3-27b-it
+python run_pipeline.py --root /path/to/lora_project --ppt /path/to/deck.pptx --out-dir agent_outputs
