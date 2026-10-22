@@ -1,7 +1,3 @@
-cd /exp/FY26/aim/ro31337/AIA
-rm -rf agent_outputs/scaffold agent_outputs/report.md agent_outputs/ARCHITECTURE.md
-python lora_review_agents/run_pipeline.py --report-from-notes \
-  --root quanta=/exp/FY26/AIA_FEW/da31742/da31742/quanta/run \
-  --root lora=/exp/FY26/AIA_FEW/da31742/da31742/quanta/timellama \
-  --root corpus=/exp/FY26/AIA_FEW/da31742/data/af_epubs \
-  --out-dir agent_outputs --reasoning-effort low --synthesis-max-tokens 32768
+python package_agent.py --repo ./agentic_route_planning --requirements ./approved_requirements.txt \
+    --mission "KSUU to FKKD via stops in DGAA" --aircraft C-17 --date 2026-12-15 \
+    --human "KSUU,TJSJ,DGAA,FKKD"
