@@ -1,3 +1,10 @@
-pip install openai python-pptx
-export LLM_BASE_URL=http://localhost:8000/v1 LLM_MODEL=google/gemma-3-27b-it
-python run_pipeline.py --root /path/to/lora_project --ppt /path/to/deck.pptx --out-dir agent_outputs
+cd /exp/FY26/aim/ro31337/AIA
+export LLM_BASE_URL=...   LLM_API_KEY=...   LLM_MODEL=...   LLM_CA_BUNDLE=...   # your LiteLLM exports, if not already set
+
+python lora_review_agents/run_pipeline.py \
+  --root quanta=/exp/FY26/AIA_FEW/da31742/da31742/quanta/run \
+  --root lora=/exp/FY26/AIA_FEW/da31742/da31742/quanta/timellama \
+  --root corpus=/exp/FY26/AIA_FEW/da31742/data/af_epubs \
+  --ppt "/exp/FY26/aim/ro31337/AIA/AIA_MORS_v5 2.pptx" \
+  --out-dir agent_outputs \
+  --hint "QuanTA (train_sft.sh -> train_sft_quanta.py) vs LoRA (train.sh -> train_sft.py) on the same task; RAG code not available, use the deck"
