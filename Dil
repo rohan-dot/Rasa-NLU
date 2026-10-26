@@ -1,3 +1,11 @@
-python package_agent.py --repo ./agentic_route_planning --requirements ./approved_requirements.txt \
-    --mission "KSUU to FKKD via stops in DGAA" --aircraft C-17 --date 2026-12-15 \
+export LITELLM_BASE_URL=https://<your-gateway>/v1
+export LITELLM_API_KEY=<key>
+export AGENT_MODEL=gpt-5.6-sol
+export AGENT_TLS_VERIFY=false        # only if you needed it before
+
+python package_agent.py \
+    --repo ./agentic_route_planning \
+    --requirements /path/to/your/approved_requirements.txt \
+    --mission "KSUU to FKKD via stops in DGAA" \
+    --aircraft C-17 --date 2026-12-15 \
     --human "KSUU,TJSJ,DGAA,FKKD"
