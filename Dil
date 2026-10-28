@@ -1,7 +1,1 @@
-    a = ap.parse_args([x for x in sys.argv[1:] if x.replace("\xa0", "").strip()])
-python package_agent.py \
-    --repo ./agentic_route_planning \
-    --requirements /path/to/your/approved_requirements.txt \
-    --mission "KSUU to FKKD via stops in DGAA" \
-    --aircraft C-17 --date 2026-12-15 \
-    --human "KSUU,TJSJ,DGAA,FKKD"
+
