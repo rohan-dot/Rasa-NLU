@@ -1,1 +1,5 @@
-
+cd agentic_route_planning
+rm -rf agentplanner runs __pycache__ _transition _env_agent samples/_env .ipynb_checkpoints
+rm -f env.sh *.bak_* *.orig *.pre_env_agent README.previous.md risk_cache.json
+mkdir -p ../not_for_github && mv fcg_extract.csv fcg1.csv airports.csv ne_110m_admin_0_countries.geojson countries_codes_and_coordinates.csv mapping.csv ../not_for_github/ 2>/dev/null
+grep -ril "api_key\|LITELLM_API" . || echo "no keys found"
