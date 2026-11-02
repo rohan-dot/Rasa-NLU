@@ -1,21 +1,18 @@
-Write microagent.py: a single-file, self-contained agentic coding assistant that works on an existing code base through tool calls. Python 3.10+, dependencies only `openai` and `httpx`. Output ONLY the raw contents of the file, starting with `#!/usr/bin/env python3`. No markdown fences, no explanation before or after.
+Build a complete, runnable RAG code base in this empty repository over a small public Hugging Face dataset, then prove it works.
 
-Configuration from environment variables: GATEWAY_URL (OpenAI-compatible base URL of a LiteLLM gateway), GATEWAY_KEY, MODEL, optional CA_BUNDLE (path to a CA file, used as httpx verify=), optional TLS_VERIFY=false (verify=False, print a one-line warning). Build the client as OpenAI(base_url=..., api_key=..., http_client=httpx.Client(verify=..., timeout=120)).
+Dataset: rag-datasets/rag-mini-wikipedia, loaded with the `datasets` library. Config "text-corpus" has a split named "passages" (the documents); config "question-answer" has a split named "test" (question/answer pairs). Print the column names first and adapt to them instead of assuming. On first load, save both splits to data/ as parquet or jsonl so every later run works offline from those files.
 
-Command line: `python microagent.py --repo PATH "task"` runs one task and exits; `python microagent.py --repo PATH` with no task starts a REPL (`task> ` prompt, `exit`/`quit` to leave, conversation history kept across tasks); `--verify` makes one cheap call ("reply with the single word: ok"), prints the result and exits; `--max-turns N` (default 80).
+Layout:
+- rag/config.py: settings from env vars GATEWAY_URL, GATEWAY_KEY, MODEL, optional EMBED_MODEL, optional TLS_VERIFY=false; an OpenAI client built with httpx (verify from TLS_VERIFY).
+- rag/data.py: download-or-load the dataset into plain Python records; a tiny built-in fixture of 5 passages and 3 questions for tests.
+- rag/chunking.py: split passages into chunks of about 150 words with 30 words overlap, keeping the passage id and chunk number.
+- rag/index.py: a pure-Python BM25 index (no scikit-learn, no rank_bm25) built once and saved to index/ as JSON or pickle, reloaded when present; an optional embedding index that uses client.embeddings.create in batches of 100 when EMBED_MODEL is set, vectors cached on disk, cosine similarity with numpy.
+- rag/retrieve.py: top-k chunks with scores, keyword by default, embeddings when available, with a merge of the two when both exist.
+- rag/generate.py: answer a question from the retrieved chunks only, temperature 0, citing [passage_id#chunk]; reply exactly "not in the documents" when the context does not contain the answer.
+- rag/cli.py with subcommands: `build` (download, chunk, index), `ask "question"` (prints the answer and the sources), `eval --n 100` (first n QA pairs: retrieval hit rate = the gold answer string appears in the retrieved context, answer accuracy = gold answer string appears in the model's reply, mean seconds per question; prints a table and writes eval/results.jsonl).
+- tests/: pytest, no network, run on the fixture: chunking boundaries, BM25 ranks an exact-phrase chunk first, index save/load round-trips, the CLI's build-then-ask path with the model call monkeypatched.
+- README.md (setup, the env vars, the three commands, the eval numbers you measured), requirements.txt (openai, httpx, datasets, numpy, pytest only), .gitignore (data/, index/, eval/, __pycache__).
 
-Tools, all sandboxed to the --repo directory (resolve every path and refuse anything outside it):
-- read_file(path, start_line=1, end_line=-1): line-numbered output "N<TAB>line", optional range.
-- write_file(path, content): create or overwrite, making parent dirs.
-- append_file(path, content).
-- str_replace(path, old_str, new_str): old_str must match exactly once; if 0 or more than 1 matches, return an error message telling the model to re-read and send a longer unique snippet. Never raise.
-- list_files(path=".", pattern="*"): recursive, fnmatch on file names, skip .git, node_modules, __pycache__, .venv, venv, .mypy_cache, .pytest_cache, dist, build, .idea; cap at 500 entries with a "(truncated)" line.
-- grep(pattern, path=".", glob="*"): Python regex over every matching file, output "relpath:lineno: line", cap at 300 hits, skip binary/undecodable files silently.
-- bash(command): subprocess with shell=True, cwd=repo, 300 s timeout, return "[exit N]" plus stdout and stderr; on timeout return an error string.
-Expose each tool to the model as an OpenAI tool spec with a JSON schema; keep descriptions short and concrete.
+Rules: no LangChain, no LlamaIndex, no other packages. Every module under 200 lines. Functions over classes except the index. Type hints and docstrings on public functions.
 
-Agent loop: messages = [system, user task]; call client.chat.completions.create(model, messages, tools, temperature=0.2, max_tokens=8192); append the assistant message as msg.model_dump(exclude_none=True) and, if it has tool_calls but no "content" key, set "content": "" (some gateway-to-Anthropic paths reject the turn otherwise); if there are no tool_calls, print msg.content and stop; else for each tool call parse the JSON arguments (an unparsable argument string becomes an error result, not a crash), print "  -> name(args truncated to 160 chars)", run the tool, catch every exception into "ERROR: <type>: <message>", truncate any result longer than 40,000 chars with a "(truncated)" marker, and append {"role": "tool", "tool_call_id": id, "content": result}. After max turns print "[stopped: hit max turns, say 'continue' to keep going]".
-
-System prompt: an expert coding agent working on the local repository at <absolute path>; explore with list_files and grep before reading, read before editing, prefer str_replace over rewriting files, after any change run the relevant tests or at least `python -m py_compile` via bash, never git push, and finish with a plain-text summary of what changed and how it was verified. If <repo>/AGENT.md exists append it under "# Project instructions"; append each <repo>/skills/*.md under "# Skill: <name>".
-
-Code quality: type hints, a short module docstring that shows the setup and run commands, no global state other than the client and config, no dead code. It must run as-is.
+Verification before you report: `pip install -r requirements.txt`, `python -m pytest -q` passes, `python -m rag.cli build` completes and prints the chunk count, `python -m rag.cli ask "Who was the first president of the United States?"` returns an answer with a citation, `python -m rag.cli eval --n 50` runs and you paste its numbers into the README. Then `git init`, add everything, and commit as "RAG over rag-mini-wikipedia: BM25 + gateway answers, eval and tests". Finish with the eval numbers, the slowest stage, and the one change you would make next.
