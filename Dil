@@ -1,18 +1,1 @@
-Build a complete, runnable RAG code base in this empty repository over a small public Hugging Face dataset, then prove it works.
 
-Dataset: rag-datasets/rag-mini-wikipedia, loaded with the `datasets` library. Config "text-corpus" has a split named "passages" (the documents); config "question-answer" has a split named "test" (question/answer pairs). Print the column names first and adapt to them instead of assuming. On first load, save both splits to data/ as parquet or jsonl so every later run works offline from those files.
-
-Layout:
-- rag/config.py: settings from env vars GATEWAY_URL, GATEWAY_KEY, MODEL, optional EMBED_MODEL, optional TLS_VERIFY=false; an OpenAI client built with httpx (verify from TLS_VERIFY).
-- rag/data.py: download-or-load the dataset into plain Python records; a tiny built-in fixture of 5 passages and 3 questions for tests.
-- rag/chunking.py: split passages into chunks of about 150 words with 30 words overlap, keeping the passage id and chunk number.
-- rag/index.py: a pure-Python BM25 index (no scikit-learn, no rank_bm25) built once and saved to index/ as JSON or pickle, reloaded when present; an optional embedding index that uses client.embeddings.create in batches of 100 when EMBED_MODEL is set, vectors cached on disk, cosine similarity with numpy.
-- rag/retrieve.py: top-k chunks with scores, keyword by default, embeddings when available, with a merge of the two when both exist.
-- rag/generate.py: answer a question from the retrieved chunks only, temperature 0, citing [passage_id#chunk]; reply exactly "not in the documents" when the context does not contain the answer.
-- rag/cli.py with subcommands: `build` (download, chunk, index), `ask "question"` (prints the answer and the sources), `eval --n 100` (first n QA pairs: retrieval hit rate = the gold answer string appears in the retrieved context, answer accuracy = gold answer string appears in the model's reply, mean seconds per question; prints a table and writes eval/results.jsonl).
-- tests/: pytest, no network, run on the fixture: chunking boundaries, BM25 ranks an exact-phrase chunk first, index save/load round-trips, the CLI's build-then-ask path with the model call monkeypatched.
-- README.md (setup, the env vars, the three commands, the eval numbers you measured), requirements.txt (openai, httpx, datasets, numpy, pytest only), .gitignore (data/, index/, eval/, __pycache__).
-
-Rules: no LangChain, no LlamaIndex, no other packages. Every module under 200 lines. Functions over classes except the index. Type hints and docstrings on public functions.
-
-Verification before you report: `pip install -r requirements.txt`, `python -m pytest -q` passes, `python -m rag.cli build` completes and prints the chunk count, `python -m rag.cli ask "Who was the first president of the United States?"` returns an answer with a citation, `python -m rag.cli eval --n 50` runs and you paste its numbers into the README. Then `git init`, add everything, and commit as "RAG over rag-mini-wikipedia: BM25 + gateway answers, eval and tests". Finish with the eval numbers, the slowest stage, and the one change you would make next.
