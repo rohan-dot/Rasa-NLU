@@ -1,3 +1,1 @@
-ls campaign_work/discver/src | grep -E "harness_entry_points|harness_sources|post_patch_shadow|check_run"   # the campaign B/C modules
-grep -l "pov_run_failed" campaign_work/discver/src/*.py | head -2                                           # task 33 present
-cd campaign_work/discver && python -m pytest -q tests | tail -2; cd ../..                                  # baseline: ~17 failed, passed > 479
+
