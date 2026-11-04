@@ -1,1 +1,1 @@
-python apply_advisor_feedback.py --repo ./agentic_route_planning --ref ./dans_repo
+python country_route_planner.py "KSUU to FKKD" --date 2026-12-15 --aircraft C-17 --auto-stops --no-llm
