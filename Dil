@@ -1,10 +1,1 @@
 
-cd /exp/FY26/AIxCC/ro31337/campaign_work/results
-rm -rf __MACOSX; mv "20261029-193424-409094 (1).zip" /exp/FY26/AIxCC/ro31337/
-cd crsbench_20261029
-[ -d 20261029-193424-409094 ] && mv 20261029-193424-409094/* . && rmdir 20261029-193424-409094    # flatten if nested
-[ -d "orchestrator logs" ] && mv "orchestrator logs" orchestrator_logs
-rm -rf __MACOSX .DS_Store
-find . -type f -printf '%s\t%P\n' | sort -k2 > INVENTORY.txt
-ls; ls orchestrator_logs | head -3; grep -l "FINAL RESULTS" orchestrator_logs/* | wc -l; head -3 csv/*.csv
-cd /exp/FY26/AIxCC/ro31337
