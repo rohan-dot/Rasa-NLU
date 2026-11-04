@@ -1,1 +1,2 @@
-
+cd /exp/FY26/AIxCC/ro31337
+pkill -f "campaign.py --work campaign_work"; pkill -f microagent.py; sleep 2; pgrep -fl "campaign.py|microagent" || echo stopped
