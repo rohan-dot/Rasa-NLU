@@ -1,3 +1,4 @@
-cd /exp/FY26/AIxCC/ro31337/campaign_work/refs
-git clone --depth 1 --filter=blob:none --sparse https://github.com/google/oss-fuzz && cd oss-fuzz && git sparse-checkout set projects && ls projects | wc -l && cd ../../discver
-python3 src/workshop/build_kb.py --osv ../refs/oss-fuzz-vulns --arvo ../refs/ARVO-Meta --cwe ../refs/cwec_v5.0.xml --out ../kb --oss-fuzz-projects ../refs/oss-fuzz/projects
+cd /exp/FY26/AIxCC/ro31337/campaign_work/discver
+python3 src/workshop/build_kb.py --osv ../refs/oss-fuzz-vulns --arvo ../refs/ARVO-Meta --cwe ../refs/cwec_v5.0.xml --oss-fuzz-projects ../refs/oss-fuzz/projects --out ../kb
+grep -rhn "DISCVER_KB" src/*.py src/*/*.py | head -2
+cd .. && zip -r ../kb-nov05.zip kb && cd discver && zip -r ../../discver-src-tests-FULL-nov05.zip src tests -x '*/__pycache__/*' '*.pyc' '*/.pytest_cache/*'
