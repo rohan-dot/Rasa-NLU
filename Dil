@@ -1,10 +1,1 @@
-cd /exp/FY26/AIxCC/ro31337/campaign_work
-mkdir -p refs/cwe && unzip -o /exp/FY26/AIxCC/ro31337/cwec_latest.xml.zip -d refs/cwe/ && ls refs/cwe/     # adjust the zip's path
-cd discver
-python3 src/workshop/build_kb.py --help                 # the real flag names — the agent may have chosen slightly different ones
 
-
-python3 src/workshop/build_kb.py --osv ../refs/oss-fuzz-vulns --arvo ../refs/ARVO-Meta --cwe ../refs/cwe/cwec_*.xml --out ../kb
-ls ../kb; wc -l ../kb/recipes.jsonl; ls ../kb/cwe_playbooks | wc -l
-
-python3 src/workshop/build_kb.py --dry-run-target ../results/latest/run/REBUILD_OUT_DIR/discver/1/asan/src/java-project/agentmanager-java8-master --out ../kb
