@@ -1,6 +1,1 @@
-cd /exp/FY26/AIxCC/ro31337/campaign_work
-zip -r ../kb-nov05.zip kb && cd discver && zip -r ../../discver-src-tests-FULL-nov05.zip src tests -x '*/__pycache__/*' '*.pyc' '*/.pytest_cache/*'
-ls -la /exp/FY26/AIxCC/ro31337/kb-nov05.zip /exp/FY26/AIxCC/ro31337/discver-src-tests-FULL-nov05.zip
 
-
-Two zips. (1) discver-src-tests-FULL-nov05.zip — overlay src/ and tests/ as always; it adds src/lang/, src/workshop/, src/tools/ and new modules. (2) kb-nov05.zip — unzip so the folder is /opt/discver/kb inside the container, or set DISCVER_KB=<path>. If src/tools/Dockerfile.snippet is in the zip, add those lines to the image build (CodeQL/Semgrep). Run java-ant-byo once first: the log should show Target language: java near the top and [strategy] KB /opt/discver/kb: … after Phase 0. Then CRSBench atlanta-imaging; send back the run folder plus the two CSVs. The /run-pov sidecar route is still the blocker for patch validation.
