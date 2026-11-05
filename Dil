@@ -1,1 +1,4 @@
-
+docker ps --format '{{.Names}}  {{.Image}}' | grep -i sidecar                     # the deployed image + tag
+docker exec <discver container> sh -c 'curl -s http://runner-sidecar.discver:8080/openapi.json' | python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin)["paths"]))'
+grep -rn "run-pov\|run_pov\|@app.post\|@router.post" /home/shared/llcrs/oss-crs --include=*.py | grep -iv test
+docker exec <discver container> libCRS --help; docker exec <discver container> pip show libcrs 2>/dev/null | head -3
