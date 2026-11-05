@@ -1,1 +1,11 @@
+cd /exp/FY26/AIxCC/ro31337/campaign_work
+pgrep -fl "campaign.py|microagent" || echo dead
+tail -3 campaign_61.log
+find discver/src discver/tests -newer BASELINE_FAILURES.txt -type f
+
+
+for f in $(find discver/src discver/tests -newer BASELINE_FAILURES.txt -type f | sed 's#^discver/##'); do
+  if unzip -l discver-fix.zip | grep -q " $f\$"; then unzip -o -q discver-fix.zip "$f" -d discver/ && echo "restored $f"; else rm -v "discver/$f"; fi
+done
+cd discver && python -m pytest -q tests | tail -2; cd ..
 
