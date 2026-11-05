@@ -1,1 +1,8 @@
+tail -4 /exp/FY26/AIxCC/ro31337/campaign_work/CAMPAIGN.md
+
+
+
+cd /exp/FY26/AIxCC/ro31337/campaign_work/discver
+python3 src/workshop/build_kb.py --osv ../refs/oss-fuzz-vulns --arvo ../refs/ARVO-Meta --cwe ../refs/cwec_v5.0.xml --out ../kb --oss-fuzz-projects ../refs/oss-fuzz/projects
+python3 src/workshop/build_kb.py --osv ../refs/oss-fuzz-vulns --out ../kb --dry-run-target ../results/latest/run/REBUILD_OUT_DIR/discver/1/asan/src/java-project/agentmanager-java8-master -k 10
 
