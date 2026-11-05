@@ -1,11 +1,4 @@
-cd /exp/FY26/AIxCC/ro31337/campaign_work
-pgrep -fl "campaign.py|microagent" || echo dead
-tail -3 campaign_61.log
-find discver/src discver/tests -newer BASELINE_FAILURES.txt -type f
-
-
-for f in $(find discver/src discver/tests -newer BASELINE_FAILURES.txt -type f | sed 's#^discver/##'); do
-  if unzip -l discver-fix.zip | grep -q " $f\$"; then unzip -o -q discver-fix.zip "$f" -d discver/ && echo "restored $f"; else rm -v "discver/$f"; fi
-done
-cd discver && python -m pytest -q tests | tail -2; cd ..
-
+cd /exp/FY26/AIxCC/ro31337
+export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=<key> AGENT_MODEL=claude-opus-5-5 AGENT_REASONING_EFFORT=high AGENT_TLS_VERIFY=false
+nohup python3 campaign_work/campaign.py --work campaign_work --tasks campaign_work/tasks_auto --only 61 --max-turns 120 > campaign_work/campaign_61.log 2>&1 &
+ls campaign_work/refs/oss-fuzz/projects 2>/dev/null | wc -l      # ~1300 if the sparse clone survived the reset; 0 → rerun that clone line
