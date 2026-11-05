@@ -1,1 +1,1 @@
-python3 src/workshop/build_kb.py --osv ../refs/oss-fuzz-vulns --arvo ../refs/ARVO-Meta --cwe ../refs/cwec_v5.0.xml --out ../kb
+
