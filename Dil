@@ -1,1 +1,4 @@
-
+cd /exp/FY26/AIxCC/ro31337
+export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1 LITELLM_API_KEY=<key> AGENT_MODEL=claude-opus-5-5 AGENT_REASONING_EFFORT=high AGENT_TLS_VERIFY=false
+nohup python3 campaign_work/campaign.py --work campaign_work --tasks campaign_work/tasks_auto --only 61 --max-turns 120 > campaign_work/campaign_61.log 2>&1 &
+tail -f campaign_work/campaign_61.log
