@@ -1,1 +1,5 @@
+cd /exp/FY26/AIxCC/ro31337/campaign_work/discver
+python3 src/workshop/build_kb.py --help
+python3 src/workshop/build_kb.py --osv ../refs/oss-fuzz-vulns --arvo ../refs/ARVO-Meta --cwe ../refs/cwec_v5.0.xml --out ../kb
+ls ../kb; wc -l ../kb/recipes.jsonl; ls ../kb/cwe_playbooks | wc -l
 
