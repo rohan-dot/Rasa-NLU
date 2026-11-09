@@ -1,1 +1,93 @@
+Reframed around discovery and triage — the system finds, confirms and submits; patching is mentioned once as a downstream stage, never as a result. Same eight slides.
 
+---
+
+## Intro 1 — Why vulnerability discovery still doesn't scale
+
+- Fuzzers run continuously at ecosystem scale, but their output is crashes, not confirmed vulnerabilities
+- Every crash still needs a human to answer: is it reachable, is it a real bug, what class, how severe
+- That hand-off is where throughput dies: triage takes expert hours per crash, and most crashes are noise
+- Writing the harness that makes a codebase fuzzable at all is still a manual, expert task
+- The question behind this work: can one system own discovery end to end — harness, fuzz, confirm, report — unattended
+
+*Notes: one message — the bottleneck has moved from running fuzzers to deciding what to fuzz and what the results mean.*
+
+## Intro 2 — Cyber Reasoning Systems and the AIxCC setting
+
+- A Cyber Reasoning System (CRS) finds vulnerabilities and proves them with a reproducing input, with no human in the loop
+- DARPA's Cyber Grand Challenge (2016) did this for synthetic binaries; AIxCC (2023–2025) did it for real open-source software with LLMs allowed
+- An AIxCC task is an OSS-Fuzz-style project: source, build script, provided fuzz harnesses, sometimes a diff to focus on
+- Scoring counts what is proven: a proof-of-vulnerability (PoV) that reproduces on the judge's build; unproven claims and duplicates score nothing
+- Hard constraints: fixed compute and LLM budget, fixed time, and every submission is judged — false positives cost
+
+*Notes: define PoV as the scored artifact. Everything in the architecture exists to turn a crash into a submittable PoV under a budget.*
+
+## Intro 3 — discver in one slide
+
+- An autonomous CRS for Java, C, C++, Go, Rust and Python, running under OSS-CRS, the open framework for AIxCC-style tasks
+- Finds or writes fuzz harnesses, ranks entry points, and admits a generated harness only after it proves it reaches project code
+- Fuzzes with libFuzzer and Jazzer, tracks harness health, and steers budget toward the task's diff when there is one
+- Deduplicates crashes and triages each one with an LLM arbiter grounded in a knowledge base of past bugs; static findings are confirmed by directed fuzzing before they count
+- Submits with confidence tiers — PoV-backed findings always, model- or scanner-only findings above a threshold
+- Learns from history without training: a compiled knowledge base from OSS-Fuzz vulnerabilities, ARVO and the CWE catalogue; a downstream patch stage exists and is out of scope for this talk
+
+*Notes: the "what"; the rest of the deck is the "how". Thresholds (0.67 submit, 0.85 for arbiter-overruled leads) belong on the methodology slide.*
+
+---
+
+## Literature 1 — Cyber Reasoning Systems: from CGC to AIxCC
+
+- **DARPA CGC (2016):** first all-machine hacking tournament; Mayhem (ForAllSecure) won; Xandra and Shellphish's Mechanical Phish placed; hybrid fuzzing + symbolic execution (Driller, NDSS 2016) was the dominant recipe
+- **DARPA AIxCC (2023–2025):** real open-source targets, LLMs allowed; ~40 teams in the semifinal, 7 finalists; final at DEF CON 33, August 2025
+- **AIxCC final results:** 1st Team Atlanta (Atlantis), 2nd Trail of Bits (Buttercup), 3rd Theori (RoboDuck); across all teams 54 of 70 synthetic vulnerabilities were discovered, plus 18 real-world vulnerabilities *(re-check the totals against DARPA's announcement)*
+- **Common finalist architecture for discovery:** many fuzzers in parallel (libFuzzer, AFL++, Jazzer) · LLM-generated harnesses and seeds · directed fuzzing toward the diff · LLM-assisted triage of crashes
+- All finalist systems were open-sourced after the final — discver's reference set includes Atlantis, Buttercup and all-you-need-is-a-fuzzing-brain
+
+*Notes: lineage. The finalists converged on the same discovery loop; the differences are in how harnesses are produced and how findings are confirmed before submission.*
+
+## Literature 2 — Fuzzing infrastructure and LLM-written harnesses
+
+- **OSS-Fuzz (Google, 2016–):** continuous fuzzing for >1,000 open-source projects; thousands of vulnerabilities found; defines the project/build/harness layout CRSs consume
+- **ClusterFuzz:** the engine behind it — crash deduplication by stack signature, regression ranges, corpus management
+- **Jazzer (Code Intelligence, 2021):** coverage-guided fuzzing for the JVM with sanitizers for injection, deserialization and SSRF — the Java engine in OSS-Fuzz and in discver
+- **OSS-Fuzz-Gen (Google, 2024):** LLMs write fuzz targets for OSS-Fuzz projects at scale, with build-and-coverage feedback to filter bad drivers
+- **Studies of LLM fuzz-driver generation:** Zhang et al., ISSTA 2024 ("How effective are they?") — LLMs produce usable drivers for most APIs but need validation; PromptFuzz (Lyu et al., CCS 2024); Fuzz4All (Xia et al., ICSE 2024); ChatAFL for protocols (Meng et al., NDSS 2024)
+- **Directed fuzzing:** AFLGo (Böhme et al., CCS 2017) — steer the fuzzer toward target locations; the basis for diff-aware targeting
+
+*Notes: two takeaways — harness quality is the main lever, and a generated harness must be validated by evidence (coverage, reach), which is what discver's gate enforces.*
+
+## Literature 3 — Triage: deciding what a crash means
+
+- **Deduplication is unsolved:** stack-hash signatures both merge distinct bugs and split one bug into many; Klees et al. (CCS 2018) showed fuzzing evaluations hinge on it; root-cause clustering (Igor, CCS 2021) improves but does not close the gap
+- **LLM verdicts alone are unreliable:** Ullah et al. (IEEE S&P 2024) — LLMs cannot yet reliably identify and reason about vulnerabilities; PrimeVul (Ding et al., ICSE 2025) — detection accuracy collapses on realistic data
+- **Grounding helps:** retrieval over known vulnerability knowledge improves LLM judgements (Vul-RAG, 2024) — the case for a knowledge base behind the arbiter
+- **Confirmation beats classification:** a static or model finding becomes evidence only when a fuzzer produces an input that reaches and triggers it — directed fuzzing (AFLGo) as the confirmation step
+- **Design consequence for discver:** crash signature → KB-grounded triage → arbiter with confidence → directed confirmation for static leads → tiered submission; no single model verdict decides
+
+*Notes: this slide justifies the triage design. The thresholds and the "weak lead" tier come from the fact that model confidence is informative but not trustworthy on its own.*
+
+## Literature 4 — Datasets and benchmarks the work draws on
+
+- **OSV / google/oss-fuzz-vulns:** machine-readable records of OSS-Fuzz-found vulnerabilities — project, crash type, affected ranges; the primary source of the knowledge base's recipes
+- **ARVO (Mei et al., 2024):** ~5,000 reproducible OSS-Fuzz vulnerabilities with working builds and PoVs — the "how was it found" layer of the KB
+- **CWE (MITRE):** weakness taxonomy; discver compiles per-CWE playbooks (what to look for, how to reach it)
+- **CyberGym (Wang et al., 2025):** 1,507 tasks from 188 OSS-Fuzz projects asking agents to reproduce real vulnerabilities; the best agents succeeded on roughly one task in ten *(re-check the headline rate for the model generation you cite)*
+- **CRSBench:** AIxCC-derived benchmark used for our evaluation — known vulnerabilities per problem, scored on PoVs; recall and precision per trial
+
+*Notes: ties the KB to its sources and names the yardsticks the results section uses. If asked "why not train" — these corpora are small for training but large for retrieval, which is the workshop design choice.*
+
+---
+
+## Positioning — Where discver sits
+
+- **Same discovery loop as the AIxCC finalists:** harness → fuzz → triage → submit, under OSS-CRS
+- **Different in how each stage is gated:** generated harnesses must prove reach and pass a static check before they fuzz; static and model findings must be confirmed or tiered before they are submitted
+- **Grounded, not trained:** strategy and triage retrieve from OSS-Fuzz-vulns, ARVO and CWE playbooks at run time — offline, no network, auditable
+- **Honest about its own state:** harness health is tracked and weak harnesses regenerated; every finding carries its evidence label; infrastructure errors are reported as errors, never as results
+- **Language-agnostic by construction:** one pipeline, per-language adapters for crash parsing, entry points and build layout
+
+*Notes: lead into the architecture diagram. Claim the gating, the grounding and the reporting — not the loop itself. If someone asks about patching: "there is a rebuild-and-re-run-gated patch stage; we're reporting discovery today."*
+
+---
+
+For the architecture diagram, drop the "Patch & submit" layer to a single "Submit" node (submission policy, confidence tiers) and the deck reads as a discovery system throughout. If you decide later to show patching, it's one slide and one diagram node back in.
