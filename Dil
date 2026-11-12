@@ -1,3 +1,5 @@
-cp MAP.md MAP_oct.md                                   # keep the old one, optional
-python3 campaign.py --work . --tasks tasks --only 00    # writes a fresh MAP.md from the current code + results/latest
-python3 campaign.py --work . --tasks tasks_auto --only 62,63,64,65,66,67,68
+find discver/src discver/tests -newer BASELINE_FAILURES.txt -type f        # what the dead agent touched — just to see
+unzip -l ../discver-src-tests-FULL-nov05.zip | awk '{print $4}' | grep -E '\.py$' | sort > /tmp/full.lst
+for f in $(find discver/src discver/tests -newer BASELINE_FAILURES.txt -type f -name '*.py'); do rel=${f#discver/}; grep -qx "$rel" /tmp/full.lst || { echo "deleting new file: $f"; rm -f "$f"; }; done
+unzip -o -q ../discver-src-tests-FULL-nov05.zip -d discver/
+cd discver && python -m pytest -q tests 2>&1 | tail -2 && cd ..
