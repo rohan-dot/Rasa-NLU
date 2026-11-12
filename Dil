@@ -3,3 +3,14 @@ unzip -l ../discver-src-tests-FULL-nov05.zip | awk '{print $4}' | grep -E '\.py$
 for f in $(find discver/src discver/tests -newer BASELINE_FAILURES.txt -type f -name '*.py'); do rel=${f#discver/}; grep -qx "$rel" /tmp/full.lst || { echo "deleting new file: $f"; rm -f "$f"; }; done
 unzip -o -q ../discver-src-tests-FULL-nov05.zip -d discver/
 cd discver && python -m pytest -q tests 2>&1 | tail -2 && cd ..
+
+
+
+export LITELLM_BASE_URL=… LITELLM_API_KEY=… AGENT_MODEL=claude-opus-5-5     # if the shell is fresh
+setsid nohup python3 campaign.py --work . --tasks tasks_auto --only 62,63,64,65,66,67,68 > runs/campaign-62-68.out 2>&1 < /dev/null &
+tail -f runs/campaign-62-68.out
+
+
+tail -5 runs/campaign-62-68.out
+tail -20 CAMPAIGN.md
+pgrep -af "campaign.py --work"          # still running?
