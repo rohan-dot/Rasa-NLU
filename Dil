@@ -1,3 +1,6 @@
-git clone --depth 1 https://github.com/open-arsenal/oms-ghost-detector refs/oms-ghost-detector
+cd /exp/FY26/AIxCC/ro31337/campaign_work
+mv refs/refs/oms-ghost-detector refs/oms-ghost-detector && rmdir refs/refs
+rm refs/discver/campaign_work/refs && rmdir refs/discver/campaign_work refs/discver
 mkdir -p discver/campaign_work && ln -sfn ../../refs discver/campaign_work/refs
 ls discver/campaign_work/refs/oms-ghost-detector | head -3
+ls refs/
