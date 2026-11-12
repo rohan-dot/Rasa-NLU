@@ -1,14 +1,1 @@
-ls discver/tests/test_workshop_v2.py                                            # 61's test file — must exist
-cd discver && python -m pytest -q tests/test_workshop.py tests/test_workshop_v2.py | tail -1 && cd ..   # 61's acceptance
-grep -n "oss-fuzz-projects" discver/src/workshop/build_kb.py | head -2         # 61's new flag
 
-
-
-export LITELLM_BASE_URL=… LITELLM_API_KEY=… AGENT_MODEL=claude-opus-5-5     # if the shell is fresh
-setsid nohup python3 campaign.py --work . --tasks tasks_auto --only 62,63,64,65,66,67,68 > runs/campaign-62-68.out 2>&1 < /dev/null &
-tail -f runs/campaign-62-68.out
-
-
-tail -5 runs/campaign-62-68.out
-tail -20 CAMPAIGN.md
-pgrep -af "campaign.py --work"          # still running?
