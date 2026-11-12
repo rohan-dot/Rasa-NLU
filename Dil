@@ -1,1 +1,6 @@
-python apply_followup_feedback.py --repo ./agentic_route_planning
+mv campaign_work/results/latest campaign_work/results/prev_java_ant_oct20
+mkdir -p campaign_work/results/latest
+cp <ghost_ex_orchestrator.log> campaign_work/results/latest/orchestrator.log
+
+
+python3 campaign.py --only 62,63,64,65,66,67,68
