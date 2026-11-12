@@ -1,6 +1,3 @@
-mv campaign_work/results/latest campaign_work/results/prev_java_ant_oct20
-mkdir -p campaign_work/results/latest
-cp <ghost_ex_orchestrator.log> campaign_work/results/latest/orchestrator.log
-
-
-python3 campaign.py --only 62,63,64,65,66,67,68
+cp MAP.md MAP_oct.md                                   # keep the old one, optional
+python3 campaign.py --work . --tasks tasks --only 00    # writes a fresh MAP.md from the current code + results/latest
+python3 campaign.py --work . --tasks tasks_auto --only 62,63,64,65,66,67,68
