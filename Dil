@@ -1,1 +1,21 @@
+cat >> tasks_auto/66_input_boundary_discovery.md <<'EOF'
 
+## Addendum — C++ service shape (added before this task started)
+Add to the fixture matrix and tests:
+| cpp-listener | C++ | `class StatusReader : public lib::MessageListener<lib::StatusMsg> { void onMessage(const lib::StatusMsg&) override; }`, constructor takes `lib::Connection&`; the decoder is `lib::Codec::decode(std::string_view) -> StatusMsg` in a vendored library (headers under `third_party/` or `include/lib/`, no source) | dependency headers | callback `StatusReader::onMessage`, payload `lib::StatusMsg`, decoder found by signature in the library headers (`decode|parse|from_*|deserialize` returning the payload type or taking it by reference), transport `lib::Connection`, downstream the project method `onMessage` calls |
+Rule (a) for C++: a project class deriving from a type outside the project and overriding a virtual whose parameter type is also outside the project. Decoder search for C++: project code reachable from the callback first, then declarations in dependency headers (vendored, `/usr/include`, `$OUT`'s include dirs), by the same name/signature shapes; no source needed — a declaration is enough to generate the call.
+EOF
+cat >> tasks_auto/67_boundary_harness_generation.md <<'EOF'
+
+## Addendum — C/C++ specifics (added before this task started)
+- Harness skeleton for C/C++: `extern "C" int LLVMFuzzerTestOneInput(const uint8_t*, size_t)`; ALL one-time initialisation
+  (codec/context construction, transport stub instance) in `extern "C" int LLVMFuzzerInitialize(int*, char***)` — never in
+  the per-input function; return early below 2 bytes and above a size cap.
+- Transport stub for C++: a subclass of the transport type with no-op overrides of its pure virtuals (nothing that opens a socket).
+- Build: a generated C/C++ harness source is compiled and linked by task 68's provided-harness link step (same flags, same
+  built libs, `-fsanitize=fuzzer,address`) into `$OUT/<name>`; if 68 did not build that component, the harness is skipped with
+  `harness-gen: <name>: component not built — skipped`, never "fuzzed anyway".
+- Tests: the `cpp-listener` fixture row from 66 → prompt names `LLVMFuzzerInitialize`, the decoder declaration, the stub rule;
+  fake build called with the component's libs; generated source contains `LLVMFuzzerInitialize`.
+EOF
+tail -3 tasks_auto/66_input_boundary_discovery.md | cut -c1-80
