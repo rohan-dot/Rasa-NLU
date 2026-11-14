@@ -1,0 +1,17 @@
+**Related work: automated vulnerability discovery**
+
+- **Fuzzing at scale** — coverage-guided fuzzing run continuously over open source (OSS-Fuzz); every target still needs a hand-written harness. [1]
+- **Automatic harness generation** — FUDGE and FuzzGen mine existing client code; works for libraries, not for services fed through a framework or dependency decoder. [2]
+- **LLM-generated harnesses** — LLMs write compiling fuzz drivers with iterative repair, but they tend to stub objects instead of reaching the parser. [3][4]
+- **Agentic discovery** — LLM agents paired with program analysis find real bugs end-to-end; triage still falls to a human. [5]
+- **Benchmarks** — on real-world vulnerabilities, agents succeed on a small minority of tasks. [6]
+
+**Gap:** finding the input boundary in an unknown repo, building a harness that reaches the parser, and triaging into verified findings — end-to-end, without a human in the loop.
+
+**References**
+[1] Serebryany, "OSS-Fuzz – Google's continuous fuzzing service for open source software," USENIX Security 2017.
+[2] Babić et al., "FUDGE: Fuzz Driver Generation at Scale," ESEC/FSE 2019.
+[3] Zhang et al., "How Effective Are They? Exploring Large Language Model Based Fuzz Driver Generation," ISSTA 2024.
+[4] Lyu et al., "Prompt Fuzzing for Fuzz Driver Generation," ACM CCS 2024.
+[5] Li et al., "IRIS: LLM-Assisted Static Analysis for Detecting Security Vulnerabilities," ICLR 2025.
+[6] Wang et al., "CyberGym: Evaluating AI Agents' Cybersecurity Capabilities with Real-World Vulnerabilities at Scale," arXiv 2025.
