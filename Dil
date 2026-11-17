@@ -1,1 +1,4 @@
+cp MAP.md MAP-nov12.md
+cp 01_map_current.md tasks_auto/
+setsid nohup python3 campaign.py --work . --tasks tasks_auto --only 01 > runs/campaign-map.out 2>&1 < /dev/null &
 
