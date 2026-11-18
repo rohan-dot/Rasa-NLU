@@ -1,3 +1,1 @@
-ls /exp/FY26/AIA_FEW/da31742/data/
-ls /exp/FY26/AIA_FEW/da31742/da31742/quanta/timellama/
-grep -H '"lora_alpha"' /exp/FY26/AIA_FEW/da31742/da31742/quanta/timellama/*/adapter/adapter_config.json
+bash lora_review_agents/run_rag.sh --limit 5 --redo setup --max-new-tokens 400 --adapter /exp/FY26/AIA_FEW/da31742/da31742/quanta/timellama/epubs_Mistral-7B-Instruct-v0.3_genlen_130_epochs_14_r_16/adapter --root data=/exp/FY26/AIA_FEW/da31742/da31742/data --root qa=/exp/FY26/AIA_FEW/da31742/da31742/qa_finetuning
