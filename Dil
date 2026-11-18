@@ -1,3 +1,3 @@
-grep -E '"r"|"lora_alpha"|"peft_type"' /panfs/g52-panfs/exp/FY26/AIA_FEW/da31742/da31742/quanta/timellama/mm_Mixtral-8x7B-Instruct-v0.1_genlen_130_epochs_14_r_1/adapter/adapter_config.json
-
-python -c "import json; d=json.load(open('/panfs/g52-panfs/exp/FY26/AIA_FEW/da31742/da31742/quanta/run/eval_dataset.json')); print(list(d[0].keys())); print(str(d[0])[:1500])"
+ls /exp/FY26/AIA_FEW/da31742/data/
+ls /exp/FY26/AIA_FEW/da31742/da31742/quanta/timellama/
+grep -H '"lora_alpha"' /exp/FY26/AIA_FEW/da31742/da31742/quanta/timellama/*/adapter/adapter_config.json
