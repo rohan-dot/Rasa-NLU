@@ -7,4 +7,4 @@ bash lora_review_agents/run_plain_vs_agentic.sh --plus --eval-file /exp/FY26/AIA
 
 
 
-wc -l /exp/FY26/AIA_FEW/da31742/da31742/qa_finetuning/*.csv /exp/FY26/AIA_FEW/da31742/da31742/quanta/run/*.csv
+wc -l /exp/FY26/AIA_FEW/da31742/da31742/qa_finetuning/qa_combined*.csv
