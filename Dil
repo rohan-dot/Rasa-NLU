@@ -1,1 +1,3 @@
-bash lora_review_agents/run_plain_vs_agentic.sh --plus --eval-file /exp/FY26/AIA_FEW/da31742/da31742/qa_finetuning/qa_combined_test_small.csv
+cd /exp/FY26/aim/ro31337/AIA
+unzip -o lora_review_agents.zip
+bash lora_review_agents/run_plain_vs_agentic.sh --plus --with-closed-book --eval-file /exp/FY26/AIA_FEW/da31742/da31742/qa_finetuning/qa_combined_test_small.csv
