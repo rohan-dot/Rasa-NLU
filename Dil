@@ -1,2 +1,9 @@
-cp discver-before-handoff/src/tools/setup_standalone.sh discver/src/tools/
-diff -rq discver-before-handoff discver -x __pycache__ -x .ipynb_checkpoints -x .pytest_cache | grep "^Only in discver-before-handoff" | head -40
+cd /exp/FY26/AIxCC/ro31337/campaign_work
+cp -rn discver-before-handoff/tests/fixtures/. discver/tests/fixtures/
+diff -rq discver-before-handoff discver -x __pycache__ -x .ipynb_checkpoints -x .pytest_cache | grep "^Only in discver-before-handoff"
+
+
+cp campaign.py campaign.py.v1 && cp microagent.py microagent.py.v1
+unzip -o discver-handoff-campaign.zip
+chmod +x stage_evidence.sh && python3 campaign.py --version
+(cd discver && python -m pytest -q tests 2>&1 | tail -3)
