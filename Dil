@@ -1,3 +1,11 @@
+cp -n discver-before-handoff/src/tools/setup_standalone.sh discver/src/tools/
+cp -rn discver-before-handoff/tests/fixtures/. discver/tests/fixtures/
+
+
+setsid nohup python3 campaign.py --work . --tasks tasks_handoff --from <first INFRA_FAIL number> > runs/from.out 2>&1 < /dev/null &
+
+
+
 cd /exp/FY26/AIA_FEW/da31742/da31742/quanta/run
 grep -l "epubs_Mistral-7B" slurm-*.out
 grep -h -i "saving\|saved\|checkpoint\|output_dir" $(grep -l "epubs_Mistral-7B" slurm-*.out) | sort -u | head -30
