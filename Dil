@@ -1,9 +1,1 @@
-cd /exp/FY26/AIA_FEW/da31742/da31742/quanta/run
-ls
-
-ls -la epubs_Mistral-7B-Instruct-v0.3_genlen_130_epochs_14
-find epubs_Mistral-7B-Instruct-v0.3_genlen_130_epochs_14 -maxdepth 2 -name "*.json" | head -20
-grep -i '"peft_type"\|"base_model_name_or_path"\|"r"\|alpha' epubs_Mistral-7B-Instruct-v0.3_genlen_130_epochs_14/adapter/adapter_config.json
-
-ls -la <the output folder for the EPUB QuanTA run>
-grep -H -i '"peft_type"\|"base_model_name_or_path"' <that folder>/*/adapter_config.json <that folder>/adapter_config.json 2>/dev/null
+find /exp/FY26/AIA_FEW/da31742/da31742/quanta -name "*.safetensors" -o -name "*.bin" -o -name "*.pt" -o -name "*.pth" 2>/dev/null | grep -v timellama | head -20
