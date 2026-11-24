@@ -1,2 +1,1 @@
-cd /exp/FY26/aim/ro31337/AIA
-nohup bash lora_review_agents/run_all.sh > rag_all.log 2>&1 &
+setsid nohup python3 campaign.py --work . --tasks tasks_handoff > runs/handoff.out 2>&1 &
