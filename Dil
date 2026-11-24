@@ -1,3 +1,3 @@
 cd /exp/FY26/AIxCC/ro31337/campaign_work
-unzip -o "$(ls -t discver-handoff-campaign*.zip | head -1)" && chmod +x stage_evidence.sh launch_campaign.sh
-python3 campaign.py --version; ls launch_campaign.sh; grep -c "report only" tasks_handoff/101_evidence_all_runs.md
+unzip -o discver-tasks-update.zip
+ls tasks_handoff | grep -cE "^(14[67]|15[05-9]|163|175)_"
