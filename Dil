@@ -1,1 +1,4 @@
-find /exp/FY26/AIA_FEW/da31742/da31742/quanta -name "*.safetensors" -o -name "*.bin" -o -name "*.pt" -o -name "*.pth" 2>/dev/null | grep -v timellama | head -20
+mv discver discver-before-handoff
+git clone <discver repo url> discver
+diff -rq discver-before-handoff/src discver/src | grep "^Only in discver-before-handoff" | head -30
+for f in redo/*.md; do b=$(basename "$f"); t=$(awk '/^## Acceptance/{a=1} a' "$f" | grep -oE "tests/test_[a-z0-9_]+\.py" | head -1); if [ -f "discver/$t" ] && (cd discver && python -m pytest -q "$t" >/dev/null 2>&1); then echo "skip $b"; else cp "$f" tasks_handoff/ && echo "redo $b"; fi; done
