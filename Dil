@@ -1,1 +1,11 @@
+cd /exp/FY26/AIA_FEW/da31742/da31742/quanta/run
+grep -l "epubs_Mistral-7B" slurm-*.out
+grep -h -i "saving\|saved\|checkpoint\|output_dir" $(grep -l "epubs_Mistral-7B" slurm-*.out) | sort -u | head -30
+
+
+
+find -L /exp/FY26/AIA_FEW/da31742 -size +20M \( -name "*.safetensors" -o -name "*.bin" -o -name "*.pt" -o -name "*.pth" -o -name "*.ckpt" \) 2>/dev/null | grep -v "timellama" | head -30
+
+
+find -L /exp/FY26/AIA_FEW /exp/FY25 -maxdepth 6 -type d -name "epubs_Mistral-7B*" 2>/dev/null | head -20
 
