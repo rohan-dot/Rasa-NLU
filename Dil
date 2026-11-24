@@ -1,9 +1,9 @@
 cd /exp/FY26/AIxCC/ro31337/campaign_work
-cp -rn discver-before-handoff/tests/fixtures/. discver/tests/fixtures/
-diff -rq discver-before-handoff discver -x __pycache__ -x .ipynb_checkpoints -x .pytest_cache | grep "^Only in discver-before-handoff"
+mkdir -p results/evidence/benchmark-2026-11-20
 
 
-cp campaign.py campaign.py.v1 && cp microagent.py microagent.py.v1
-unzip -o discver-handoff-campaign.zip
-chmod +x stage_evidence.sh && python3 campaign.py --version
-(cd discver && python -m pytest -q tests 2>&1 | tail -3)
+bash stage_evidence.sh benchmark-2026-11-20 /path/to/run-folder-1 /path/to/run-folder-2 /path/to/the-report.md
+
+
+
+unzip -o discver-handoff-campaign.zip tasks_handoff/101_evidence_all_runs.md
