@@ -1,1 +1,4 @@
-
+cd /exp/FY26/AIA_FEW/da31742/da31742/quanta/run
+ls
+ls -la <the output folder for the EPUB QuanTA run>
+grep -H -i '"peft_type"\|"base_model_name_or_path"' <that folder>/*/adapter_config.json <that folder>/adapter_config.json 2>/dev/null
