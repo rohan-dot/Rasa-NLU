@@ -1,4 +1,2 @@
-cd /exp/FY26/AIA_FEW/da31742/da31742/quanta
-head -c 700 run/epubs_Mistral-7B-Instruct-v0.3_genlen_130_epochs_14/test_predictions.csv
-echo; echo ----
-head -c 700 qa_combined_output_deduped_test.csv
+cp discver-before-handoff/src/tools/setup_standalone.sh discver/src/tools/
+diff -rq discver-before-handoff discver -x __pycache__ -x .ipynb_checkpoints -x .pytest_cache | grep "^Only in discver-before-handoff" | head -40
