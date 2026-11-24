@@ -1,4 +1,5 @@
+cd /exp/FY26/AIxCC/ro31337/campaign_work
 mv discver discver-before-handoff
-git clone <discver repo url> discver
+mkdir unz && unzip -q <downloaded-file>.zip -d unz && mv unz/* discver && rmdir unz
+ls discver/src | head
 diff -rq discver-before-handoff/src discver/src | grep "^Only in discver-before-handoff" | head -30
-for f in redo/*.md; do b=$(basename "$f"); t=$(awk '/^## Acceptance/{a=1} a' "$f" | grep -oE "tests/test_[a-z0-9_]+\.py" | head -1); if [ -f "discver/$t" ] && (cd discver && python -m pytest -q "$t" >/dev/null 2>&1); then echo "skip $b"; else cp "$f" tasks_handoff/ && echo "redo $b"; fi; done
