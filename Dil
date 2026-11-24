@@ -1,1 +1,2 @@
-source ~/campaign.env && bash launch_campaign.sh
+cd /exp/FY26/aim/ro31337/AIA
+nohup bash lora_review_agents/run_all.sh > rag_all.log 2>&1 &
