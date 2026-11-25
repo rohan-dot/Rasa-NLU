@@ -1,9 +1,6 @@
-python3 - <<'EOF'
-import json
-p = "runs/20261124-170852/state.json"
-s = json.load(open(p))
-for t in ("101_evidence_all_runs.md", "102_code_map.md"):
-    s["done"].pop(t, None)
-json.dump(s, open(p, "w"), indent=1)
-print("next up:", [t for t in s["tasks"] if t not in s["done"]][:3])
-EOF
+cd /exp/FY26/AIxCC/ro31337/campaign_work
+bash keepalive.sh off
+P=$(awk '{print $1}' runs/campaign.pid 2>/dev/null); if [ -n "$P" ] && grep -qa campaign.py /proc/$P/cmdline 2>/dev/null; then kill $P; while kill -0 $P 2>/dev/null; do sleep 2; done; echo stopped; fi
+sbatch campaign_job.sh
+squeue -u $USER
+tail -f runs/slurm-*.out
