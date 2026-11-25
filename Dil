@@ -1,1 +1,12 @@
-setsid nohup python3 campaign.py --work . --tasks tasks_handoff > runs/handoff.out 2>&1 &
+    # Local OpenAI-compatible server. Reasoning models (gpt-oss, Qwen3, DeepSeek-R1) spend
+    # hidden tokens first and return content=None if the budget runs out -> give room and retry.
+    for budget in (int(os.environ.get("VLLM_MAX_TOKENS", "4000")), 16000):
+        payload = {"model": VLLM_MODEL, "messages": messages, "max_tokens": budget}
+        r = requests.post(VLLM_URL, json=payload, timeout=LLM_TIMEOUT)
+        r.raise_for_status()
+        msg = r.json()["choices"][0]["message"]
+        txt = (msg.get("content") or "").strip()
+        if txt:
+            return txt
+        print(f"[llm] empty reply from {VLLM_MODEL} (budget={budget}); retrying larger")
+    return ""
