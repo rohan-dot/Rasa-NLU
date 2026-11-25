@@ -1,6 +1,12 @@
 cd /exp/FY26/AIxCC/ro31337/campaign_work
+if squeue -h -u $USER -n discver-campaign | grep -q .; then scancel -n discver-campaign; sleep 30; fi
 bash keepalive.sh off
 P=$(awk '{print $1}' runs/campaign.pid 2>/dev/null); if [ -n "$P" ] && grep -qa campaign.py /proc/$P/cmdline 2>/dev/null; then kill $P; while kill -0 $P 2>/dev/null; do sleep 2; done; echo stopped; fi
+export LITELLM_BASE_URL=https://llai-proxy.llan.ll.mit.edu/v1
+export LITELLM_API_KEY=<your key>
+export AGENT_MODEL=claude-opus-5-5
+export AGENT_TLS_VERIFY=false
+export AGENT_REASONING_EFFORT=high
 sbatch campaign_job.sh
 squeue -u $USER
 tail -f runs/slurm-*.out
